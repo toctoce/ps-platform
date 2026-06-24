@@ -1,6 +1,6 @@
 import { StrictMode, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Activity, ArrowLeft, FileText, Plus, RefreshCw } from 'lucide-react';
+import { Activity, ArrowLeft, Code2, FileText, Plus, RefreshCw, Send } from 'lucide-react';
 import './styles.css';
 
 const initialForm = {
@@ -10,6 +10,22 @@ const initialForm = {
   outputDescription: 'A+B를 출력한다.',
   timeLimitMs: 1000,
   memoryLimitMb: 128,
+};
+
+const initialSubmissionForm = {
+  language: 'java',
+  sourceCode: `import java.io.*;
+import java.util.*;
+
+public class Main {
+  public static void main(String[] args) throws Exception {
+    BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+    StringTokenizer st = new StringTokenizer(br.readLine());
+    int a = Integer.parseInt(st.nextToken());
+    int b = Integer.parseInt(st.nextToken());
+    System.out.println(a + b);
+  }
+}`,
 };
 
 function parseRoute() {
@@ -230,20 +246,50 @@ function ProblemListPage({ navigate, setMessage }) {
 
 function ProblemDetailPage({ problemId, navigate, setMessage }) {
   const [problem, setProblem] = useState(null);
+  const [submissions, setSubmissions] = useState([]);
+  const [submissionForm, setSubmissionForm] = useState(initialSubmissionForm);
   const [busy, setBusy] = useState(false);
+  const [submitBusy, setSubmitBusy] = useState(false);
 
   async function loadProblem() {
     setBusy(true);
     try {
-      const data = await request(`/api/problems/${problemId}`);
-      setProblem(data);
+      const [problemData, submissionData] = await Promise.all([
+        request(`/api/problems/${problemId}`),
+        request(`/api/problems/${problemId}/submissions`),
+      ]);
+      setProblem(problemData);
+      setSubmissions(submissionData);
       setMessage(`문제 #${problemId} 상세를 조회했습니다.`);
     } catch (error) {
       setProblem(null);
+      setSubmissions([]);
       setMessage(error.message);
     } finally {
       setBusy(false);
     }
+  }
+
+  async function submitCode(event) {
+    event.preventDefault();
+    setSubmitBusy(true);
+    try {
+      const created = await request(`/api/problems/${problemId}/submissions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(submissionForm),
+      });
+      setSubmissions((current) => [created, ...current]);
+      setMessage(`제출 #${created.id}이 접수되었습니다. 채점 대기 상태입니다.`);
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setSubmitBusy(false);
+    }
+  }
+
+  function updateSubmissionForm(field, value) {
+    setSubmissionForm((current) => ({ ...current, [field]: value }));
   }
 
   useEffect(() => {
@@ -263,26 +309,83 @@ function ProblemDetailPage({ problemId, navigate, setMessage }) {
         </button>
       </div>
 
-      <section className="panel detail-panel">
-        {problem ? (
-          <article className="detail">
-            <p className="eyebrow">#{problem.id}</p>
-            <h2>{problem.title}</h2>
-            <dl>
-              <dt>설명</dt>
-              <dd>{problem.description}</dd>
-              <dt>입력</dt>
-              <dd>{problem.inputDescription}</dd>
-              <dt>출력</dt>
-              <dd>{problem.outputDescription}</dd>
-              <dt>제한</dt>
-              <dd>{problem.timeLimitMs}ms / {problem.memoryLimitMb}MB</dd>
-            </dl>
-          </article>
-        ) : (
-          <p className="empty">문제를 불러오지 못했습니다.</p>
-        )}
-      </section>
+      <div className="solve-layout">
+        <section className="panel detail-panel">
+          {problem ? (
+            <article className="detail">
+              <p className="eyebrow">#{problem.id}</p>
+              <h2>{problem.title}</h2>
+              <dl>
+                <dt>설명</dt>
+                <dd>{problem.description}</dd>
+                <dt>입력</dt>
+                <dd>{problem.inputDescription}</dd>
+                <dt>출력</dt>
+                <dd>{problem.outputDescription}</dd>
+                <dt>제한</dt>
+                <dd>{problem.timeLimitMs}ms / {problem.memoryLimitMb}MB</dd>
+              </dl>
+            </article>
+          ) : (
+            <p className="empty">문제를 불러오지 못했습니다.</p>
+          )}
+        </section>
+
+        <section className="panel solve-panel">
+          <div className="panel-header">
+            <Code2 size={18} />
+            <h2>코드 제출</h2>
+          </div>
+
+          <form className="submission-form" onSubmit={submitCode}>
+            <label>
+              언어
+              <select
+                value={submissionForm.language}
+                onChange={(event) => updateSubmissionForm('language', event.target.value)}
+              >
+                <option value="java">Java</option>
+                <option value="python">Python</option>
+                <option value="cpp">C++</option>
+              </select>
+            </label>
+
+            <label>
+              소스 코드
+              <textarea
+                className="code-editor"
+                value={submissionForm.sourceCode}
+                onChange={(event) => updateSubmissionForm('sourceCode', event.target.value)}
+                spellCheck="false"
+              />
+            </label>
+
+            <button className="primary-button" type="submit" disabled={submitBusy || !problem}>
+              <Send size={17} />
+              제출
+            </button>
+          </form>
+
+          <div className="submission-list">
+            <div className="panel-header compact-header">
+              <FileText size={17} />
+              <h2>제출 기록</h2>
+            </div>
+            {submissions.length === 0 ? (
+              <p className="empty">아직 제출이 없습니다.</p>
+            ) : (
+              submissions.map((submission) => (
+                <div className="submission-row" key={submission.id}>
+                  <span>#{submission.id}</span>
+                  <strong>{submission.status}</strong>
+                  <small>{submission.language}</small>
+                  <small>{submission.verdict ?? '채점 대기'}</small>
+                </div>
+              ))
+            )}
+          </div>
+        </section>
+      </div>
     </section>
   );
 }
