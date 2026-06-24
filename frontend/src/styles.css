@@ -49,6 +49,15 @@ button:disabled {
   line-height: 1.2;
 }
 
+.brand-button {
+  display: block;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  text-align: left;
+}
+
 .eyebrow {
   margin: 0;
   color: #5f6368;
@@ -71,11 +80,27 @@ button:disabled {
 
 .workspace {
   display: grid;
-  grid-template-columns: minmax(320px, 0.95fr) minmax(280px, 0.75fr) minmax(320px, 0.9fr);
+  grid-template-columns: minmax(340px, 0.95fr) minmax(320px, 1fr);
   gap: 16px;
   max-width: 1280px;
   margin: 0 auto;
   align-items: start;
+}
+
+.list-page {
+  grid-template-columns: minmax(340px, 0.95fr) minmax(320px, 1fr);
+}
+
+.detail-page {
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.page-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
 }
 
 .panel {
@@ -238,9 +263,9 @@ textarea:focus {
   min-width: 82px;
 }
 
-.detail h3 {
+.detail h2 {
   margin: 6px 0 14px;
-  font-size: 20px;
+  font-size: 24px;
   line-height: 1.25;
   overflow-wrap: anywhere;
 }
@@ -271,11 +296,7 @@ dd {
 
 @media (max-width: 1040px) {
   .workspace {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .form-panel {
-    grid-column: 1 / -1;
+    grid-template-columns: 1fr;
   }
 }
 

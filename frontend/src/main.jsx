@@ -1,6 +1,6 @@
 import { StrictMode, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Activity, FileText, Plus, RefreshCw, Search } from 'lucide-react';
+import { Activity, ArrowLeft, FileText, Plus, RefreshCw } from 'lucide-react';
 import './styles.css';
 
 const initialForm = {
@@ -12,25 +12,35 @@ const initialForm = {
   memoryLimitMb: 128,
 };
 
+function parseRoute() {
+  const path = window.location.pathname;
+  const detailMatch = path.match(/^\/problems\/(\d+)$/);
+
+  if (detailMatch) {
+    return { name: 'problem-detail', problemId: detailMatch[1] };
+  }
+
+  return { name: 'problem-list' };
+}
+
+async function request(path, options) {
+  const response = await fetch(path, options);
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`${response.status} ${response.statusText}${body ? `: ${body}` : ''}`);
+  }
+  return response.json();
+}
+
 function App() {
+  const [route, setRoute] = useState(parseRoute);
   const [health, setHealth] = useState('확인 전');
   const [healthBusy, setHealthBusy] = useState(false);
-  const [problems, setProblems] = useState([]);
-  const [selectedProblem, setSelectedProblem] = useState(null);
-  const [selectedId, setSelectedId] = useState('');
-  const [form, setForm] = useState(initialForm);
-  const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
 
-  const latestProblem = useMemo(() => problems[0], [problems]);
-
-  async function request(path, options) {
-    const response = await fetch(path, options);
-    if (!response.ok) {
-      const body = await response.text();
-      throw new Error(`${response.status} ${response.statusText}${body ? `: ${body}` : ''}`);
-    }
-    return response.json();
+  function navigate(path) {
+    window.history.pushState(null, '', path);
+    setRoute(parseRoute());
   }
 
   async function checkHealth() {
@@ -45,6 +55,55 @@ function App() {
       setHealthBusy(false);
     }
   }
+
+  useEffect(() => {
+    checkHealth();
+
+    function handlePopState() {
+      setRoute(parseRoute());
+    }
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  return (
+    <main className="app-shell">
+      <section className="topbar">
+        <button className="brand-button" type="button" onClick={() => navigate('/problems')}>
+          <p className="eyebrow">PS Platform</p>
+          <h1>{route.name === 'problem-detail' ? '문제 상세' : '문제 목록'}</h1>
+        </button>
+        <button className="icon-button" type="button" onClick={checkHealth} disabled={healthBusy} title="헬스체크">
+          <Activity size={18} />
+          <span>{health}</span>
+        </button>
+      </section>
+
+      {message && <div className="notice">{message}</div>}
+
+      {route.name === 'problem-detail' ? (
+        <ProblemDetailPage
+          problemId={route.problemId}
+          navigate={navigate}
+          setMessage={setMessage}
+        />
+      ) : (
+        <ProblemListPage
+          navigate={navigate}
+          setMessage={setMessage}
+        />
+      )}
+    </main>
+  );
+}
+
+function ProblemListPage({ navigate, setMessage }) {
+  const [problems, setProblems] = useState([]);
+  const [form, setForm] = useState(initialForm);
+  const [busy, setBusy] = useState(false);
+
+  const hasProblems = useMemo(() => problems.length > 0, [problems]);
 
   async function loadProblems() {
     setBusy(true);
@@ -74,26 +133,7 @@ function App() {
         body: JSON.stringify(payload),
       });
       setMessage(`문제 #${created.id}를 등록했습니다.`);
-      setSelectedProblem(created);
-      setSelectedId(String(created.id));
-      await loadProblems();
-    } catch (error) {
-      setMessage(error.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function loadProblemDetail(id = selectedId) {
-    if (!id) {
-      setMessage('조회할 문제 ID를 입력하세요.');
-      return;
-    }
-    setBusy(true);
-    try {
-      const data = await request(`/api/problems/${id}`);
-      setSelectedProblem(data);
-      setMessage(`문제 #${id} 상세를 조회했습니다.`);
+      navigate(`/problems/${created.id}`);
     } catch (error) {
       setMessage(error.message);
     } finally {
@@ -106,142 +146,144 @@ function App() {
   }
 
   useEffect(() => {
-    checkHealth();
     loadProblems();
   }, []);
 
   return (
-    <main className="app-shell">
-      <section className="topbar">
-        <div>
-          <p className="eyebrow">PS Platform</p>
-          <h1>Backend API 테스트</h1>
+    <section className="workspace list-page">
+      <form className="panel form-panel" onSubmit={createProblem}>
+        <div className="panel-header">
+          <Plus size={18} />
+          <h2>문제 등록</h2>
         </div>
-        <button className="icon-button" type="button" onClick={checkHealth} disabled={healthBusy} title="헬스체크">
-          <Activity size={18} />
-          <span>{health}</span>
+
+        <label>
+          제목
+          <input value={form.title} onChange={(event) => updateForm('title', event.target.value)} />
+        </label>
+
+        <label>
+          설명
+          <textarea value={form.description} onChange={(event) => updateForm('description', event.target.value)} />
+        </label>
+
+        <label>
+          입력 설명
+          <textarea value={form.inputDescription} onChange={(event) => updateForm('inputDescription', event.target.value)} />
+        </label>
+
+        <label>
+          출력 설명
+          <textarea value={form.outputDescription} onChange={(event) => updateForm('outputDescription', event.target.value)} />
+        </label>
+
+        <div className="field-row">
+          <label>
+            시간 제한(ms)
+            <input type="number" min="1" value={form.timeLimitMs} onChange={(event) => updateForm('timeLimitMs', event.target.value)} />
+          </label>
+          <label>
+            메모리 제한(MB)
+            <input type="number" min="1" value={form.memoryLimitMb} onChange={(event) => updateForm('memoryLimitMb', event.target.value)} />
+          </label>
+        </div>
+
+        <button className="primary-button" type="submit" disabled={busy}>
+          <Plus size={18} />
+          등록
         </button>
-      </section>
+      </form>
 
-      {message && <div className="notice">{message}</div>}
-
-      <section className="workspace">
-        <form className="panel form-panel" onSubmit={createProblem}>
-          <div className="panel-header">
-            <Plus size={18} />
-            <h2>문제 등록</h2>
-          </div>
-
-          <label>
-            제목
-            <input value={form.title} onChange={(event) => updateForm('title', event.target.value)} />
-          </label>
-
-          <label>
-            설명
-            <textarea value={form.description} onChange={(event) => updateForm('description', event.target.value)} />
-          </label>
-
-          <label>
-            입력 설명
-            <textarea value={form.inputDescription} onChange={(event) => updateForm('inputDescription', event.target.value)} />
-          </label>
-
-          <label>
-            출력 설명
-            <textarea value={form.outputDescription} onChange={(event) => updateForm('outputDescription', event.target.value)} />
-          </label>
-
-          <div className="field-row">
-            <label>
-              시간 제한(ms)
-              <input type="number" min="1" value={form.timeLimitMs} onChange={(event) => updateForm('timeLimitMs', event.target.value)} />
-            </label>
-            <label>
-              메모리 제한(MB)
-              <input type="number" min="1" value={form.memoryLimitMb} onChange={(event) => updateForm('memoryLimitMb', event.target.value)} />
-            </label>
-          </div>
-
-          <button className="primary-button" type="submit" disabled={busy}>
-            <Plus size={18} />
-            등록
+      <section className="panel">
+        <div className="panel-header split">
+          <span className="heading-inline">
+            <FileText size={18} />
+            <h2>문제 목록</h2>
+          </span>
+          <button className="ghost-button" type="button" onClick={loadProblems} disabled={busy} title="새로고침">
+            <RefreshCw size={17} />
           </button>
-        </form>
+        </div>
 
-        <section className="panel">
-          <div className="panel-header split">
-            <span className="heading-inline">
-              <FileText size={18} />
-              <h2>문제 목록</h2>
-            </span>
-            <button className="ghost-button" type="button" onClick={loadProblems} disabled={busy} title="새로고침">
-              <RefreshCw size={17} />
-            </button>
-          </div>
-
-          <div className="problem-list">
-            {problems.length === 0 ? (
-              <p className="empty">등록된 문제가 없습니다.</p>
-            ) : (
-              problems.map((problem) => (
-                <button
-                  className="problem-row"
-                  type="button"
-                  key={problem.id}
-                  onClick={() => {
-                    setSelectedId(String(problem.id));
-                    loadProblemDetail(problem.id);
-                  }}
-                >
-                  <span>#{problem.id}</span>
-                  <strong>{problem.title}</strong>
-                  <small>{problem.timeLimitMs}ms / {problem.memoryLimitMb}MB</small>
-                </button>
-              ))
-            )}
-          </div>
-        </section>
-
-        <section className="panel detail-panel">
-          <div className="panel-header">
-            <Search size={18} />
-            <h2>상세 조회</h2>
-          </div>
-
-          <div className="lookup">
-            <input
-              placeholder={latestProblem ? String(latestProblem.id) : '문제 ID'}
-              value={selectedId}
-              onChange={(event) => setSelectedId(event.target.value)}
-            />
-            <button className="ghost-button with-text" type="button" onClick={() => loadProblemDetail()} disabled={busy}>
-              <Search size={17} />
-              조회
-            </button>
-          </div>
-
-          {selectedProblem ? (
-            <article className="detail">
-              <p className="eyebrow">#{selectedProblem.id}</p>
-              <h3>{selectedProblem.title}</h3>
-              <dl>
-                <dt>설명</dt>
-                <dd>{selectedProblem.description}</dd>
-                <dt>입력</dt>
-                <dd>{selectedProblem.inputDescription}</dd>
-                <dt>출력</dt>
-                <dd>{selectedProblem.outputDescription}</dd>
-                <dt>제한</dt>
-                <dd>{selectedProblem.timeLimitMs}ms / {selectedProblem.memoryLimitMb}MB</dd>
-              </dl>
-            </article>
+        <div className="problem-list">
+          {!hasProblems ? (
+            <p className="empty">등록된 문제가 없습니다.</p>
           ) : (
-            <p className="empty">목록에서 문제를 선택하거나 ID를 입력하세요.</p>
+            problems.map((problem) => (
+              <button
+                className="problem-row"
+                type="button"
+                key={problem.id}
+                onClick={() => navigate(`/problems/${problem.id}`)}
+              >
+                <span>#{problem.id}</span>
+                <strong>{problem.title}</strong>
+                <small>{problem.timeLimitMs}ms / {problem.memoryLimitMb}MB</small>
+              </button>
+            ))
           )}
-        </section>
+        </div>
       </section>
-    </main>
+    </section>
+  );
+}
+
+function ProblemDetailPage({ problemId, navigate, setMessage }) {
+  const [problem, setProblem] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  async function loadProblem() {
+    setBusy(true);
+    try {
+      const data = await request(`/api/problems/${problemId}`);
+      setProblem(data);
+      setMessage(`문제 #${problemId} 상세를 조회했습니다.`);
+    } catch (error) {
+      setProblem(null);
+      setMessage(error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    loadProblem();
+  }, [problemId]);
+
+  return (
+    <section className="detail-page">
+      <div className="page-actions">
+        <button className="ghost-button with-text" type="button" onClick={() => navigate('/problems')}>
+          <ArrowLeft size={17} />
+          목록
+        </button>
+        <button className="ghost-button with-text" type="button" onClick={loadProblem} disabled={busy}>
+          <RefreshCw size={17} />
+          새로고침
+        </button>
+      </div>
+
+      <section className="panel detail-panel">
+        {problem ? (
+          <article className="detail">
+            <p className="eyebrow">#{problem.id}</p>
+            <h2>{problem.title}</h2>
+            <dl>
+              <dt>설명</dt>
+              <dd>{problem.description}</dd>
+              <dt>입력</dt>
+              <dd>{problem.inputDescription}</dd>
+              <dt>출력</dt>
+              <dd>{problem.outputDescription}</dd>
+              <dt>제한</dt>
+              <dd>{problem.timeLimitMs}ms / {problem.memoryLimitMb}MB</dd>
+            </dl>
+          </article>
+        ) : (
+          <p className="empty">문제를 불러오지 못했습니다.</p>
+        )}
+      </section>
+    </section>
   );
 }
 
