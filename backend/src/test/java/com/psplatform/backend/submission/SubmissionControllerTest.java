@@ -110,6 +110,19 @@ class SubmissionControllerTest {
 			.andExpect(jsonPath("$.message").value("Submission not found: 999"));
 	}
 
+	@Test
+	void submissionVerdictsAreDefined() {
+		org.assertj.core.api.Assertions.assertThat(SubmissionVerdict.values())
+			.containsExactly(
+				SubmissionVerdict.ACCEPTED,
+				SubmissionVerdict.WRONG_ANSWER,
+				SubmissionVerdict.TIME_LIMIT_EXCEEDED,
+				SubmissionVerdict.MEMORY_LIMIT_EXCEEDED,
+				SubmissionVerdict.RUNTIME_ERROR,
+				SubmissionVerdict.COMPILE_ERROR
+			);
+	}
+
 	private Problem createProblem() {
 		return problemRepository.save(new ProblemCreateRequest(
 			"A+B",

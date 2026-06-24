@@ -9,7 +9,7 @@ public class Submission {
 	private final String language;
 	private final String sourceCode;
 	private final SubmissionStatus status;
-	private final String verdict;
+	private final SubmissionVerdict verdict;
 	private final LocalDateTime createdAt;
 	private final LocalDateTime judgedAt;
 
@@ -19,7 +19,7 @@ public class Submission {
 		String language,
 		String sourceCode,
 		SubmissionStatus status,
-		String verdict,
+		SubmissionVerdict verdict,
 		LocalDateTime createdAt,
 		LocalDateTime judgedAt
 	) {
@@ -53,7 +53,7 @@ public class Submission {
 		return status;
 	}
 
-	public String getVerdict() {
+	public SubmissionVerdict getVerdict() {
 		return verdict;
 	}
 

@@ -8,7 +8,7 @@ public record SubmissionResponse(
 	String language,
 	String sourceCode,
 	SubmissionStatus status,
-	String verdict,
+	SubmissionVerdict verdict,
 	LocalDateTime createdAt,
 	LocalDateTime judgedAt
 ) {

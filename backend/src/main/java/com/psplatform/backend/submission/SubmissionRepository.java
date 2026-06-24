@@ -18,13 +18,14 @@ public class SubmissionRepository {
 
 	private final RowMapper<Submission> rowMapper = (rs, rowNum) -> {
 		Timestamp judgedAt = rs.getTimestamp("judged_at");
+		String verdict = rs.getString("verdict");
 		return new Submission(
 			rs.getLong("id"),
 			rs.getLong("problem_id"),
 			rs.getString("language"),
 			rs.getString("source_code"),
 			SubmissionStatus.valueOf(rs.getString("status")),
-			rs.getString("verdict"),
+			verdict == null ? null : SubmissionVerdict.valueOf(verdict),
 			rs.getTimestamp("created_at").toLocalDateTime(),
 			judgedAt == null ? null : judgedAt.toLocalDateTime()
 		);
