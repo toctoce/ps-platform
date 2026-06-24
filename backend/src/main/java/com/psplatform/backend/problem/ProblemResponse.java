@@ -14,14 +14,14 @@ public record ProblemResponse(
 ) {
 	public static ProblemResponse from(Problem problem) {
 		return new ProblemResponse(
-			problem.id(),
-			problem.title(),
-			problem.description(),
-			problem.inputDescription(),
-			problem.outputDescription(),
-			problem.timeLimitMs(),
-			problem.memoryLimitMb(),
-			problem.createdAt()
+			problem.getId(),
+			problem.getTitle(),
+			problem.getDescription(),
+			problem.getInputDescription(),
+			problem.getOutputDescription(),
+			problem.getTimeLimitMs(),
+			problem.getMemoryLimitMb(),
+			problem.getCreatedAt()
 		);
 	}
 }

@@ -81,9 +81,9 @@ class ProblemControllerTest {
 			128
 		));
 
-		mockMvc.perform(get("/api/problems/{id}", problem.id()))
+		mockMvc.perform(get("/api/problems/{id}", problem.getId()))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.id").value(problem.id()))
+			.andExpect(jsonPath("$.id").value(problem.getId()))
 			.andExpect(jsonPath("$.title").value("A+B"));
 	}
 

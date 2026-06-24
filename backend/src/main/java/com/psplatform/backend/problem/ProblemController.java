@@ -25,7 +25,7 @@ public class ProblemController {
 	public ResponseEntity<ProblemResponse> create(@RequestBody ProblemCreateRequest request) {
 		Problem problem = problemService.create(request);
 		return ResponseEntity
-			.created(URI.create("/api/problems/" + problem.id()))
+			.created(URI.create("/api/problems/" + problem.getId()))
 			.body(ProblemResponse.from(problem));
 	}
 
