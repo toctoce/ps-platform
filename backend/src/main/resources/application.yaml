@@ -1,3 +1,11 @@
 spring:
   application:
     name: backend
+  datasource:
+    url: jdbc:h2:mem:ps-platform;MODE=PostgreSQL;DATABASE_TO_UPPER=false
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  sql:
+    init:
+      mode: always
