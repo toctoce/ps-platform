@@ -41,4 +41,23 @@ public class ProblemController {
 	public ProblemResponse findById(@PathVariable long id) {
 		return ProblemResponse.from(problemService.findById(id));
 	}
+
+	@GetMapping("/{id}/test-cases")
+	public List<ProblemTestCaseResponse> findTestCases(@PathVariable long id) {
+		return problemService.findTestCasesByProblemId(id)
+			.stream()
+			.map(ProblemTestCaseResponse::from)
+			.toList();
+	}
+
+	@PostMapping("/{id}/test-cases")
+	public ResponseEntity<ProblemTestCaseResponse> addTestCase(
+		@PathVariable long id,
+		@RequestBody ProblemTestCaseCreateRequest request
+	) {
+		ProblemTestCase testCase = problemService.addTestCase(id, request);
+		return ResponseEntity
+			.created(URI.create("/api/problems/" + id + "/test-cases/" + testCase.getId()))
+			.body(ProblemTestCaseResponse.from(testCase));
+	}
 }

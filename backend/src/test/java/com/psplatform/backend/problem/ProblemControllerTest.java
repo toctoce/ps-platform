@@ -108,6 +108,67 @@ class ProblemControllerTest {
 	}
 
 	@Test
+	void addTestCaseToProblem() throws Exception {
+		Problem problem = problemRepository.save(new ProblemCreateRequest(
+			"A+B",
+			"두 수를 더하는 문제",
+			"정수 A와 B가 주어진다.",
+			"A+B를 출력한다.",
+			1000,
+			128,
+			List.of()
+		));
+
+		mockMvc.perform(post("/api/problems/{id}/test-cases", problem.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "input": "10 20\\n",
+					  "expectedOutput": "30\\n"
+					}
+					"""))
+			.andExpect(status().isCreated())
+			.andExpect(header().string(
+				"Location",
+				org.hamcrest.Matchers.matchesPattern("/api/problems/[0-9]+/test-cases/[0-9]+")
+			))
+			.andExpect(jsonPath("$.id").isNumber())
+			.andExpect(jsonPath("$.problemId").value(problem.getId()))
+			.andExpect(jsonPath("$.input").value("10 20\n"))
+			.andExpect(jsonPath("$.expectedOutput").value("30\n"))
+			.andExpect(jsonPath("$.sortOrder").value(0));
+	}
+
+	@Test
+	void findTestCasesByProblemId() throws Exception {
+		Problem problem = problemRepository.save(new ProblemCreateRequest(
+			"A+B",
+			"두 수를 더하는 문제",
+			"정수 A와 B가 주어진다.",
+			"A+B를 출력한다.",
+			1000,
+			128,
+			List.of()
+		));
+		problemTestCaseRepository.saveAll(
+			problem.getId(),
+			List.of(
+				new ProblemTestCaseCreateRequest("1 2\n", "3\n"),
+				new ProblemTestCaseCreateRequest("10 20\n", "30\n")
+			)
+		);
+
+		mockMvc.perform(get("/api/problems/{id}/test-cases", problem.getId()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$[0].input").value("1 2\n"))
+			.andExpect(jsonPath("$[0].expectedOutput").value("3\n"))
+			.andExpect(jsonPath("$[0].sortOrder").value(0))
+			.andExpect(jsonPath("$[1].input").value("10 20\n"))
+			.andExpect(jsonPath("$[1].expectedOutput").value("30\n"))
+			.andExpect(jsonPath("$[1].sortOrder").value(1));
+	}
+
+	@Test
 	void findProblemByIdReturnsNotFound() throws Exception {
 		mockMvc.perform(get("/api/problems/{id}", 999))
 			.andExpect(status().isNotFound())

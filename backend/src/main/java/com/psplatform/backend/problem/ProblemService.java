@@ -33,4 +33,15 @@ public class ProblemService {
 		return problemRepository.findById(id)
 			.orElseThrow(() -> new ProblemNotFoundException(id));
 	}
+
+	@Transactional
+	public ProblemTestCase addTestCase(long problemId, ProblemTestCaseCreateRequest request) {
+		findById(problemId);
+		return problemTestCaseRepository.save(problemId, request);
+	}
+
+	public List<ProblemTestCase> findTestCasesByProblemId(long problemId) {
+		findById(problemId);
+		return problemTestCaseRepository.findByProblemId(problemId);
+	}
 }

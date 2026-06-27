@@ -1,6 +1,6 @@
 import { StrictMode, useEffect, useMemo, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Activity, ArrowLeft, Code2, FileText, Plus, RefreshCw, Send } from 'lucide-react';
+import { Activity, ArrowLeft, Code2, FileText, Plus, RefreshCw, Send, X } from 'lucide-react';
 import './styles.css';
 
 const initialForm = {
@@ -10,6 +10,17 @@ const initialForm = {
   outputDescription: 'A+B를 출력한다.',
   timeLimitMs: 1000,
   memoryLimitMb: 128,
+  testCases: [
+    {
+      input: '1 2\n',
+      expectedOutput: '3\n',
+    },
+  ],
+};
+
+const initialTestCaseForm = {
+  input: '1 2\n',
+  expectedOutput: '3\n',
 };
 
 const initialSubmissionForm = {
@@ -142,6 +153,9 @@ function ProblemListPage({ navigate, setMessage }) {
         ...form,
         timeLimitMs: Number(form.timeLimitMs),
         memoryLimitMb: Number(form.memoryLimitMb),
+        testCases: form.testCases.filter((testCase) => (
+          testCase.input.trim() !== '' || testCase.expectedOutput.trim() !== ''
+        )),
       };
       const created = await request('/api/problems', {
         method: 'POST',
@@ -159,6 +173,29 @@ function ProblemListPage({ navigate, setMessage }) {
 
   function updateForm(field, value) {
     setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function updateCreateTestCase(index, field, value) {
+    setForm((current) => ({
+      ...current,
+      testCases: current.testCases.map((testCase, currentIndex) => (
+        currentIndex === index ? { ...testCase, [field]: value } : testCase
+      )),
+    }));
+  }
+
+  function addCreateTestCase() {
+    setForm((current) => ({
+      ...current,
+      testCases: [...current.testCases, { input: '', expectedOutput: '' }],
+    }));
+  }
+
+  function removeCreateTestCase(index) {
+    setForm((current) => ({
+      ...current,
+      testCases: current.testCases.filter((_, currentIndex) => currentIndex !== index),
+    }));
   }
 
   useEffect(() => {
@@ -204,6 +241,51 @@ function ProblemListPage({ navigate, setMessage }) {
           </label>
         </div>
 
+        <div className="testcase-editor">
+          <div className="panel-header compact-header split">
+            <span className="heading-inline">
+              <FileText size={17} />
+              <h2>테스트케이스</h2>
+            </span>
+            <button className="ghost-button" type="button" onClick={addCreateTestCase} title="테스트케이스 추가">
+              <Plus size={17} />
+            </button>
+          </div>
+
+          {form.testCases.map((testCase, index) => (
+            <div className="testcase-fields" key={`create-test-case-${index}`}>
+              <div className="testcase-title">
+                <strong>#{index + 1}</strong>
+                <button
+                  className="ghost-button icon-only"
+                  type="button"
+                  onClick={() => removeCreateTestCase(index)}
+                  disabled={form.testCases.length === 1}
+                  title="테스트케이스 제거"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <label>
+                입력
+                <textarea
+                  className="case-textarea"
+                  value={testCase.input}
+                  onChange={(event) => updateCreateTestCase(index, 'input', event.target.value)}
+                />
+              </label>
+              <label>
+                기대 출력
+                <textarea
+                  className="case-textarea"
+                  value={testCase.expectedOutput}
+                  onChange={(event) => updateCreateTestCase(index, 'expectedOutput', event.target.value)}
+                />
+              </label>
+            </div>
+          ))}
+        </div>
+
         <button className="primary-button" type="submit" disabled={busy}>
           <Plus size={18} />
           등록
@@ -246,23 +328,29 @@ function ProblemListPage({ navigate, setMessage }) {
 
 function ProblemDetailPage({ problemId, navigate, setMessage }) {
   const [problem, setProblem] = useState(null);
+  const [testCases, setTestCases] = useState([]);
+  const [testCaseForm, setTestCaseForm] = useState(initialTestCaseForm);
   const [submissions, setSubmissions] = useState([]);
   const [submissionForm, setSubmissionForm] = useState(initialSubmissionForm);
   const [busy, setBusy] = useState(false);
   const [submitBusy, setSubmitBusy] = useState(false);
+  const [testCaseBusy, setTestCaseBusy] = useState(false);
 
   async function loadProblem() {
     setBusy(true);
     try {
-      const [problemData, submissionData] = await Promise.all([
+      const [problemData, testCaseData, submissionData] = await Promise.all([
         request(`/api/problems/${problemId}`),
+        request(`/api/problems/${problemId}/test-cases`),
         request(`/api/problems/${problemId}/submissions`),
       ]);
       setProblem(problemData);
+      setTestCases(testCaseData);
       setSubmissions(submissionData);
       setMessage(`문제 #${problemId} 상세를 조회했습니다.`);
     } catch (error) {
       setProblem(null);
+      setTestCases([]);
       setSubmissions([]);
       setMessage(error.message);
     } finally {
@@ -288,8 +376,31 @@ function ProblemDetailPage({ problemId, navigate, setMessage }) {
     }
   }
 
+  async function addTestCase(event) {
+    event.preventDefault();
+    setTestCaseBusy(true);
+    try {
+      const created = await request(`/api/problems/${problemId}/test-cases`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(testCaseForm),
+      });
+      setTestCases((current) => [...current, created]);
+      setTestCaseForm(initialTestCaseForm);
+      setMessage(`테스트케이스 #${created.id}를 추가했습니다.`);
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setTestCaseBusy(false);
+    }
+  }
+
   function updateSubmissionForm(field, value) {
     setSubmissionForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function updateTestCaseForm(field, value) {
+    setTestCaseForm((current) => ({ ...current, [field]: value }));
   }
 
   useEffect(() => {
@@ -324,11 +435,65 @@ function ProblemDetailPage({ problemId, navigate, setMessage }) {
                 <dd>{problem.outputDescription}</dd>
                 <dt>제한</dt>
                 <dd>{problem.timeLimitMs}ms / {problem.memoryLimitMb}MB</dd>
+                <dt>테스트케이스</dt>
+                <dd>{testCases.length}개</dd>
               </dl>
             </article>
           ) : (
             <p className="empty">문제를 불러오지 못했습니다.</p>
           )}
+
+          <div className="testcase-list">
+            <div className="panel-header compact-header">
+              <FileText size={17} />
+              <h2>테스트케이스</h2>
+            </div>
+
+            {testCases.length === 0 ? (
+              <p className="empty">등록된 테스트케이스가 없습니다.</p>
+            ) : (
+              testCases.map((testCase) => (
+                <div className="testcase-row" key={testCase.id}>
+                  <strong>#{testCase.sortOrder + 1}</strong>
+                  <label>
+                    입력
+                    <pre>{testCase.input}</pre>
+                  </label>
+                  <label>
+                    기대 출력
+                    <pre>{testCase.expectedOutput}</pre>
+                  </label>
+                </div>
+              ))
+            )}
+          </div>
+
+          <form className="testcase-add-form" onSubmit={addTestCase}>
+            <div className="panel-header compact-header">
+              <Plus size={17} />
+              <h2>테스트케이스 추가</h2>
+            </div>
+            <label>
+              입력
+              <textarea
+                className="case-textarea"
+                value={testCaseForm.input}
+                onChange={(event) => updateTestCaseForm('input', event.target.value)}
+              />
+            </label>
+            <label>
+              기대 출력
+              <textarea
+                className="case-textarea"
+                value={testCaseForm.expectedOutput}
+                onChange={(event) => updateTestCaseForm('expectedOutput', event.target.value)}
+              />
+            </label>
+            <button className="primary-button" type="submit" disabled={testCaseBusy || !problem}>
+              <Plus size={17} />
+              추가
+            </button>
+          </form>
         </section>
 
         <section className="panel solve-panel">

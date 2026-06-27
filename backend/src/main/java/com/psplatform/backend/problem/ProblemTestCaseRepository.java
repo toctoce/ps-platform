@@ -4,6 +4,8 @@ import java.util.List;
 
 public interface ProblemTestCaseRepository {
 
+	ProblemTestCase save(long problemId, ProblemTestCaseCreateRequest testCase);
+
 	void saveAll(long problemId, List<ProblemTestCaseCreateRequest> testCases);
 
 	List<ProblemTestCase> findByProblemId(long problemId);
