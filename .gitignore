@@ -28,6 +28,7 @@ backend/build/
 # Judge worker
 judge-worker/build/
 judge-worker/.gradle/
+judge-worker/.gocache
 
 # Temporary files
 *.tmp
