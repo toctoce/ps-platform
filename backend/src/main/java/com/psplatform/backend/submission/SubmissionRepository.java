@@ -7,13 +7,9 @@ public interface SubmissionRepository {
 
 	Submission save(long problemId, SubmissionCreateRequest request);
 
-	void createJudgeJob(long submissionId);
-
 	Optional<Submission> findById(long id);
 
 	List<Submission> findByProblemId(long problemId);
-
-	int countJudgeJobsBySubmissionId(long submissionId);
 
 	void deleteAll();
 }

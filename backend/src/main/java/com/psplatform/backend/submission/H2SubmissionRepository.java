@@ -67,18 +67,6 @@ public class H2SubmissionRepository implements SubmissionRepository {
 	}
 
 	@Override
-	public void createJudgeJob(long submissionId) {
-		jdbcTemplate.update(
-			"""
-			INSERT INTO judge_jobs (submission_id, status)
-			VALUES (?, ?)
-			""",
-			submissionId,
-			JudgeJobStatus.QUEUED.name()
-		);
-	}
-
-	@Override
 	public Optional<Submission> findById(long id) {
 		List<Submission> submissions = jdbcTemplate.query(
 			"""
@@ -104,16 +92,6 @@ public class H2SubmissionRepository implements SubmissionRepository {
 			rowMapper,
 			problemId
 		);
-	}
-
-	@Override
-	public int countJudgeJobsBySubmissionId(long submissionId) {
-		Integer count = jdbcTemplate.queryForObject(
-			"SELECT COUNT(*) FROM judge_jobs WHERE submission_id = ?",
-			Integer.class,
-			submissionId
-		);
-		return count == null ? 0 : count;
 	}
 
 	@Override

@@ -7,16 +7,23 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.psplatform.backend.problem.ProblemNotFoundException;
 import com.psplatform.backend.problem.ProblemRepository;
+import com.psplatform.backend.judge.JudgeJobRepository;
 
 @Service
 public class SubmissionService {
 
 	private final ProblemRepository problemRepository;
 	private final SubmissionRepository submissionRepository;
+	private final JudgeJobRepository judgeJobRepository;
 
-	public SubmissionService(ProblemRepository problemRepository, SubmissionRepository submissionRepository) {
+	public SubmissionService(
+		ProblemRepository problemRepository,
+		SubmissionRepository submissionRepository,
+		JudgeJobRepository judgeJobRepository
+	) {
 		this.problemRepository = problemRepository;
 		this.submissionRepository = submissionRepository;
+		this.judgeJobRepository = judgeJobRepository;
 	}
 
 	@Transactional
@@ -26,7 +33,7 @@ public class SubmissionService {
 		}
 
 		Submission submission = submissionRepository.save(problemId, request);
-		submissionRepository.createJudgeJob(submission.getId());
+		judgeJobRepository.create(submission.getId());
 		return submission;
 	}
 

@@ -17,6 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.psplatform.backend.problem.Problem;
 import com.psplatform.backend.problem.ProblemCreateRequest;
 import com.psplatform.backend.problem.ProblemRepository;
+import com.psplatform.backend.judge.JudgeJobRepository;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -30,6 +31,9 @@ class SubmissionControllerTest {
 
 	@Autowired
 	private SubmissionRepository submissionRepository;
+
+	@Autowired
+	private JudgeJobRepository judgeJobRepository;
 
 	@BeforeEach
 	void setUp() {
@@ -60,7 +64,7 @@ class SubmissionControllerTest {
 
 		Submission submission = submissionRepository.findByProblemId(problem.getId()).getFirst();
 		org.assertj.core.api.Assertions.assertThat(
-			submissionRepository.countJudgeJobsBySubmissionId(submission.getId())
+			judgeJobRepository.countBySubmissionId(submission.getId())
 		).isEqualTo(1);
 	}
 
