@@ -2,6 +2,7 @@ package com.psplatform.backend.judge;
 
 import java.sql.PreparedStatement;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -155,6 +156,37 @@ public class H2JudgeJobRepository implements JudgeJobRepository {
 			submissionId
 		);
 		return count == null ? 0 : count;
+	}
+
+	@Override
+	public int requeueStale(long staleAfterSeconds) {
+		LocalDateTime staleBefore = LocalDateTime.now().minusSeconds(staleAfterSeconds);
+
+		jdbcTemplate.update(
+			"""
+			UPDATE submissions
+			SET status = ?
+			WHERE id IN (
+				SELECT submission_id
+				FROM judge_jobs
+				WHERE status = ? AND picked_at < ?
+			)
+			""",
+			SubmissionStatus.PENDING.name(),
+			JudgeJobStatus.RUNNING.name(),
+			Timestamp.valueOf(staleBefore)
+		);
+
+		return jdbcTemplate.update(
+			"""
+			UPDATE judge_jobs
+			SET status = ?, picked_at = NULL
+			WHERE status = ? AND picked_at < ?
+			""",
+			JudgeJobStatus.QUEUED.name(),
+			JudgeJobStatus.RUNNING.name(),
+			Timestamp.valueOf(staleBefore)
+		);
 	}
 
 	private Optional<JudgeJobAssignment> findAssignmentByJobId(long jobId) {

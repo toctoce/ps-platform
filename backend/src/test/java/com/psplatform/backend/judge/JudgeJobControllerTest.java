@@ -104,6 +104,51 @@ class JudgeJobControllerTest {
 			.andExpect(jsonPath("$.message").value("Judge job not found: 999"));
 	}
 
+	@Test
+	void requeueStaleReturnsRunningJobToQueue() throws Exception {
+		Submission submission = createSubmissionWithJob();
+		judgeJobRepository.findNextAndMarkRunning().orElseThrow();
+
+		mockMvc.perform(post("/api/judge-jobs/requeue-stale")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "staleAfterSeconds": 0
+					}
+					"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.requeuedCount").value(1));
+
+		Submission pendingSubmission = submissionRepository.findById(submission.getId()).orElseThrow();
+		assertThat(pendingSubmission.getStatus()).isEqualTo(SubmissionStatus.PENDING);
+
+		mockMvc.perform(post("/api/judge-jobs/next"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.submissionId").value(submission.getId()));
+	}
+
+	@Test
+	void requeueStaleKeepsFreshRunningJob() throws Exception {
+		Submission submission = createSubmissionWithJob();
+		judgeJobRepository.findNextAndMarkRunning().orElseThrow();
+
+		mockMvc.perform(post("/api/judge-jobs/requeue-stale")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "staleAfterSeconds": 3600
+					}
+					"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.requeuedCount").value(0));
+
+		Submission runningSubmission = submissionRepository.findById(submission.getId()).orElseThrow();
+		assertThat(runningSubmission.getStatus()).isEqualTo(SubmissionStatus.RUNNING);
+
+		mockMvc.perform(post("/api/judge-jobs/next"))
+			.andExpect(status().isNoContent());
+	}
+
 	private Submission createSubmissionWithJob() {
 		Problem problem = problemRepository.save(new ProblemCreateRequest(
 			"A+B",

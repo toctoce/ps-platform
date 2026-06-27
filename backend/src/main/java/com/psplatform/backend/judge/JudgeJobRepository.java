@@ -13,5 +13,7 @@ public interface JudgeJobRepository {
 
 	Submission complete(long jobId, SubmissionVerdict verdict);
 
+	int requeueStale(long staleAfterSeconds);
+
 	int countBySubmissionId(long submissionId);
 }

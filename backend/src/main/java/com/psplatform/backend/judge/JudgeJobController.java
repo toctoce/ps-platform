@@ -35,4 +35,9 @@ public class JudgeJobController {
 		Submission submission = judgeJobService.complete(jobId, request);
 		return SubmissionResponse.from(submission);
 	}
+
+	@PostMapping("/requeue-stale")
+	public JudgeJobRequeueStaleResponse requeueStale(@RequestBody JudgeJobRequeueStaleRequest request) {
+		return judgeJobService.requeueStale(request);
+	}
 }

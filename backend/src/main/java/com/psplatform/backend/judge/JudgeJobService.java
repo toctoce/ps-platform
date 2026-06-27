@@ -25,4 +25,10 @@ public class JudgeJobService {
 	public Submission complete(long jobId, JudgeJobCompleteRequest request) {
 		return judgeJobRepository.complete(jobId, request.verdict());
 	}
+
+	@Transactional
+	public JudgeJobRequeueStaleResponse requeueStale(JudgeJobRequeueStaleRequest request) {
+		int requeuedCount = judgeJobRepository.requeueStale(request.staleAfterSeconds());
+		return new JudgeJobRequeueStaleResponse(requeuedCount);
+	}
 }
