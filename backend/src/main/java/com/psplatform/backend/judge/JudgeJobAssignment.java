@@ -1,5 +1,7 @@
 package com.psplatform.backend.judge;
 
+import java.util.List;
+
 public record JudgeJobAssignment(
 	Long jobId,
 	Long submissionId,
@@ -7,6 +9,7 @@ public record JudgeJobAssignment(
 	String language,
 	String sourceCode,
 	int timeLimitMs,
-	int memoryLimitMb
+	int memoryLimitMb,
+	List<JudgeTestCase> testCases
 ) {
 }

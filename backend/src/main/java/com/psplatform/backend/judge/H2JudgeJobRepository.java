@@ -10,6 +10,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
+import com.psplatform.backend.problem.ProblemTestCase;
+import com.psplatform.backend.problem.ProblemTestCaseRepository;
 import com.psplatform.backend.submission.JudgeJobStatus;
 import com.psplatform.backend.submission.Submission;
 import com.psplatform.backend.submission.SubmissionStatus;
@@ -19,6 +21,7 @@ import com.psplatform.backend.submission.SubmissionVerdict;
 public class H2JudgeJobRepository implements JudgeJobRepository {
 
 	private final JdbcTemplate jdbcTemplate;
+	private final ProblemTestCaseRepository problemTestCaseRepository;
 
 	private final RowMapper<JudgeJobAssignment> assignmentRowMapper = (rs, rowNum) -> new JudgeJobAssignment(
 		rs.getLong("job_id"),
@@ -27,7 +30,8 @@ public class H2JudgeJobRepository implements JudgeJobRepository {
 		rs.getString("language"),
 		rs.getString("source_code"),
 		rs.getInt("time_limit_ms"),
-		rs.getInt("memory_limit_mb")
+		rs.getInt("memory_limit_mb"),
+		List.of()
 	);
 
 	private final RowMapper<Submission> submissionRowMapper = (rs, rowNum) -> {
@@ -45,8 +49,9 @@ public class H2JudgeJobRepository implements JudgeJobRepository {
 		);
 	};
 
-	public H2JudgeJobRepository(JdbcTemplate jdbcTemplate) {
+	public H2JudgeJobRepository(JdbcTemplate jdbcTemplate, ProblemTestCaseRepository problemTestCaseRepository) {
 		this.jdbcTemplate = jdbcTemplate;
+		this.problemTestCaseRepository = problemTestCaseRepository;
 	}
 
 	@Override
@@ -202,7 +207,31 @@ public class H2JudgeJobRepository implements JudgeJobRepository {
 			assignmentRowMapper,
 			jobId
 		);
-		return assignments.stream().findFirst();
+		return assignments.stream()
+			.findFirst()
+			.map(this::withTestCases);
+	}
+
+	private JudgeJobAssignment withTestCases(JudgeJobAssignment assignment) {
+		List<JudgeTestCase> testCases = problemTestCaseRepository.findByProblemId(assignment.problemId())
+			.stream()
+			.map(this::toJudgeTestCase)
+			.toList();
+
+		return new JudgeJobAssignment(
+			assignment.jobId(),
+			assignment.submissionId(),
+			assignment.problemId(),
+			assignment.language(),
+			assignment.sourceCode(),
+			assignment.timeLimitMs(),
+			assignment.memoryLimitMb(),
+			testCases
+		);
+	}
+
+	private JudgeTestCase toJudgeTestCase(ProblemTestCase testCase) {
+		return new JudgeTestCase(testCase.getInput(), testCase.getExpectedOutput());
 	}
 
 	private Optional<Submission> findSubmissionByJobId(long jobId) {

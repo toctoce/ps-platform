@@ -5,6 +5,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,6 +18,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.psplatform.backend.problem.Problem;
 import com.psplatform.backend.problem.ProblemCreateRequest;
 import com.psplatform.backend.problem.ProblemRepository;
+import com.psplatform.backend.problem.ProblemTestCaseCreateRequest;
+import com.psplatform.backend.problem.ProblemTestCaseRepository;
 import com.psplatform.backend.submission.Submission;
 import com.psplatform.backend.submission.SubmissionCreateRequest;
 import com.psplatform.backend.submission.SubmissionRepository;
@@ -31,6 +35,9 @@ class JudgeJobControllerTest {
 
 	@Autowired
 	private ProblemRepository problemRepository;
+
+	@Autowired
+	private ProblemTestCaseRepository problemTestCaseRepository;
 
 	@Autowired
 	private SubmissionRepository submissionRepository;
@@ -62,7 +69,9 @@ class JudgeJobControllerTest {
 			.andExpect(jsonPath("$.language").value("java"))
 			.andExpect(jsonPath("$.sourceCode").value("public class Main {}"))
 			.andExpect(jsonPath("$.timeLimitMs").value(1000))
-			.andExpect(jsonPath("$.memoryLimitMb").value(128));
+			.andExpect(jsonPath("$.memoryLimitMb").value(128))
+			.andExpect(jsonPath("$.testCases[0].input").value("1 2\n"))
+			.andExpect(jsonPath("$.testCases[0].expectedOutput").value("3\n"));
 
 		Submission runningSubmission = submissionRepository.findById(submission.getId()).orElseThrow();
 		assertThat(runningSubmission.getStatus()).isEqualTo(SubmissionStatus.RUNNING);
@@ -156,8 +165,13 @@ class JudgeJobControllerTest {
 			"정수 A와 B가 주어진다.",
 			"A+B를 출력한다.",
 			1000,
-			128
+			128,
+			List.of()
 		));
+		problemTestCaseRepository.saveAll(
+			problem.getId(),
+			List.of(new ProblemTestCaseCreateRequest("1 2\n", "3\n"))
+		);
 		Submission submission = submissionRepository.save(
 			problem.getId(),
 			new SubmissionCreateRequest("java", "public class Main {}")

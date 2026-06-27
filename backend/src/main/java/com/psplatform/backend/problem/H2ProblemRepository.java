@@ -98,6 +98,7 @@ public class H2ProblemRepository implements ProblemRepository {
 	public void deleteAll() {
 		jdbcTemplate.update("DELETE FROM judge_jobs");
 		jdbcTemplate.update("DELETE FROM submissions");
+		jdbcTemplate.update("DELETE FROM problem_test_cases");
 		jdbcTemplate.update("DELETE FROM problems");
 	}
 }

@@ -5,6 +5,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,6 +27,9 @@ class ProblemControllerTest {
 	@Autowired
 	private ProblemRepository problemRepository;
 
+	@Autowired
+	private ProblemTestCaseRepository problemTestCaseRepository;
+
 	@BeforeEach
 	void setUp() {
 		problemRepository.deleteAll();
@@ -40,7 +46,13 @@ class ProblemControllerTest {
 					  "inputDescription": "정수 A와 B가 주어진다.",
 					  "outputDescription": "A+B를 출력한다.",
 					  "timeLimitMs": 1000,
-					  "memoryLimitMb": 128
+					  "memoryLimitMb": 128,
+					  "testCases": [
+					    {
+					      "input": "1 2\\n",
+					      "expectedOutput": "3\\n"
+					    }
+					  ]
 					}
 					"""))
 			.andExpect(status().isCreated())
@@ -52,6 +64,12 @@ class ProblemControllerTest {
 			.andExpect(jsonPath("$.outputDescription").value("A+B를 출력한다."))
 			.andExpect(jsonPath("$.timeLimitMs").value(1000))
 			.andExpect(jsonPath("$.memoryLimitMb").value(128));
+
+		Problem problem = problemRepository.findAll().getFirst();
+		List<ProblemTestCase> testCases = problemTestCaseRepository.findByProblemId(problem.getId());
+		assertThat(testCases).hasSize(1);
+		assertThat(testCases.getFirst().getInput()).isEqualTo("1 2\n");
+		assertThat(testCases.getFirst().getExpectedOutput()).isEqualTo("3\n");
 	}
 
 	@Test
@@ -62,7 +80,8 @@ class ProblemControllerTest {
 			"정수 A와 B가 주어진다.",
 			"A+B를 출력한다.",
 			1000,
-			128
+			128,
+			List.of()
 		));
 
 		mockMvc.perform(get("/api/problems"))
@@ -78,7 +97,8 @@ class ProblemControllerTest {
 			"정수 A와 B가 주어진다.",
 			"A+B를 출력한다.",
 			1000,
-			128
+			128,
+			List.of()
 		));
 
 		mockMvc.perform(get("/api/problems/{id}", problem.getId()))

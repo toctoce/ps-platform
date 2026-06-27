@@ -6,6 +6,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -134,7 +136,8 @@ class SubmissionControllerTest {
 			"정수 A와 B가 주어진다.",
 			"A+B를 출력한다.",
 			1000,
-			128
+			128,
+			List.of()
 		));
 	}
 }
