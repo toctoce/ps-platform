@@ -53,17 +53,13 @@ func TestLoadInvalidPollInterval(t *testing.T) {
 	}
 }
 
-func TestLoadDefaultStaleAfterSecondsWhenMissing(t *testing.T) {
+func TestLoadReturnsErrorWhenStaleAfterSecondsMissing(t *testing.T) {
 	t.Setenv("BACKEND_BASE_URL", "http://localhost:8080")
 	t.Setenv("JUDGE_WORKER_POLL_INTERVAL_MS", "1200")
 	t.Setenv("JAVA_DOCKER_IMAGE", "eclipse-temurin:17-jdk")
 
-	cfg, err := Load()
-	if err != nil {
-		t.Fatalf("Load() error = %v", err)
-	}
-	if cfg.StaleAfterSeconds != defaultStaleAfterSecs {
-		t.Fatalf("staleAfterSeconds = %d, want %d", cfg.StaleAfterSeconds, defaultStaleAfterSecs)
+	if _, err := Load(); err == nil {
+		t.Fatal("expected error for missing JUDGE_WORKER_STALE_AFTER_SECONDS, got nil")
 	}
 }
 

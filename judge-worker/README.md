@@ -10,7 +10,6 @@
   - judge-job 폴링 간격(밀리초)
 - `JUDGE_WORKER_STALE_AFTER_SECONDS`  
   - 실행 중인 채점 작업이 해당 시간(초) 이상 멈춰 있으면 QUEUED로 재큐합니다.  
-  - 값 미설정 시 기본값은 `60`입니다.
 - `JAVA_DOCKER_IMAGE`  
   - Java 채점용 Docker 이미지 (예: `eclipse-temurin:17-jdk`)
 
@@ -19,17 +18,20 @@
 ## 실행 방법
 
 ```bash
-cp judge-worker/.env.example judge-worker/.env
-source judge-worker/.env
 cd judge-worker
+BACKEND_BASE_URL=http://localhost:8080 \
+JUDGE_WORKER_POLL_INTERVAL_MS=1000 \
+JUDGE_WORKER_STALE_AFTER_SECONDS=60 \
+JAVA_DOCKER_IMAGE=eclipse-temurin:17-jdk \
 go run ./cmd/judge-worker
 ```
 
-원하면 `env`를 한 줄로 내보내도 됩니다.
+또는 `export`로 분리해서 내보내도 됩니다.
 
 ```bash
 export BACKEND_BASE_URL=http://localhost:8080
 export JUDGE_WORKER_POLL_INTERVAL_MS=1000
+export JUDGE_WORKER_STALE_AFTER_SECONDS=60
 export JAVA_DOCKER_IMAGE=eclipse-temurin:17-jdk
 go run ./cmd/judge-worker
 ```

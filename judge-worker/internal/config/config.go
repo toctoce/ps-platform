@@ -17,19 +17,17 @@ type Config struct {
 }
 
 const (
-	backendBaseURLKey     = "BACKEND_BASE_URL"
-	pollIntervalMsKey     = "JUDGE_WORKER_POLL_INTERVAL_MS"
-	javaDockerImageKey    = "JAVA_DOCKER_IMAGE"
-	staleAfterSecondsKey  = "JUDGE_WORKER_STALE_AFTER_SECONDS"
-	defaultStaleAfterSecs = 60
+	backendBaseURLKey    = "BACKEND_BASE_URL"
+	pollIntervalMsKey    = "JUDGE_WORKER_POLL_INTERVAL_MS"
+	javaDockerImageKey   = "JAVA_DOCKER_IMAGE"
+	staleAfterSecondsKey = "JUDGE_WORKER_STALE_AFTER_SECONDS"
 )
 
 // Load는 운영에서 필요한 모든 값을 환경변수에서 로드합니다.
 func Load() (Config, error) {
 	cfg := Config{
-		BackendBaseURL:    strings.TrimSpace(os.Getenv(backendBaseURLKey)),
-		JavaDockerImage:   strings.TrimSpace(os.Getenv(javaDockerImageKey)),
-		StaleAfterSeconds: defaultStaleAfterSecs,
+		BackendBaseURL:  strings.TrimSpace(os.Getenv(backendBaseURLKey)),
+		JavaDockerImage: strings.TrimSpace(os.Getenv(javaDockerImageKey)),
 	}
 	if cfg.BackendBaseURL == "" {
 		return Config{}, missingEnvError(backendBaseURLKey)
@@ -44,21 +42,13 @@ func Load() (Config, error) {
 	}
 	cfg.PollInterval = time.Duration(pollIntervalMs) * time.Millisecond
 
-	staleAfterSeconds, err := parsePositiveIntOrDefault(staleAfterSecondsKey, os.Getenv(staleAfterSecondsKey), defaultStaleAfterSecs)
+	staleAfterSeconds, err := parsePositiveInt(staleAfterSecondsKey, os.Getenv(staleAfterSecondsKey))
 	if err != nil {
 		return Config{}, err
 	}
 	cfg.StaleAfterSeconds = staleAfterSeconds
 
 	return cfg, nil
-}
-
-func parsePositiveIntOrDefault(key string, rawValue string, defaultValue int64) (int64, error) {
-	value := strings.TrimSpace(rawValue)
-	if value == "" {
-		return defaultValue, nil
-	}
-	return parsePositiveInt(key, value)
 }
 
 func parsePositiveInt(key string, rawValue string) (int64, error) {
