@@ -85,11 +85,122 @@ func TestProcessOnceReturnsFalseWhenNoJob(t *testing.T) {
 	}
 }
 
+func TestProcessOnceReturnsFalseWhenNextJobErrors(t *testing.T) {
+	client := &fakeBackendClient{
+		nextErr: errors.New("backend unavailable"),
+	}
+	w := &Worker{
+		client:   client,
+		executor: &fakeExecutor{verdict: sandbox.VerdictAccepted},
+	}
+
+	processed, err := w.processOnce(context.Background())
+	if err == nil {
+		t.Fatalf("expected error")
+	}
+	if processed {
+		t.Fatalf("expected no job to be processed")
+	}
+}
+
+func TestProcessOnceCompletesRuntimeErrorOnExecutorError(t *testing.T) {
+	client := &fakeBackendClient{
+		jobs: []backend.JudgeJobAssignment{
+			{JobID: 201},
+		},
+	}
+	execErr := errors.New("executor panic")
+	executor := &fakeExecutor{
+		err:     execErr,
+		verdict: sandbox.VerdictAccepted,
+	}
+	w := &Worker{
+		client:       client,
+		executor:     executor,
+		pollInterval: time.Second,
+	}
+
+	processed, err := w.processOnce(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if !processed {
+		t.Fatalf("expected job to be processed")
+	}
+	if got := client.lastVerdict; got != sandbox.VerdictRuntimeError {
+		t.Fatalf("verdict = %s, want %s", got, sandbox.VerdictRuntimeError)
+	}
+	if client.lastJobID != 201 {
+		t.Fatalf("job id = %d, want %d", client.lastJobID, 201)
+	}
+}
+
+func TestRunExitsAfterContextCancelWhenNoJobs(t *testing.T) {
+	client := &fakeBackendClient{
+		jobs:         []backend.JudgeJobAssignment{},
+		nextJobCalls: make(chan time.Time, 1),
+	}
+	w := &Worker{
+		client:       client,
+		executor:     &fakeExecutor{verdict: sandbox.VerdictAccepted},
+		pollInterval: 10 * time.Minute,
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+
+	go func() {
+		_ = w.Run(ctx)
+		close(done)
+	}()
+
+	_, err := waitNextCall(client.nextJobCalls, 1*time.Second)
+	if err != nil {
+		t.Fatalf("first NextJob call: %v", err)
+	}
+	cancel()
+	<-done
+
+	client.mu.Lock()
+	calls := client.calledNext
+	client.mu.Unlock()
+	if calls != 1 {
+		t.Fatalf("next job called %d times, want 1", calls)
+	}
+}
+
+func TestProcessOnceReturnsErrorWhenCompleteJobFails(t *testing.T) {
+	client := &fakeBackendClient{
+		jobs: []backend.JudgeJobAssignment{
+			{JobID: 301},
+		},
+		completeErr: errors.New("complete failed"),
+	}
+	executor := &fakeExecutor{
+		verdict: sandbox.VerdictAccepted,
+	}
+	w := &Worker{
+		client:       client,
+		executor:     executor,
+		pollInterval: time.Second,
+	}
+
+	processed, err := w.processOnce(context.Background())
+	if !processed {
+		t.Fatalf("expected processed")
+	}
+	if err == nil {
+		t.Fatalf("expected complete error")
+	}
+}
+
 type fakeBackendClient struct {
 	mu            sync.Mutex
 	jobs          []backend.JudgeJobAssignment
 	nextErr       error
 	completeErr   error
+	lastJobID     int64
+	lastVerdict   string
 	nextJobCalls  chan time.Time
 	calledNext    int
 	completeCalls int
@@ -117,10 +228,12 @@ func (c *fakeBackendClient) NextJob(context.Context) (*backend.JudgeJobAssignmen
 	return &job, nil
 }
 
-func (c *fakeBackendClient) CompleteJob(context.Context, int64, string) error {
+func (c *fakeBackendClient) CompleteJob(_ context.Context, jobID int64, verdict string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.completeCalls++
+	c.lastJobID = jobID
+	c.lastVerdict = verdict
 	if c.completeErr != nil {
 		return c.completeErr
 	}
