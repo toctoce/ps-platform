@@ -35,3 +35,8 @@ export JUDGE_WORKER_STALE_AFTER_SECONDS=60
 export JAVA_DOCKER_IMAGE=eclipse-temurin:17-jdk
 go run ./cmd/judge-worker
 ```
+
+## 채점 실행기 문서
+
+- Java 실행기 기준으로 채점 파이프라인/판정 매핑/다른 언어 확장 체크리스트는
+  [executor-spec.md](./executor-spec.md)에서 확인합니다.
