@@ -27,12 +27,11 @@ const (
 )
 
 const (
-	defaultTimeLimitMs     = 1000
-	javaCompileTimeout     = 10 * time.Second
-	javaSourceFile         = "Main.java"
-	defaultJavaDockerImage = "eclipse-temurin:17-jdk"
-	containerWorkspaceDir  = "/workspace"
-	judgeMessageMaxBytes   = 1024
+	defaultTimeLimitMs    = 1000
+	javaCompileTimeout    = 10 * time.Second
+	javaSourceFile        = "Main.java"
+	containerWorkspaceDir = "/workspace"
+	judgeMessageMaxBytes  = 1024
 )
 
 // ExecutionResult는 채점 결과 판정 값과 실패 사유를 동시에 담습니다.
@@ -65,16 +64,14 @@ type JavaExecutor struct {
 }
 
 // NewJavaExecutor는 운영 환경에서 Java 실행기를 생성합니다.
-func NewJavaExecutor() *JavaExecutor {
-	image := os.Getenv("JAVA_DOCKER_IMAGE")
+func NewJavaExecutor(javaImage string) *JavaExecutor {
+	image := strings.TrimSpace(javaImage)
 	return NewJavaExecutorWithRunner(&dockerCommandRunner{}, image)
 }
 
 // NewJavaExecutorWithRunner는 테스트에서 fake runner를 주입하기 위한 생성자입니다.
 func NewJavaExecutorWithRunner(runner commandRunner, image string) *JavaExecutor {
-	if image == "" {
-		image = defaultJavaDockerImage
-	}
+	image = strings.TrimSpace(image)
 
 	return &JavaExecutor{
 		runner: runner,

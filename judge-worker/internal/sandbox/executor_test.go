@@ -9,6 +9,8 @@ import (
 	"ps-platform/judge-worker/internal/backend"
 )
 
+const testJavaDockerImage = "eclipse-temurin:17-jdk"
+
 func TestJavaExecutorAcceptsWhenAllTestCasesPass(t *testing.T) {
 	executor := NewJavaExecutorWithRunner(&fakeCommandRunner{
 		responses: []commandResponse{
@@ -16,7 +18,7 @@ func TestJavaExecutorAcceptsWhenAllTestCasesPass(t *testing.T) {
 			{result: commandResult{exitCode: 0, stdout: "3\n"}},
 			{result: commandResult{exitCode: 0, stdout: "11\n"}},
 		},
-	}, "")
+	}, testJavaDockerImage)
 
 	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
 		Language: "java",
@@ -55,7 +57,7 @@ func TestJavaExecutorReturnsCompileErrorOnCompileFailure(t *testing.T) {
 		responses: []commandResponse{
 			{result: commandResult{exitCode: 1, stderr: "Compilation failed"}},
 		},
-	}, "")
+	}, testJavaDockerImage)
 
 	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
 		Language:    "java",
@@ -81,7 +83,7 @@ func TestJavaExecutorReturnsWrongAnswerWhenOutputDiffers(t *testing.T) {
 			{result: commandResult{exitCode: 0}},
 			{result: commandResult{exitCode: 0, stdout: "4\n"}},
 		},
-	}, "")
+	}, testJavaDockerImage)
 
 	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
 		Language:   "java",
@@ -108,7 +110,7 @@ func TestJavaExecutorReturnsRuntimeErrorOnNonZeroExit(t *testing.T) {
 			{result: commandResult{exitCode: 0}},
 			{result: commandResult{exitCode: 1, stderr: "RuntimeError"}},
 		},
-	}, "")
+	}, testJavaDockerImage)
 
 	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
 		Language:   "java",
@@ -139,7 +141,7 @@ func TestJavaExecutorReturnsTimeLimitExceededOnTimedOutRun(t *testing.T) {
 			nil,
 			timeoutErr,
 		},
-	}, "")
+	}, testJavaDockerImage)
 
 	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
 		Language:   "java",
@@ -161,7 +163,7 @@ func TestJavaExecutorReturnsTimeLimitExceededOnTimedOutRun(t *testing.T) {
 }
 
 func TestJavaExecutorReturnsErrorOnUnsupportedLanguage(t *testing.T) {
-	executor := NewJavaExecutorWithRunner(&fakeCommandRunner{}, "")
+	executor := NewJavaExecutorWithRunner(&fakeCommandRunner{}, testJavaDockerImage)
 	_, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
 		Language:   "python",
 		SourceCode: "print(1)",
