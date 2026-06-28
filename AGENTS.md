@@ -43,6 +43,7 @@ judge-worker는 judge job을 소비하고, 제출된 코드를 격리된 환경�
 * 코드 실행 로직을 backend에 두지 않습니다.
 * 검증을 통과시키기 위해 테스트를 삭제하거나 약화하지 않습니다.
 * 작고 리뷰하기 쉬운 변경을 선호합니다.
+* judge-worker 작업 기준은 `judge-worker/coding-guide.md`를 우선 적용합니다.
 
 ## 커밋 메시지 규칙
 
