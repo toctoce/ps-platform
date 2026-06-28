@@ -5,6 +5,7 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	"ps-platform/judge-worker/internal/backend"
 )
@@ -104,7 +105,7 @@ func TestJavaExecutorReturnsMemoryLimitExceededWhenCompileKilledByMemoryCap(t *t
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if result.Verdict != VerdictMemoryLimitExceeded {
-		t.Fatalf("verdict = %s, want %s", result.Verdict, VerdictMemoryLimitExceeded)
+		t.Fatalf("verdict = %s, want %s, message = %q", result.Verdict, VerdictMemoryLimitExceeded, result.Message)
 	}
 	if result.Message != "memory limit exceeded on compile" {
 		t.Fatalf("judge message = %q, want %q", result.Message, "memory limit exceeded on compile")
@@ -165,7 +166,34 @@ func TestJavaExecutorReturnsMemoryLimitExceededWhenExecutionKilledByMemoryCap(t 
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if result.Verdict != VerdictMemoryLimitExceeded {
-		t.Fatalf("verdict = %s, want %s", result.Verdict, VerdictMemoryLimitExceeded)
+		t.Fatalf("verdict = %s, want %s, message = %q", result.Verdict, VerdictMemoryLimitExceeded, result.Message)
+	}
+	if result.Message != "memory limit exceeded on test case 1" {
+		t.Fatalf("judge message = %q, want %q", result.Message, "memory limit exceeded on test case 1")
+	}
+}
+
+func TestJavaExecutorReturnsMemoryLimitExceededWhenExecutionHitsJavaOutOfMemory(t *testing.T) {
+	executor := NewJavaExecutorWithRunner(&fakeCommandRunner{
+		responses: []commandResponse{
+			{result: commandResult{exitCode: 0}},
+			{result: commandResult{exitCode: 1, stderr: "Exception in thread \"main\" java.lang.OutOfMemoryError: Java heap space"}},
+		},
+	}, testJavaDockerImage)
+
+	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
+		Language:   "java",
+		SourceCode: "public class Main {}",
+		TestCases: []backend.JudgeTestCase{
+			{Input: "1 2\n", ExpectedOutput: "3\n"},
+		},
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Verdict != VerdictMemoryLimitExceeded {
+		t.Fatalf("verdict = %s, want %s, message = %q", result.Verdict, VerdictMemoryLimitExceeded, result.Message)
 	}
 	if result.Message != "memory limit exceeded on test case 1" {
 		t.Fatalf("judge message = %q, want %q", result.Message, "memory limit exceeded on test case 1")
@@ -196,6 +224,39 @@ func TestJavaExecutorReturnsRuntimeErrorOnNonZeroExit(t *testing.T) {
 	}
 	if result.Message != "runtime error on test case 1: RuntimeError" {
 		t.Fatalf("judge message = %q, want %q", result.Message, "runtime error on test case 1: RuntimeError")
+	}
+}
+
+func TestIsMemoryLimitExceededByJavaOutOfMemoryOutput(t *testing.T) {
+	if !isMemoryLimitExceeded(1, "", "Exception in thread \"main\" java.lang.OutOfMemoryError: Java heap space") {
+		t.Fatalf("expected Java OutOfMemoryError output to be detected as memory limit exceeded")
+	}
+	if !isMemoryLimitExceeded(1, "Exception in thread \"main\" java.lang.OutOfMemoryError: Java heap space", "") {
+		t.Fatalf("expected Java OutOfMemoryError output in stdout to be detected as memory limit exceeded")
+	}
+}
+
+func TestRunTestCaseReturnsMemoryLimitExceededOnJavaOutOfMemoryOutput(t *testing.T) {
+	executor := NewJavaExecutorWithRunner(&fakeCommandRunner{
+		responses: []commandResponse{
+			{result: commandResult{exitCode: 1, stderr: "Exception in thread \"main\" java.lang.OutOfMemoryError: Java heap space"}},
+		},
+	}, testJavaDockerImage)
+
+	result, err := executor.runTestCase(
+		context.Background(),
+		"/tmp",
+		backend.JudgeTestCase{Input: "1 2\n", ExpectedOutput: "3\n"},
+		1,
+		time.Second,
+		128,
+	)
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Verdict != VerdictMemoryLimitExceeded {
+		t.Fatalf("verdict = %s, want %s, message = %q", result.Verdict, VerdictMemoryLimitExceeded, result.Message)
 	}
 }
 

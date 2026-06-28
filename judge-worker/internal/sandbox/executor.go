@@ -296,12 +296,15 @@ func isMemoryLimitExceeded(exitCode int, stdout string, stderr string) bool {
 		return true
 	}
 
-	standardOut := strings.ToLower(stdout)
-	standardErr := strings.ToLower(stderr)
-	return strings.Contains(standardOut, "out of memory") ||
-		strings.Contains(standardErr, "out of memory") ||
-		(strings.Contains(standardErr, "exceeded") &&
-			strings.Contains(standardErr, "memory"))
+	combinedOutput := strings.ToLower(stdout) + "\n" + strings.ToLower(stderr)
+
+	return strings.Contains(combinedOutput, "out of memory") ||
+		strings.Contains(combinedOutput, "outofmemoryerror") ||
+		strings.Contains(combinedOutput, "java.lang.outofmemoryerror") ||
+		strings.Contains(combinedOutput, "java heap space") ||
+		strings.Contains(combinedOutput, "metaspace") ||
+		(strings.Contains(combinedOutput, "exceeded") &&
+			strings.Contains(combinedOutput, "memory"))
 }
 
 // dockerCommandRunner는 docker CLI를 호출해 격리된 컨테이너에서 명령을 실행합니다.
