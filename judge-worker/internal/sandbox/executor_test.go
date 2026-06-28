@@ -260,6 +260,29 @@ func TestRunTestCaseReturnsMemoryLimitExceededOnJavaOutOfMemoryOutput(t *testing
 	}
 }
 
+func TestJavaExecutorReturnsTimeLimitExceededOnCompileTimeout(t *testing.T) {
+	timeoutErr := context.DeadlineExceeded
+	executor := NewJavaExecutorWithRunner(&fakeCommandRunner{
+		errors: []error{timeoutErr},
+	}, testJavaDockerImage)
+
+	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
+		Language:   "java",
+		SourceCode: "public class Main {}",
+		TestCases:  []backend.JudgeTestCase{},
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Verdict != VerdictTimeLimitExceeded {
+		t.Fatalf("verdict = %s, want %s, message = %q", result.Verdict, VerdictTimeLimitExceeded, result.Message)
+	}
+	if result.Message != "compile timed out" {
+		t.Fatalf("judge message = %q, want %q", result.Message, "compile timed out")
+	}
+}
+
 func TestJavaExecutorReturnsTimeLimitExceededOnTimedOutRun(t *testing.T) {
 	timeoutErr := context.DeadlineExceeded
 	executor := NewJavaExecutorWithRunner(&fakeCommandRunner{
