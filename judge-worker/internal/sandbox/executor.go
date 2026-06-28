@@ -227,9 +227,17 @@ func (e *JavaExecutor) runTestCase(
 			}, nil
 		}
 
+		runtimeErrorMessage := firstNonEmpty("", result.stderr, result.stdout)
+		if runtimeErrorMessage != "" {
+			return ExecutionResult{
+				Verdict: VerdictRuntimeError,
+				Message: fmt.Sprintf("runtime error on test case %d: %s", testCaseIndex, runtimeErrorMessage),
+			}, nil
+		}
+
 		return ExecutionResult{
 			Verdict: VerdictRuntimeError,
-			Message: fmt.Sprintf("runtime error on test case %d: %s", testCaseIndex, firstNonEmpty("", result.stderr, result.stdout)),
+			Message: fmt.Sprintf("runtime error on test case %d", testCaseIndex),
 		}, nil
 	}
 

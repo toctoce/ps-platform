@@ -227,6 +227,33 @@ func TestJavaExecutorReturnsRuntimeErrorOnNonZeroExit(t *testing.T) {
 	}
 }
 
+func TestJavaExecutorReturnsRuntimeErrorWithoutDetailWhenOutputMissing(t *testing.T) {
+	executor := NewJavaExecutorWithRunner(&fakeCommandRunner{
+		responses: []commandResponse{
+			{result: commandResult{exitCode: 0}},
+			{result: commandResult{exitCode: 1}},
+		},
+	}, testJavaDockerImage)
+
+	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
+		Language:   "java",
+		SourceCode: "public class Main {}",
+		TestCases: []backend.JudgeTestCase{
+			{Input: "1 2\n", ExpectedOutput: "3\n"},
+		},
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Verdict != VerdictRuntimeError {
+		t.Fatalf("verdict = %s, want %s, message = %q", result.Verdict, VerdictRuntimeError, result.Message)
+	}
+	if result.Message != "runtime error on test case 1" {
+		t.Fatalf("judge message = %q, want %q", result.Message, "runtime error on test case 1")
+	}
+}
+
 func TestIsMemoryLimitExceededByJavaOutOfMemoryOutput(t *testing.T) {
 	if !isMemoryLimitExceeded(1, "", "Exception in thread \"main\" java.lang.OutOfMemoryError: Java heap space") {
 		t.Fatalf("expected Java OutOfMemoryError output to be detected as memory limit exceeded")
