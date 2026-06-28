@@ -227,6 +227,52 @@ func TestJavaExecutorReturnsRuntimeErrorOnNonZeroExit(t *testing.T) {
 	}
 }
 
+func TestJavaExecutorReturnsTimeLimitExceededWhenCompileContextTimesOutWithoutError(t *testing.T) {
+	executor := NewJavaExecutorWithRunner(&timeoutAwareRunner{result: commandResult{exitCode: 137}}, testJavaDockerImage)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+	defer cancel()
+
+	result, err := executor.Execute(ctx, backend.JudgeJobAssignment{
+		Language:   "java",
+		SourceCode: "public class Main { public static void main(String[] args) {} }",
+		TestCases:  []backend.JudgeTestCase{},
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Verdict != VerdictTimeLimitExceeded {
+		t.Fatalf("verdict = %s, want %s, message = %q", result.Verdict, VerdictTimeLimitExceeded, result.Message)
+	}
+	if result.Message != "compile timed out" {
+		t.Fatalf("judge message = %q, want %q", result.Message, "compile timed out")
+	}
+}
+
+func TestJavaExecutorReturnsTimeLimitExceededWhenRunContextTimesOutWithoutError(t *testing.T) {
+	executor := NewJavaExecutorWithRunner(&timeoutAwareRunner{result: commandResult{exitCode: 143}}, testJavaDockerImage)
+
+	result, err := executor.runTestCase(
+		context.Background(),
+		"/tmp",
+		backend.JudgeTestCase{Input: "1 2\n", ExpectedOutput: "3\n"},
+		1,
+		time.Millisecond,
+		128,
+	)
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Verdict != VerdictTimeLimitExceeded {
+		t.Fatalf("verdict = %s, want %s, message = %q", result.Verdict, VerdictTimeLimitExceeded, result.Message)
+	}
+	if result.Message != "time limit exceeded on test case 1" {
+		t.Fatalf("judge message = %q, want %q", result.Message, "time limit exceeded on test case 1")
+	}
+}
+
 func TestJavaExecutorReturnsRuntimeErrorWithoutDetailWhenOutputMissing(t *testing.T) {
 	executor := NewJavaExecutorWithRunner(&fakeCommandRunner{
 		responses: []commandResponse{
@@ -407,4 +453,13 @@ func (r *fakeCommandRunner) Run(_ context.Context, command string, args []string
 	}
 
 	return response.result, response.err
+}
+
+type timeoutAwareRunner struct {
+	result commandResult
+}
+
+func (r *timeoutAwareRunner) Run(ctx context.Context, _ string, _ []string, _ string, _ io.Reader) (commandResult, error) {
+	<-ctx.Done()
+	return r.result, nil
 }

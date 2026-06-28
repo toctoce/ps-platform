@@ -167,6 +167,12 @@ func (e *JavaExecutor) compile(ctx context.Context, tempDir string, memoryLimitM
 		}
 		return ExecutionResult{}, err
 	}
+	if isCommandTimedOut(compileCtx) {
+		return ExecutionResult{
+			Verdict: VerdictTimeLimitExceeded,
+			Message: "compile timed out",
+		}, nil
+	}
 
 	if result.exitCode != 0 {
 		if isMemoryLimitExceeded(result.exitCode, result.stderr, result.stdout) {
@@ -217,6 +223,12 @@ func (e *JavaExecutor) runTestCase(
 			}, nil
 		}
 		return ExecutionResult{}, err
+	}
+	if isCommandTimedOut(runCtx) {
+		return ExecutionResult{
+			Verdict: VerdictTimeLimitExceeded,
+			Message: fmt.Sprintf("time limit exceeded on test case %d", testCaseIndex),
+		}, nil
 	}
 
 	if result.exitCode != 0 {
@@ -297,6 +309,10 @@ func isTimeout(parentCtx context.Context, commandCtx context.Context, err error)
 		return true
 	}
 	return false
+}
+
+func isCommandTimedOut(commandCtx context.Context) bool {
+	return errors.Is(commandCtx.Err(), context.DeadlineExceeded)
 }
 
 func isMemoryLimitExceeded(exitCode int, stdout string, stderr string) bool {
