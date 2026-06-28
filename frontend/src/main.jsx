@@ -1,6 +1,18 @@
-import { StrictMode, useEffect, useMemo, useState } from 'react';
+import { StrictMode, useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Activity, ArrowLeft, Code2, FileText, Plus, RefreshCw, Send, X } from 'lucide-react';
+import {
+  Activity,
+  ArrowLeft,
+  Code2,
+  FileText,
+  Lock,
+  FolderKanban,
+  Plus,
+  RefreshCw,
+  Send,
+  Shuffle,
+  X,
+} from 'lucide-react';
 import './styles.css';
 
 const initialForm = {
@@ -16,11 +28,6 @@ const initialForm = {
       expectedOutput: '3\n',
     },
   ],
-};
-
-const initialTestCaseForm = {
-  input: '1 2\n',
-  expectedOutput: '3\n',
 };
 
 const initialSubmissionForm = {
@@ -40,6 +47,42 @@ public class Main {
 };
 
 const authStorageKey = 'ps-platform-auth';
+const editorStorageKeyPrefix = 'ps-platform-editor';
+const IDE_TAB_SIZE = 2;
+const IDE_OPEN_CLOSE = {
+  '(': ')',
+  '{': '}',
+  '[': ']',
+  '"': '"',
+  "'": "'",
+};
+
+const categoryRules = [
+  {
+    name: '배열',
+    keywords: ['배열', 'array', '정렬', 'sort'],
+  },
+  {
+    name: '문자열',
+    keywords: ['문자열', 'string', 'substring', '문자'],
+  },
+  {
+    name: '구현',
+    keywords: ['구현', 'implement', '시뮬레이션'],
+  },
+  {
+    name: '구간',
+    keywords: ['구간', '투포인터', 'prefix', '누적'],
+  },
+  {
+    name: '그래프',
+    keywords: ['그래프', 'bfs', 'dfs', '최단거리', '다익스트라'],
+  },
+  {
+    name: '자료구조',
+    keywords: ['스택', '큐', '스택', '스택', 'hash', '맵', '큐', '트리'],
+  },
+];
 
 function getStoredAuth() {
   const raw = localStorage.getItem(authStorageKey);
@@ -68,30 +111,186 @@ function clearStoredAuth() {
 }
 
 function parseRoute() {
-  const path = window.location.pathname.replace(/\/+$/, '');
+  const path = (window.location.pathname || '/').replace(/\/+$/, '') || '/';
   if (path === '/login') {
     return { name: 'login' };
   }
   if (path === '/signup') {
     return { name: 'signup' };
   }
-
+  if (path === '/categories') {
+    return { name: 'category-list' };
+  }
+  const categoryMatch = path.match(/^\/categories\/(.+)$/);
+  if (categoryMatch) {
+    return {
+      name: 'category-detail',
+      category: decodeURIComponent(categoryMatch[1]),
+    };
+  }
+  if (path === '/random') {
+    return { name: 'random' };
+  }
+  if (path === '/mypage' || path === '/my') {
+    return { name: 'my-page' };
+  }
+  if (path === '/admin') {
+    return { name: 'admin' };
+  }
   const detailMatch = path.match(/^\/problems\/(\d+)$/);
-
   if (detailMatch) {
     return { name: 'problem-detail', problemId: detailMatch[1] };
   }
-
-  return { name: 'problem-list' };
+  if (path === '/problems' || path === '/home' || path === '/') {
+    return { name: 'home' };
+  }
+  return { name: 'home' };
 }
 
-async function request(path, options) {
+function getProblemCategory(problem) {
+  if (problem.category) {
+    return problem.category;
+  }
+
+  const source = `${problem.title ?? ''} ${problem.description ?? ''} ${problem.inputDescription ?? ''}`.toLowerCase();
+
+  for (const rule of categoryRules) {
+    if (rule.keywords.some((keyword) => source.includes(keyword.toLowerCase()))) {
+      return rule.name;
+    }
+  }
+
+  return '기타';
+}
+
+function buildCategoryGroups(problems) {
+  const map = new Map();
+  for (const problem of problems) {
+    const category = getProblemCategory(problem);
+    if (!map.has(category)) {
+      map.set(category, []);
+    }
+    map.get(category).push(problem);
+  }
+  return map;
+}
+
+function pickRandomProblems(problems, count) {
+  const copied = [...problems];
+  for (let i = copied.length - 1; i > 0; i--) {
+    const swapIndex = Math.floor(Math.random() * (i + 1));
+    [copied[i], copied[swapIndex]] = [copied[swapIndex], copied[i]];
+  }
+  return copied.slice(0, count);
+}
+
+function safeJsonRequest(response) {
+  const contentLength = Number(response.headers.get('content-length') || 0);
+  if (contentLength === 0) {
+    return null;
+  }
+  return response.text().then((text) => {
+    if (!text) {
+      return null;
+    }
+    try {
+      return JSON.parse(text);
+    } catch (_error) {
+      return text;
+    }
+  });
+}
+
+async function request(path, options = {}) {
   const response = await fetch(path, options);
   if (!response.ok) {
-    const body = await response.text();
+    const body = await safeJsonRequest(response);
     throw new Error(`${response.status} ${response.statusText}${body ? `: ${body}` : ''}`);
   }
-  return response.json();
+  return safeJsonRequest(response);
+}
+
+function getRouteTitle(route) {
+  if (route.name === 'home') {
+    return '홈';
+  }
+  if (route.name === 'login') {
+    return '로그인';
+  }
+  if (route.name === 'signup') {
+    return '회원가입';
+  }
+  if (route.name === 'category-list') {
+    return '카테고리별 풀기';
+  }
+  if (route.name === 'category-detail') {
+    return `${route.category} 카테고리`;
+  }
+  if (route.name === 'random') {
+    return '랜덤 풀기';
+  }
+  if (route.name === 'my-page') {
+    return '마이페이지';
+  }
+  if (route.name === 'problem-detail') {
+    return '문제 해결';
+  }
+  if (route.name === 'admin') {
+    return '관리자 페이지';
+  }
+  return '홈';
+}
+
+function isPendingStatus(status) {
+  return status === 'PENDING' || status === 'RUNNING';
+}
+
+function isFinishedStatus(status) {
+  return !isPendingStatus(status);
+}
+
+function submissionResultLabel(submission) {
+  if (submission.status === 'JUDGED') {
+    return submission.verdict ?? 'JUDGED';
+  }
+  if (submission.status === 'FAILED') {
+    return submission.verdict ?? 'FAILED';
+  }
+  return submission.status ?? 'UNKNOWN';
+}
+
+function statusToLabel(status, verdict) {
+  if (status === 'JUDGED') {
+    return verdict ?? 'JUDGED';
+  }
+  return status ?? 'UNKNOWN';
+}
+
+function submissionBadgeClass(status) {
+  if (status === 'JUDGED') {
+    return 'verdict';
+  }
+  if (status === 'FAILED') {
+    return 'failed';
+  }
+  if (status === 'RUNNING') {
+    return 'running';
+  }
+  return 'pending';
+}
+
+function ProblemRow({ problem, navigate }) {
+  const category = getProblemCategory(problem);
+  return (
+    <button className="problem-row" type="button" onClick={() => navigate(`/problems/${problem.id}`)}>
+      <div className="problem-row-header">
+        <span>#{problem.id}</span>
+        <span className="category-chip">{category}</span>
+      </div>
+      <strong>{problem.title}</strong>
+      <small>{problem.timeLimitMs}ms / {problem.memoryLimitMb}MB</small>
+    </button>
+  );
 }
 
 function App() {
@@ -101,14 +300,10 @@ function App() {
   const [healthBusy, setHealthBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [authBusy, setAuthBusy] = useState(false);
+
   const isAuthenticated = Boolean(auth?.accessToken);
-  const pageTitle = route.name === 'problem-detail'
-    ? '문제 상세'
-    : route.name === 'login'
-      ? '로그인'
-      : route.name === 'signup'
-        ? '회원가입'
-      : '문제 목록';
+  const isAdmin = auth?.user?.role === 'ADMIN';
+  const pageTitle = getRouteTitle(route);
 
   function applyAuth(nextAuth) {
     setAuth(nextAuth);
@@ -125,6 +320,22 @@ function App() {
     setRoute(parseRoute());
   }
 
+  function isActiveNav(target) {
+    if (target === 'home') {
+      return route.name === 'home' || route.name === 'problem-detail';
+    }
+    if (target === 'random') {
+      return route.name === 'random';
+    }
+    if (target === 'categories') {
+      return route.name === 'category-list' || route.name === 'category-detail';
+    }
+    if (target === 'mypage') {
+      return route.name === 'my-page';
+    }
+    return false;
+  }
+
   function handleLoginSuccess(authResponse) {
     applyAuth({
       accessToken: authResponse.accessToken,
@@ -132,12 +343,11 @@ function App() {
       user: authResponse.user,
     });
     setMessage('로그인에 성공했습니다.');
-    navigate('/problems');
+    navigate('/');
   }
 
   async function logout() {
     setAuthBusy(true);
-
     try {
       if (auth?.refreshToken) {
         await request('/api/auth/logout', {
@@ -184,7 +394,7 @@ function App() {
       applyAuth({ ...auth, user });
     } catch (error) {
       clearAuth();
-      setMessage(`자동 로그인 세션이 만료되어 로그인이 해제되었습니다. (${error.message})`);
+      setMessage(`자동 로그인 세션이 만료되어 로그아웃됩니다. (${error.message})`);
     } finally {
       setAuthBusy(false);
     }
@@ -205,10 +415,40 @@ function App() {
   return (
     <main className="app-shell">
       <section className="topbar">
-        <button className="brand-button" type="button" onClick={() => navigate('/problems')}>
+        <button className="brand-button" type="button" onClick={() => navigate('/')}>
           <p className="eyebrow">PS Platform</p>
           <h1>{pageTitle}</h1>
         </button>
+        <div className="topbar-nav">
+          <button
+            className={`ghost-button nav-link ${isActiveNav('home') ? 'is-active' : ''}`}
+            type="button"
+            onClick={() => navigate('/')}
+          >
+            홈
+          </button>
+          <button
+            className={`ghost-button nav-link ${isActiveNav('categories') ? 'is-active' : ''}`}
+            type="button"
+            onClick={() => navigate('/categories')}
+          >
+            카테고리별 풀기
+          </button>
+          <button
+            className={`ghost-button nav-link ${isActiveNav('random') ? 'is-active' : ''}`}
+            type="button"
+            onClick={() => navigate('/random')}
+          >
+            랜덤 풀기
+          </button>
+          <button
+            className={`ghost-button nav-link ${isActiveNav('mypage') ? 'is-active' : ''}`}
+            type="button"
+            onClick={() => navigate('/mypage')}
+          >
+            마이페이지
+          </button>
+        </div>
         <div className="topbar-actions">
           {isAuthenticated ? (
             <>
@@ -261,16 +501,51 @@ function App() {
           setMessage={setMessage}
           navigate={navigate}
         />
+      ) : route.name === 'category-list' ? (
+        <CategoryPage
+          navigate={navigate}
+          setMessage={setMessage}
+          category={null}
+        />
+      ) : route.name === 'category-detail' ? (
+        <CategoryPage
+          category={route.category}
+          navigate={navigate}
+          setMessage={setMessage}
+        />
+      ) : route.name === 'random' ? (
+        <RandomProblemPage
+          navigate={navigate}
+          setMessage={setMessage}
+        />
+      ) : route.name === 'my-page' ? (
+        <MyPage
+          auth={auth}
+          isAuthenticated={isAuthenticated}
+          setMessage={setMessage}
+          navigate={navigate}
+        />
+      ) : route.name === 'admin' ? (
+        <AdminPage
+          auth={auth}
+          isAuthenticated={isAuthenticated}
+          isAdmin={isAdmin}
+          setMessage={setMessage}
+          navigate={navigate}
+        />
       ) : route.name === 'problem-detail' ? (
         <ProblemDetailPage
           problemId={route.problemId}
           navigate={navigate}
           setMessage={setMessage}
+          isAuthenticated={isAuthenticated}
         />
       ) : (
-        <ProblemListPage
+        <HomePage
           navigate={navigate}
           setMessage={setMessage}
+          isAdmin={isAdmin}
+          isAuthenticated={isAuthenticated}
         />
       )}
     </main>
@@ -352,9 +627,16 @@ function LoginPage({ onLoginSuccess, setMessage, isAuthenticated, navigate }) {
         <button
           className="ghost-button with-text"
           type="button"
-          onClick={() => navigate('/problems')}
+          onClick={() => navigate('/signup')}
         >
-          문제 목록 보기
+          회원가입
+        </button>
+        <button
+          className="ghost-button with-text"
+          type="button"
+          onClick={() => navigate('/')}
+        >
+          홈으로 이동
         </button>
       </form>
     </section>
@@ -371,12 +653,10 @@ function SignupPage({ setMessage, navigate }) {
       setMessage('모든 항목을 입력해 주세요.');
       return;
     }
-
     if (form.password.length < 8) {
       setMessage('비밀번호는 8자 이상이어야 합니다.');
       return;
     }
-
     if (form.password !== form.confirmPassword) {
       setMessage('비밀번호 확인이 일치하지 않습니다.');
       return;
@@ -466,12 +746,26 @@ function SignupPage({ setMessage, navigate }) {
   );
 }
 
-function ProblemListPage({ navigate, setMessage }) {
+function HomePage({ navigate, setMessage, isAdmin, isAuthenticated }) {
   const [problems, setProblems] = useState([]);
-  const [form, setForm] = useState(initialForm);
   const [busy, setBusy] = useState(false);
+  const [randomSeed, setRandomSeed] = useState(0);
 
-  const hasProblems = useMemo(() => problems.length > 0, [problems]);
+  const categoryGroups = useMemo(() => buildCategoryGroups(problems), [problems]);
+  const categories = useMemo(
+    () => Array.from(categoryGroups.entries())
+      .map(([name, list]) => ({ name, count: list.length }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    [categoryGroups]
+  );
+  const recentProblems = useMemo(
+    () => [...problems].sort((a, b) => b.id - a.id).slice(0, 10),
+    [problems]
+  );
+  const randomProblems = useMemo(
+    () => pickRandomProblems(problems, 5),
+    [problems, randomSeed]
+  );
 
   async function loadProblems() {
     setBusy(true);
@@ -486,249 +780,236 @@ function ProblemListPage({ navigate, setMessage }) {
     }
   }
 
-  async function createProblem(event) {
-    event.preventDefault();
-    setBusy(true);
-    try {
-      const payload = {
-        ...form,
-        timeLimitMs: Number(form.timeLimitMs),
-        memoryLimitMb: Number(form.memoryLimitMb),
-        testCases: form.testCases.filter((testCase) => (
-          testCase.input.trim() !== '' || testCase.expectedOutput.trim() !== ''
-        )),
-      };
-      const created = await request('/api/problems', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      setMessage(`문제 #${created.id}를 등록했습니다.`);
-      navigate(`/problems/${created.id}`);
-    } catch (error) {
-      setMessage(error.message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function updateForm(field, value) {
-    setForm((current) => ({ ...current, [field]: value }));
-  }
-
-  function updateCreateTestCase(index, field, value) {
-    setForm((current) => ({
-      ...current,
-      testCases: current.testCases.map((testCase, currentIndex) => (
-        currentIndex === index ? { ...testCase, [field]: value } : testCase
-      )),
-    }));
-  }
-
-  function addCreateTestCase() {
-    setForm((current) => ({
-      ...current,
-      testCases: [...current.testCases, { input: '', expectedOutput: '' }],
-    }));
-  }
-
-  function removeCreateTestCase(index) {
-    setForm((current) => ({
-      ...current,
-      testCases: current.testCases.filter((_, currentIndex) => currentIndex !== index),
-    }));
-  }
-
   useEffect(() => {
     loadProblems();
   }, []);
 
   return (
-    <section className="workspace list-page">
-      <form className="panel form-panel" onSubmit={createProblem}>
-        <div className="panel-header">
-          <Plus size={18} />
-          <h2>문제 등록</h2>
-        </div>
-
-        <label>
-          제목
-          <input value={form.title} onChange={(event) => updateForm('title', event.target.value)} />
-        </label>
-
-        <label>
-          설명
-          <textarea value={form.description} onChange={(event) => updateForm('description', event.target.value)} />
-        </label>
-
-        <label>
-          입력 설명
-          <textarea value={form.inputDescription} onChange={(event) => updateForm('inputDescription', event.target.value)} />
-        </label>
-
-        <label>
-          출력 설명
-          <textarea value={form.outputDescription} onChange={(event) => updateForm('outputDescription', event.target.value)} />
-        </label>
-
-        <div className="field-row">
-          <label>
-            시간 제한(ms)
-            <input type="number" min="1" value={form.timeLimitMs} onChange={(event) => updateForm('timeLimitMs', event.target.value)} />
-          </label>
-          <label>
-            메모리 제한(MB)
-            <input type="number" min="1" value={form.memoryLimitMb} onChange={(event) => updateForm('memoryLimitMb', event.target.value)} />
-          </label>
-        </div>
-
-        <div className="testcase-editor">
-          <div className="panel-header compact-header split">
+    <section className="home-page">
+      <section className="home-grid">
+        <section className="panel">
+          <div className="panel-header split">
             <span className="heading-inline">
-              <FileText size={17} />
-              <h2>테스트케이스</h2>
+              <FolderKanban size={18} />
+              <h2>카테고리별로 풀기</h2>
             </span>
-            <button className="ghost-button" type="button" onClick={addCreateTestCase} title="테스트케이스 추가">
-              <Plus size={17} />
+            <button
+              className="ghost-button with-text"
+              type="button"
+              onClick={() => navigate('/categories')}
+            >
+              전체 보기
             </button>
           </div>
-
-          {form.testCases.map((testCase, index) => (
-            <div className="testcase-fields" key={`create-test-case-${index}`}>
-              <div className="testcase-title">
-                <strong>#{index + 1}</strong>
+          <div className="category-summary">
+            {categories.length === 0 ? (
+              <p className="empty">분류 가능한 문제가 없습니다.</p>
+            ) : (
+              categories.slice(0, 8).map((category) => (
                 <button
-                  className="ghost-button icon-only"
+                  className="category-chip category-chip--button"
+                  key={category.name}
                   type="button"
-                  onClick={() => removeCreateTestCase(index)}
-                  disabled={form.testCases.length === 1}
-                  title="테스트케이스 제거"
+                  onClick={() => navigate(`/categories/${encodeURIComponent(category.name)}`)}
                 >
-                  <X size={16} />
+                  <strong>{category.name}</strong>
+                  <span>{category.count}문제</span>
                 </button>
-              </div>
-              <label>
-                입력
-                <textarea
-                  className="case-textarea"
-                  value={testCase.input}
-                  onChange={(event) => updateCreateTestCase(index, 'input', event.target.value)}
-                />
-              </label>
-              <label>
-                기대 출력
-                <textarea
-                  className="case-textarea"
-                  value={testCase.expectedOutput}
-                  onChange={(event) => updateCreateTestCase(index, 'expectedOutput', event.target.value)}
-                />
-              </label>
-            </div>
-          ))}
-        </div>
+              ))
+            )}
+          </div>
+        </section>
 
-        <button className="primary-button" type="submit" disabled={busy}>
-          <Plus size={18} />
-          등록
-        </button>
-      </form>
+        <section className="panel">
+          <div className="panel-header split">
+            <span className="heading-inline">
+              <Shuffle size={18} />
+              <h2>랜덤 5문제</h2>
+            </span>
+            <button
+              className="ghost-button with-text"
+              type="button"
+              onClick={() => setRandomSeed((current) => current + 1)}
+              disabled={busy}
+            >
+              다시 뽑기
+            </button>
+          </div>
+          <div className="problem-list">
+            {randomProblems.length === 0 ? (
+              <p className="empty">문제가 없습니다.</p>
+            ) : (
+              randomProblems.map((problem) => (
+                <ProblemRow
+                  key={`random-${problem.id}`}
+                  problem={problem}
+                  navigate={navigate}
+                />
+              ))
+            )}
+          </div>
+        </section>
+      </section>
 
       <section className="panel">
         <div className="panel-header split">
           <span className="heading-inline">
             <FileText size={18} />
-            <h2>문제 목록</h2>
+            <h2>최근 문제</h2>
           </span>
           <button className="ghost-button" type="button" onClick={loadProblems} disabled={busy} title="새로고침">
             <RefreshCw size={17} />
           </button>
         </div>
-
         <div className="problem-list">
-          {!hasProblems ? (
+          {recentProblems.length === 0 ? (
             <p className="empty">등록된 문제가 없습니다.</p>
           ) : (
-            problems.map((problem) => (
-              <button
-                className="problem-row"
-                type="button"
+            recentProblems.map((problem) => (
+              <ProblemRow
                 key={problem.id}
-                onClick={() => navigate(`/problems/${problem.id}`)}
-              >
-                <span>#{problem.id}</span>
-                <strong>{problem.title}</strong>
-                <small>{problem.timeLimitMs}ms / {problem.memoryLimitMb}MB</small>
-              </button>
+                problem={problem}
+                navigate={navigate}
+              />
             ))
           )}
         </div>
+      </section>
+      <section className="panel">
+        <div className="panel-header">
+          <Lock size={18} />
+          <h2>{isAdmin ? '관리자 기능' : '관리자 페이지'}</h2>
+        </div>
+        <p className="helper-text">
+          {isAdmin
+            ? '문제 등록과 테스트케이스 등록은 관리자 페이지에서 수행합니다.'
+            : '문제 등록·테스트케이스 등록은 관리자 권한 전용입니다.'}
+        </p>
+        <button
+          className="primary-button"
+          type="button"
+          onClick={() => navigate('/admin')}
+          disabled={!isAuthenticated}
+        >
+          관리자 페이지로 이동
+        </button>
       </section>
     </section>
   );
 }
 
-function ProblemDetailPage({ problemId, navigate, setMessage }) {
-  const [problem, setProblem] = useState(null);
-  const [testCases, setTestCases] = useState([]);
-  const [testCaseForm, setTestCaseForm] = useState(initialTestCaseForm);
-  const [submissions, setSubmissions] = useState([]);
-  const [submissionForm, setSubmissionForm] = useState(initialSubmissionForm);
-  const [busy, setBusy] = useState(false);
-  const [submitBusy, setSubmitBusy] = useState(false);
+function AdminPage({ auth, isAuthenticated, isAdmin, setMessage, navigate }) {
+  const [problems, setProblems] = useState([]);
+  const [loadingProblems, setLoadingProblems] = useState(false);
+  const [problemForm, setProblemForm] = useState(initialForm);
+  const [createBusy, setCreateBusy] = useState(false);
+  const [problemId, setProblemId] = useState('');
+  const [testCaseForms, setTestCaseForms] = useState([{ input: '', expectedOutput: '' }]);
   const [testCaseBusy, setTestCaseBusy] = useState(false);
 
-  async function loadProblem() {
-    setBusy(true);
+  function authHeaders() {
+    return auth?.accessToken
+      ? { Authorization: `Bearer ${auth.accessToken}` }
+      : {};
+  }
+
+  async function loadProblems() {
+    setLoadingProblems(true);
     try {
-      const [problemData, testCaseData, submissionData] = await Promise.all([
-        request(`/api/problems/${problemId}`),
-        request(`/api/problems/${problemId}/test-cases`),
-        request(`/api/problems/${problemId}/submissions`),
-      ]);
-      setProblem(problemData);
-      setTestCases(testCaseData);
-      setSubmissions(submissionData);
-      setMessage(`문제 #${problemId} 상세를 조회했습니다.`);
+      const data = await request('/api/problems');
+      setProblems(data);
+      setMessage(`문제 ${data.length}개를 조회했습니다.`);
+      if (problemId && !data.some((problem) => String(problem.id) === String(problemId))) {
+        setProblemId('');
+      }
     } catch (error) {
-      setProblem(null);
-      setTestCases([]);
-      setSubmissions([]);
       setMessage(error.message);
     } finally {
-      setBusy(false);
+      setLoadingProblems(false);
     }
   }
 
-  async function submitCode(event) {
+  function updateProblemForm(field, value) {
+    setProblemForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function updateTestCaseForm(index, field, value) {
+    setTestCaseForms((current) => (
+      current.map((item, currentIndex) => (
+        currentIndex === index ? { ...item, [field]: value } : item
+      ))
+    ));
+  }
+
+  function addTestCaseForm() {
+    setTestCaseForms((current) => [...current, { input: '', expectedOutput: '' }]);
+  }
+
+  function removeTestCaseForm(index) {
+    setTestCaseForms((current) => {
+      if (current.length <= 1) {
+        return current;
+      }
+      return current.filter((_, currentIndex) => currentIndex !== index);
+    });
+  }
+
+  async function createProblem(event) {
     event.preventDefault();
-    setSubmitBusy(true);
+    setCreateBusy(true);
     try {
-      const created = await request(`/api/problems/${problemId}/submissions`, {
+      const payload = {
+        ...problemForm,
+        timeLimitMs: Number(problemForm.timeLimitMs),
+        memoryLimitMb: Number(problemForm.memoryLimitMb),
+        testCases: [],
+      };
+      const created = await request('/api/problems', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(submissionForm),
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify(payload),
       });
-      setSubmissions((current) => [created, ...current]);
-      setMessage(`제출 #${created.id}이 접수되었습니다. 채점 대기 상태입니다.`);
+      setMessage(`문제 #${created.id}를 등록했습니다.`);
+      setProblemId(String(created.id));
+      setProblemForm(initialForm);
+      await loadProblems();
+      navigate(`/problems/${created.id}`);
     } catch (error) {
       setMessage(error.message);
     } finally {
-      setSubmitBusy(false);
+      setCreateBusy(false);
     }
   }
 
-  async function addTestCase(event) {
+  async function addTestCases(event) {
     event.preventDefault();
+    const targetProblemId = Number(problemId);
+    if (!Number.isInteger(targetProblemId) || targetProblemId <= 0) {
+      setMessage('문제를 선택해 주세요.');
+      return;
+    }
+
+    const cases = testCaseForms
+      .map((item) => ({ input: item.input, expectedOutput: item.expectedOutput }))
+      .filter((item) => item.input.trim() !== '' || item.expectedOutput.trim() !== '');
+
+    if (cases.length === 0) {
+      setMessage('저장할 테스트케이스가 없습니다.');
+      return;
+    }
+
     setTestCaseBusy(true);
     try {
-      const created = await request(`/api/problems/${problemId}/test-cases`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(testCaseForm),
-      });
-      setTestCases((current) => [...current, created]);
-      setTestCaseForm(initialTestCaseForm);
-      setMessage(`테스트케이스 #${created.id}를 추가했습니다.`);
+      await Promise.all(
+        cases.map((item) => request(`/api/problems/${targetProblemId}/test-cases`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify(item),
+        }))
+      );
+      setMessage(`문제 #${targetProblemId} 테스트케이스 ${cases.length}개를 등록했습니다.`);
+      setTestCaseForms([{ input: '', expectedOutput: '' }]);
+      await loadProblems();
     } catch (error) {
       setMessage(error.message);
     } finally {
@@ -736,22 +1017,659 @@ function ProblemDetailPage({ problemId, navigate, setMessage }) {
     }
   }
 
+  useEffect(() => {
+    if (isAuthenticated && isAdmin) {
+      loadProblems();
+    }
+  }, [isAuthenticated, isAdmin]);
+
+  if (!isAuthenticated || !isAdmin) {
+    return (
+      <section className="home-page">
+        <div className="page-actions">
+          <button className="ghost-button with-text" type="button" onClick={() => navigate('/')}>
+            <ArrowLeft size={17} />
+            홈으로
+          </button>
+        </div>
+        <section className="panel">
+          <div className="panel-header">
+            <Lock size={18} />
+            <h2>관리자 전용</h2>
+          </div>
+          <p className="empty">관리자 권한으로 로그인해야 접근할 수 있습니다.</p>
+        </section>
+      </section>
+    );
+  }
+
+  return (
+    <section className="home-page">
+      <div className="page-actions">
+        <button className="ghost-button with-text" type="button" onClick={() => navigate('/')}>
+          <ArrowLeft size={17} />
+          홈으로
+        </button>
+        <button className="ghost-button with-text" type="button" onClick={loadProblems} disabled={loadingProblems}>
+          <RefreshCw size={17} />
+          문제 목록 새로고침
+        </button>
+      </div>
+
+      <section className="panel">
+        <div className="panel-header">
+          <Plus size={18} />
+          <h2>문제 등록</h2>
+        </div>
+        <form className="form-panel" onSubmit={createProblem}>
+          <div className="problem-form-grid">
+            <label>
+              제목
+              <input
+                value={problemForm.title}
+                onChange={(event) => updateProblemForm('title', event.target.value)}
+              />
+            </label>
+            <label>
+              시간 제한(ms)
+              <input
+                type="number"
+                min="1"
+                value={problemForm.timeLimitMs}
+                onChange={(event) => updateProblemForm('timeLimitMs', event.target.value)}
+              />
+            </label>
+            <label>
+              메모리 제한(MB)
+              <input
+                type="number"
+                min="1"
+                value={problemForm.memoryLimitMb}
+                onChange={(event) => updateProblemForm('memoryLimitMb', event.target.value)}
+              />
+            </label>
+          </div>
+          <label>
+            설명
+            <textarea
+              value={problemForm.description}
+              onChange={(event) => updateProblemForm('description', event.target.value)}
+            />
+          </label>
+          <label>
+            입력 설명
+            <textarea
+              value={problemForm.inputDescription}
+              onChange={(event) => updateProblemForm('inputDescription', event.target.value)}
+            />
+          </label>
+          <label>
+            출력 설명
+            <textarea
+              value={problemForm.outputDescription}
+              onChange={(event) => updateProblemForm('outputDescription', event.target.value)}
+            />
+          </label>
+          <button className="primary-button" type="submit" disabled={createBusy}>
+            <Plus size={17} />
+            문제 등록
+          </button>
+        </form>
+      </section>
+
+      <section className="panel">
+        <div className="panel-header">
+          <Code2 size={18} />
+          <h2>테스트케이스 등록</h2>
+        </div>
+        <p className="helper-text">이미 등록된 문제에 대해 테스트케이스를 추가합니다.</p>
+        <label>
+          문제 선택
+          <select value={problemId} onChange={(event) => setProblemId(event.target.value)}>
+            <option value="">문제 선택</option>
+            {problems.map((problem) => (
+              <option key={problem.id} value={String(problem.id)}>
+                #{problem.id} {problem.title}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <form className="form-panel" onSubmit={addTestCases}>
+          <div className="testcase-editor">
+            <div className="panel-header compact-header split">
+              <span className="heading-inline">
+                <FileText size={17} />
+                <h2>테스트케이스 목록</h2>
+              </span>
+              <button className="ghost-button" type="button" onClick={addTestCaseForm} title="테스트케이스 추가">
+                <Plus size={16} />
+              </button>
+            </div>
+            {testCaseForms.map((testCaseForm, index) => (
+              <div className="testcase-fields" key={`test-case-${index}`}>
+                <div className="testcase-title">
+                  <strong>#{index + 1}</strong>
+                  <button
+                    className="ghost-button icon-only"
+                    type="button"
+                    onClick={() => removeTestCaseForm(index)}
+                    disabled={testCaseForms.length === 1}
+                    title="테스트케이스 제거"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <label>
+                  입력
+                  <textarea
+                    className="case-textarea"
+                    value={testCaseForm.input}
+                    onChange={(event) => updateTestCaseForm(index, 'input', event.target.value)}
+                  />
+                </label>
+                <label>
+                  기대 출력
+                  <textarea
+                    className="case-textarea"
+                    value={testCaseForm.expectedOutput}
+                    onChange={(event) => updateTestCaseForm(index, 'expectedOutput', event.target.value)}
+                  />
+                </label>
+              </div>
+            ))}
+          </div>
+          <button className="primary-button" type="submit" disabled={testCaseBusy}>
+            <Plus size={17} />
+            테스트케이스 등록
+          </button>
+        </form>
+      </section>
+    </section>
+  );
+}
+
+function CategoryPage({ category, navigate, setMessage }) {
+  const [problems, setProblems] = useState([]);
+  const [busy, setBusy] = useState(false);
+
+  const groups = useMemo(() => buildCategoryGroups(problems), [problems]);
+  const categoryRows = useMemo(() => {
+    if (!category) {
+      return Array.from(groups.entries())
+        .map(([categoryName, list]) => ({ categoryName, count: list.length }))
+        .sort((a, b) => a.categoryName.localeCompare(b.categoryName));
+    }
+
+    return [{ categoryName: category, count: (groups.get(category) ?? []).length }];
+  }, [category, groups]);
+
+  const selectedProblems = useMemo(() => {
+    if (!category) {
+      return [];
+    }
+    return [...(groups.get(category) ?? [])];
+  }, [category, groups]);
+
+  async function loadProblems() {
+    setBusy(true);
+    try {
+      const data = await request('/api/problems');
+      setProblems(data);
+      if (!category) {
+        setMessage(`카테고리 목록을 불러왔습니다.`);
+      } else {
+        const target = data.filter((problem) => getProblemCategory(problem) === category);
+        setMessage(`${category} 카테고리 문제 ${target.length}개`);
+      }
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    loadProblems();
+  }, [category]);
+
+  return (
+    <section className="home-page">
+      <section className="panel">
+        <div className="panel-header split">
+          <span className="heading-inline">
+            <FileText size={18} />
+            <h2>{category ? `${category} 카테고리` : '카테고리 목록'}</h2>
+          </span>
+          <button className="ghost-button with-text" type="button" onClick={() => navigate('/categories')}>
+            목록
+          </button>
+        </div>
+
+        {!category ? (
+          <div className="category-list">
+            {categoryRows.length === 0 ? (
+              <p className="empty">카테고리 데이터가 없습니다.</p>
+            ) : (
+              categoryRows.map((item) => (
+                <button
+                  className="category-panel"
+                  type="button"
+                  key={item.categoryName}
+                  onClick={() => navigate(`/categories/${encodeURIComponent(item.categoryName)}`)}
+                >
+                  <h3>{item.categoryName}</h3>
+                  <small>{item.count}문제</small>
+                </button>
+              ))
+            )}
+          </div>
+        ) : (
+          <div className="problem-list">
+            {busy ? <p className="empty">불러오는 중...</p> : null}
+            {!busy && selectedProblems.length === 0 ? (
+              <p className="empty">해당 카테고리에 문제가 없습니다.</p>
+            ) : null}
+            {!busy ? selectedProblems.map((problem) => (
+              <ProblemRow
+                key={problem.id}
+                problem={problem}
+                navigate={navigate}
+              />
+            )) : null}
+          </div>
+        )}
+      </section>
+
+      <section className="panel">
+        <div className="panel-header">
+          <Code2 size={18} />
+          <h2>{category ? `${category} 바로 풀기` : '빠른 이동'}</h2>
+        </div>
+        <div className="quick-links">
+          <button className="ghost-button" type="button" onClick={() => navigate('/random')}>
+            랜덤 풀기
+          </button>
+          <button className="ghost-button" type="button" onClick={() => navigate('/')}>
+            홈으로 돌아가기
+          </button>
+        </div>
+      </section>
+    </section>
+  );
+}
+
+function RandomProblemPage({ navigate, setMessage }) {
+  const [problems, setProblems] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [seed, setSeed] = useState(0);
+
+  const randomProblems = useMemo(() => pickRandomProblems(problems, 5), [problems, seed]);
+
+  async function loadProblems() {
+    setBusy(true);
+    try {
+      const data = await request('/api/problems');
+      setProblems(data);
+      setMessage(`문제 ${data.length}개 중 5개를 무작위로 추출했습니다.`);
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    loadProblems();
+  }, []);
+
+  return (
+    <section className="home-page">
+      <section className="panel">
+        <div className="panel-header split">
+          <span className="heading-inline">
+            <RefreshCw size={18} />
+            <h2>랜덤 5문제</h2>
+          </span>
+          <button className="ghost-button with-text" type="button" onClick={() => setSeed((current) => current + 1)}>
+            새로 뽑기
+          </button>
+        </div>
+
+        <div className="problem-list">
+          {busy ? <p className="empty">불러오는 중...</p> : null}
+          {!busy && randomProblems.length === 0 ? (
+            <p className="empty">문제가 없습니다.</p>
+          ) : null}
+          {!busy ? randomProblems.map((problem) => (
+            <ProblemRow key={problem.id} problem={problem} navigate={navigate} />
+          )) : null}
+        </div>
+      </section>
+    </section>
+  );
+}
+
+function MyPage({ auth, isAuthenticated, setMessage, navigate }) {
+  if (!isAuthenticated) {
+    return (
+      <section className="home-page">
+        <section className="panel">
+          <div className="panel-header">
+            <Code2 size={18} />
+            <h2>마이페이지</h2>
+          </div>
+          <p className="empty">로그인 후 이용할 수 있습니다.</p>
+          <button className="ghost-button with-text" type="button" onClick={() => navigate('/login')}>
+            로그인
+          </button>
+        </section>
+      </section>
+    );
+  }
+
+  return (
+    <section className="home-page">
+      <section className="panel">
+        <div className="panel-header">
+          <Code2 size={18} />
+          <h2>계정 정보</h2>
+        </div>
+        <dl className="profile-list">
+          <dt>이메일</dt>
+          <dd>{auth.user?.email}</dd>
+          <dt>닉네임</dt>
+          <dd>{auth.user?.username}</dd>
+          <dt>권한</dt>
+          <dd>{auth.user?.role ?? 'USER'}</dd>
+          <dt>가입일</dt>
+          <dd>{auth.user?.createdAt ?? '확인 불가'}</dd>
+        </dl>
+        <button
+          className="ghost-button with-text"
+          type="button"
+          onClick={() => setMessage('현재 API에 유저별 제출 기록 API가 없어 추가 개발 예정입니다.')}
+        >
+          제출 기록 확인
+        </button>
+      </section>
+    </section>
+  );
+}
+
+function ProblemDetailPage({ problemId, navigate, setMessage, isAuthenticated }) {
+  const [problem, setProblem] = useState(null);
+  const [submissions, setSubmissions] = useState([]);
+  const [busy, setBusy] = useState(false);
+  const [submissionBusy, setSubmissionBusy] = useState(false);
+  const [submissionForm, setSubmissionForm] = useState(initialSubmissionForm);
+  const [testCaseCount, setTestCaseCount] = useState(0);
+  const [editorHint, setEditorHint] = useState('Ctrl+Enter: 제출 / Tab: 들여쓰기 / 괄호 자동 닫힘');
+  const pollingRef = useRef({});
+  const lastSubmissionStatus = useRef({});
+  const editorRef = useRef(null);
+  const formRef = useRef(null);
+
+  const problemKey = `${editorStorageKeyPrefix}:${problemId}`;
+
+  function cleanupPolling() {
+    Object.keys(pollingRef.current).forEach((key) => {
+      clearInterval(pollingRef.current[key]);
+      delete pollingRef.current[key];
+    });
+  }
+
+  function stopPolling(submissionId) {
+    const key = String(submissionId);
+    const timer = pollingRef.current[key];
+    if (timer) {
+      clearInterval(timer);
+      delete pollingRef.current[key];
+    }
+  }
+
+  function applyCode(nextCode, cursorPosition) {
+    setSubmissionForm((current) => ({ ...current, sourceCode: nextCode }));
+    requestAnimationFrame(() => {
+      if (!editorRef.current) {
+        return;
+      }
+      editorRef.current.focus();
+      editorRef.current.selectionStart = cursorPosition;
+      editorRef.current.selectionEnd = cursorPosition;
+    });
+  }
+
+  function handleEditorKeyDown(event) {
+    const currentCode = submissionForm.sourceCode;
+    const key = event.key;
+    const start = editorRef.current?.selectionStart ?? 0;
+    const end = editorRef.current?.selectionEnd ?? 0;
+
+    if ((event.ctrlKey || event.metaKey) && key === 's') {
+      event.preventDefault();
+      if (problemId) {
+        const draftKey = `${problemKey}:${submissionForm.language}`;
+        localStorage.setItem(draftKey, submissionForm.sourceCode);
+        setMessage('임시 저장 완료');
+      }
+      return;
+    }
+
+    if ((event.ctrlKey || event.metaKey) && key === 'Enter') {
+      event.preventDefault();
+      if (formRef.current && isAuthenticated) {
+        formRef.current.requestSubmit();
+        setEditorHint('제출 실행');
+      } else {
+        setMessage('로그인이 필요합니다.');
+      }
+      return;
+    }
+
+    if (key === 'Tab') {
+      event.preventDefault();
+      if (event.shiftKey) {
+        const lineStart = currentCode.lastIndexOf('\n', start - 1) + 1;
+        const lineHeadEnd = (() => {
+          let idx = lineStart;
+          while (idx < currentCode.length && currentCode[idx] === ' ') {
+            idx += 1;
+          }
+          return idx;
+        })();
+        const removeCount = Math.min(IDE_TAB_SIZE, lineHeadEnd - lineStart);
+        if (removeCount <= 0) {
+          applyCode(currentCode.slice(0, start) + currentCode.slice(start), start);
+          return;
+        }
+        const nextCode = currentCode.slice(0, lineStart) + currentCode.slice(lineStart + removeCount);
+        const nextCursor = Math.max(lineStart, start - removeCount);
+        applyCode(nextCode, nextCursor);
+        setEditorHint('들여쓰기 제거');
+        return;
+      }
+
+      const nextCode = currentCode.slice(0, start) + '  ' + currentCode.slice(end);
+      const nextCursor = start + 2;
+      applyCode(nextCode, nextCursor);
+      setEditorHint('탭 2칸 삽입');
+      return;
+    }
+
+    if (Object.keys(IDE_OPEN_CLOSE).includes(key)) {
+      if (start !== end) {
+        event.preventDefault();
+        const selected = currentCode.slice(start, end);
+        const close = IDE_OPEN_CLOSE[key];
+        const nextCode = `${currentCode.slice(0, start)}${key}${selected}${close}${currentCode.slice(end)}`;
+        const nextCursor = start + 1 + selected.length;
+        applyCode(nextCode, nextCursor);
+        setEditorHint('자동 괄호 닫기');
+        return;
+      }
+      event.preventDefault();
+      const close = IDE_OPEN_CLOSE[key];
+      const nextCode = `${currentCode.slice(0, start)}${key}${close}${currentCode.slice(end)}`;
+      const nextCursor = start + 1;
+      applyCode(nextCode, nextCursor);
+      setEditorHint('자동 괄호 닫기');
+      return;
+    }
+
+    if (key === 'Enter') {
+      event.preventDefault();
+      const lineStart = currentCode.lastIndexOf('\n', start - 1) + 1;
+      const lineText = currentCode.slice(lineStart, start);
+      const leadingWhitespaceMatch = lineText.match(/^[ \t]*/);
+      const leadingWhitespace = leadingWhitespaceMatch ? leadingWhitespaceMatch[0] : '';
+      const needsIndent = lineText.trim().endsWith('{');
+      const insertedIndent = needsIndent ? `${leadingWhitespace}${' '.repeat(IDE_TAB_SIZE)}` : leadingWhitespace;
+      const nextCode = `${currentCode.slice(0, start)}\n${insertedIndent}${currentCode.slice(end)}`;
+      const nextCursor = start + 1 + insertedIndent.length;
+      applyCode(nextCode, nextCursor);
+      setEditorHint('자동 들여쓰기');
+    }
+  }
+
   function updateSubmissionForm(field, value) {
     setSubmissionForm((current) => ({ ...current, [field]: value }));
   }
 
-  function updateTestCaseForm(field, value) {
-    setTestCaseForm((current) => ({ ...current, [field]: value }));
+  async function refreshSubmission(submissionId) {
+    try {
+      const submission = await request(`/api/submissions/${submissionId}`);
+      const previousStatus = lastSubmissionStatus.current[submission.id];
+      lastSubmissionStatus.current[submission.id] = submission.status;
+
+      setSubmissions((current) => {
+        const index = current.findIndex((item) => item.id === submission.id);
+        if (index === -1) {
+          return [submission, ...current];
+        }
+        const next = [...current];
+        next[index] = submission;
+        return next;
+      });
+
+      if (previousStatus !== undefined && isFinishedStatus(previousStatus) && isFinishedStatus(submission.status)) {
+        return;
+      }
+
+      if (isFinishedStatus(submission.status)) {
+        setMessage(`채점 결과: 제출 #${submission.id} - ${submissionResultLabel(submission)}`);
+        setEditorHint(`${submission.id}번 채점 완료`);
+      }
+
+      if (!isPendingStatus(submission.status)) {
+        stopPolling(submissionId);
+      }
+    } catch (error) {
+      stopPolling(submissionId);
+      setMessage(`채점 상태 조회 실패 (${submissionId}): ${error.message}`);
+    }
+  }
+
+  function startPolling(submissionId) {
+    const key = String(submissionId);
+    if (pollingRef.current[key]) {
+      return;
+    }
+    refreshSubmission(submissionId);
+    pollingRef.current[key] = setInterval(() => {
+      refreshSubmission(submissionId);
+    }, 1400);
+  }
+
+  async function loadProblem() {
+    setBusy(true);
+    try {
+      const [problemData, submissionData] = await Promise.all([
+        request(`/api/problems/${problemId}`),
+        request(`/api/problems/${problemId}/submissions`),
+      ]);
+      const testCaseData = await request(`/api/problems/${problemId}/test-cases`);
+      const fetchedSubmissions = Array.isArray(submissionData) ? submissionData : [];
+
+      setProblem(problemData);
+      setTestCaseCount(Array.isArray(testCaseData) ? testCaseData.length : 0);
+      setSubmissions(fetchedSubmissions);
+      lastSubmissionStatus.current = fetchedSubmissions.reduce((acc, submission) => {
+        acc[submission.id] = submission.status;
+        return acc;
+      }, {});
+      setMessage(`문제 #${problemId} 상세를 조회했습니다.`);
+      cleanupPolling();
+      fetchedSubmissions
+        .filter((submission) => isPendingStatus(submission.status))
+        .forEach((submission) => startPolling(submission.id));
+    } catch (error) {
+      setProblem(null);
+      setSubmissions([]);
+      setTestCaseCount(0);
+      setMessage(error.message);
+      cleanupPolling();
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submitCode(event) {
+    event.preventDefault();
+    if (!isAuthenticated) {
+      setMessage('로그인 후 제출할 수 있습니다.');
+      return;
+    }
+
+    setSubmissionBusy(true);
+    try {
+      const created = await request(`/api/problems/${problemId}/submissions`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(submissionForm),
+      });
+      lastSubmissionStatus.current[created.id] = created.status;
+      setSubmissions((current) => [created, ...current]);
+      setMessage(`제출 #${created.id}이 접수되었습니다.`);
+      startPolling(created.id);
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setSubmissionBusy(false);
+    }
   }
 
   useEffect(() => {
     loadProblem();
+    const draftKey = `${problemKey}:${submissionForm.language}`;
+    const saved = localStorage.getItem(draftKey);
+    if (saved !== null) {
+      setSubmissionForm((current) => ({ ...current, sourceCode: saved }));
+    }
+    return cleanupPolling;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [problemId]);
+
+  useEffect(() => {
+    const draftKey = `${problemKey}:${submissionForm.language}`;
+    const saved = localStorage.getItem(draftKey);
+    if (saved !== null) {
+      setSubmissionForm((current) => ({ ...current, sourceCode: saved }));
+    }
+  }, [submissionForm.language, problemId, problemKey]);
+
+  useEffect(() => {
+    if (!problemId) {
+      return;
+    }
+    const draftKey = `${problemKey}:${submissionForm.language}`;
+    localStorage.setItem(draftKey, submissionForm.sourceCode);
+  }, [submissionForm.sourceCode, submissionForm.language, problemId, problemKey]);
 
   return (
     <section className="detail-page">
       <div className="page-actions">
-        <button className="ghost-button with-text" type="button" onClick={() => navigate('/problems')}>
+        <button className="ghost-button with-text" type="button" onClick={() => navigate('/')}>
           <ArrowLeft size={17} />
           목록
         </button>
@@ -776,74 +1694,24 @@ function ProblemDetailPage({ problemId, navigate, setMessage }) {
                 <dd>{problem.outputDescription}</dd>
                 <dt>제한</dt>
                 <dd>{problem.timeLimitMs}ms / {problem.memoryLimitMb}MB</dd>
+                <dt>카테고리</dt>
+                <dd>{getProblemCategory(problem)}</dd>
                 <dt>테스트케이스</dt>
-                <dd>{testCases.length}개</dd>
+                <dd>{testCaseCount}개</dd>
               </dl>
             </article>
           ) : (
             <p className="empty">문제를 불러오지 못했습니다.</p>
           )}
-
-          <div className="testcase-list">
-            <div className="panel-header compact-header">
-              <FileText size={17} />
-              <h2>테스트케이스</h2>
-            </div>
-
-            {testCases.length === 0 ? (
-              <p className="empty">등록된 테스트케이스가 없습니다.</p>
-            ) : (
-              testCases.map((testCase) => (
-                <div className="testcase-row" key={testCase.id}>
-                  <strong>#{testCase.sortOrder + 1}</strong>
-                  <label>
-                    입력
-                    <pre>{testCase.input}</pre>
-                  </label>
-                  <label>
-                    기대 출력
-                    <pre>{testCase.expectedOutput}</pre>
-                  </label>
-                </div>
-              ))
-            )}
-          </div>
-
-          <form className="testcase-add-form" onSubmit={addTestCase}>
-            <div className="panel-header compact-header">
-              <Plus size={17} />
-              <h2>테스트케이스 추가</h2>
-            </div>
-            <label>
-              입력
-              <textarea
-                className="case-textarea"
-                value={testCaseForm.input}
-                onChange={(event) => updateTestCaseForm('input', event.target.value)}
-              />
-            </label>
-            <label>
-              기대 출력
-              <textarea
-                className="case-textarea"
-                value={testCaseForm.expectedOutput}
-                onChange={(event) => updateTestCaseForm('expectedOutput', event.target.value)}
-              />
-            </label>
-            <button className="primary-button" type="submit" disabled={testCaseBusy || !problem}>
-              <Plus size={17} />
-              추가
-            </button>
-          </form>
         </section>
 
         <section className="panel solve-panel">
           <div className="panel-header">
             <Code2 size={18} />
-            <h2>코드 제출</h2>
+            <h2>온라인 IDE</h2>
           </div>
-
-          <form className="submission-form" onSubmit={submitCode}>
+          <p className="helper-text">{editorHint}</p>
+          <form className="submission-form" onSubmit={submitCode} ref={formRef}>
             <label>
               언어
               <select
@@ -860,13 +1728,15 @@ function ProblemDetailPage({ problemId, navigate, setMessage }) {
               소스 코드
               <textarea
                 className="code-editor"
+                ref={editorRef}
                 value={submissionForm.sourceCode}
                 onChange={(event) => updateSubmissionForm('sourceCode', event.target.value)}
+                onKeyDown={handleEditorKeyDown}
                 spellCheck="false"
               />
             </label>
 
-            <button className="primary-button" type="submit" disabled={submitBusy || !problem}>
+            <button className="primary-button" type="submit" disabled={submissionBusy || !problem}>
               <Send size={17} />
               제출
             </button>
@@ -875,17 +1745,19 @@ function ProblemDetailPage({ problemId, navigate, setMessage }) {
           <div className="submission-list">
             <div className="panel-header compact-header">
               <FileText size={17} />
-              <h2>제출 기록</h2>
+              <h2>채점 상태</h2>
             </div>
-          {submissions.length === 0 ? (
+            {submissions.length === 0 ? (
               <p className="empty">아직 제출이 없습니다.</p>
             ) : (
               submissions.map((submission) => (
                 <div className="submission-row" key={submission.id}>
                   <span>#{submission.id}</span>
-                  <strong>{submission.status}</strong>
+                  <strong className={`submission-badge ${submissionBadgeClass(submission.status)}`}>
+                    {statusToLabel(submission.status, submission.verdict)}
+                  </strong>
                   <small>{submission.language}</small>
-                  <small>{submission.verdict ?? '채점 대기'}</small>
+                  <small>{submission.verdict ? `${submission.verdict}` : '채점 중'}</small>
                   {submission.judgeMessage ? (
                     <pre className="submission-message">{submission.judgeMessage}</pre>
                   ) : null}
