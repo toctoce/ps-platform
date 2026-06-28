@@ -154,6 +154,41 @@ func TestCompleteJobReturnsErrorOnHTTPError(t *testing.T) {
 	}
 }
 
+func TestRequeueStalePostsRequestBodyAndEndpoint(t *testing.T) {
+	received := struct {
+		staleAfterSeconds int64
+	}{}
+
+	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Fatalf("method = %s, want POST", r.Method)
+		}
+		if r.URL.Path != "/api/judge-jobs/requeue-stale" {
+			t.Fatalf("path = %s, want /api/judge-jobs/requeue-stale", r.URL.Path)
+		}
+		if got := r.Header.Get("Content-Type"); got != "application/json" {
+			t.Fatalf("content-type = %s, want application/json", got)
+		}
+
+		var req requeueStaleRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatalf("decode request: %v", err)
+		}
+		received.staleAfterSeconds = req.StaleAfterSeconds
+		w.Header().Set("Content-Type", "application/json")
+		if _, err := w.Write([]byte(`{"requeuedCount": 2}`)); err != nil {
+			t.Fatalf("write response: %v", err)
+		}
+	})
+
+	if err := client.RequeueStaleJobs(context.Background(), 120); err != nil {
+		t.Fatalf("RequeueStaleJobs error: %v", err)
+	}
+	if received.staleAfterSeconds != 120 {
+		t.Fatalf("staleAfterSeconds = %d, want %d", received.staleAfterSeconds, 120)
+	}
+}
+
 func TestClientRespectsContextCancellation(t *testing.T) {
 	client := &Client{
 		baseURL: "http://127.0.0.1:1",

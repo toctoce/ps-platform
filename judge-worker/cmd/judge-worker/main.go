@@ -27,7 +27,12 @@ func main() {
 	// backend client, sandbox executor, worker loop를 조립합니다.
 	client := backend.NewClient(cfg.BackendBaseURL)
 	executor := sandbox.NewJavaExecutor(cfg.JavaDockerImage)
-	judgeWorker := worker.NewWorker(client, executor, cfg.PollInterval)
+	judgeWorker := worker.NewWorker(
+		client,
+		executor,
+		cfg.PollInterval,
+		cfg.StaleAfterSeconds,
+	)
 
 	slog.Info(
 		"judge worker started",

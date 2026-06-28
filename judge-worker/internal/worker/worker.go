@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -15,19 +16,22 @@ type Worker struct {
 	client       backendClient
 	executor     sandbox.Executor
 	pollInterval time.Duration
+	staleAfter   int64
 }
 
 type backendClient interface {
 	NextJob(ctx context.Context) (*backend.JudgeJobAssignment, error)
 	CompleteJob(ctx context.Context, jobID int64, verdict string, judgeMessage string) error
+	RequeueStaleJobs(ctx context.Context, staleAfterSeconds int64) error
 }
 
 // NewWorker는 backend client, sandbox executor, polling 간격을 조합해 Worker를 생성합니다.
-func NewWorker(client *backend.Client, executor sandbox.Executor, pollInterval time.Duration) *Worker {
+func NewWorker(client *backend.Client, executor sandbox.Executor, pollInterval time.Duration, staleAfterSeconds int64) *Worker {
 	return &Worker{
 		client:       client,
 		executor:     executor,
 		pollInterval: pollInterval,
+		staleAfter:   staleAfterSeconds,
 	}
 }
 
@@ -37,6 +41,15 @@ func (w *Worker) Run(ctx context.Context) error {
 	defer ticker.Stop()
 
 	for {
+		if w.staleAfter > 0 {
+			if err := w.client.RequeueStaleJobs(ctx, w.staleAfter); err != nil {
+				if errors.Is(err, context.Canceled) {
+					return err
+				}
+				slog.Error("failed to requeue stale judge jobs", "error", err)
+			}
+		}
+
 		processedAny := false
 
 		for {

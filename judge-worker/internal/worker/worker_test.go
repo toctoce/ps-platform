@@ -109,8 +109,8 @@ func TestProcessOnceReturnsFalseWhenNextJobErrors(t *testing.T) {
 
 func TestProcessOnceForwardsAllExecutorVerdicts(t *testing.T) {
 	testCases := []struct {
-		name       string
-		execution  sandbox.ExecutionResult
+		name      string
+		execution sandbox.ExecutionResult
 	}{
 		{
 			name:      "accepted",
@@ -246,6 +246,42 @@ func TestRunExitsAfterContextCancelWhenNoJobs(t *testing.T) {
 	}
 }
 
+func TestRunRequeuesStaleJobsBeforePolling(t *testing.T) {
+	client := &fakeBackendClient{
+		jobs:         []backend.JudgeJobAssignment{},
+		nextJobCalls: make(chan time.Time, 1),
+		requeueCalls: make(chan time.Time, 1),
+	}
+	w := &Worker{
+		client:       client,
+		executor:     &fakeExecutor{execution: sandbox.ExecutionResult{Verdict: sandbox.VerdictAccepted}},
+		pollInterval: 50 * time.Millisecond,
+		staleAfter:   17,
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan struct{})
+	go func() {
+		_ = w.Run(ctx)
+		close(done)
+	}()
+
+	_, err := waitNextCall(client.requeueCalls, 1*time.Second)
+	if err != nil {
+		cancel()
+		<-done
+		t.Fatalf("first requeue call: %v", err)
+	}
+	cancel()
+	<-done
+
+	client.mu.Lock()
+	defer client.mu.Unlock()
+	if client.lastRequeueAfter != 17 {
+		t.Fatalf("requeue staleAfterSeconds = %d, want %d", client.lastRequeueAfter, 17)
+	}
+}
+
 func TestProcessOnceReturnsErrorWhenCompleteJobFails(t *testing.T) {
 	client := &fakeBackendClient{
 		jobs: []backend.JudgeJobAssignment{
@@ -276,10 +312,13 @@ type fakeBackendClient struct {
 	jobs             []backend.JudgeJobAssignment
 	nextErr          error
 	completeErr      error
+	requeueErr       error
+	lastRequeueAfter int64
 	lastJobID        int64
 	lastVerdict      string
 	lastJudgeMessage string
 	nextJobCalls     chan time.Time
+	requeueCalls     chan time.Time
 	calledNext       int
 	completeCalls    int
 }
@@ -315,6 +354,19 @@ func (c *fakeBackendClient) CompleteJob(_ context.Context, jobID int64, verdict 
 	c.lastJudgeMessage = judgeMessage
 	if c.completeErr != nil {
 		return c.completeErr
+	}
+	return nil
+}
+
+func (c *fakeBackendClient) RequeueStaleJobs(_ context.Context, staleAfterSeconds int64) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.lastRequeueAfter = staleAfterSeconds
+	if c.requeueCalls != nil {
+		c.requeueCalls <- time.Now()
+	}
+	if c.requeueErr != nil {
+		return c.requeueErr
 	}
 	return nil
 }

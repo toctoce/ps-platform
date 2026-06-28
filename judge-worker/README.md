@@ -8,6 +8,9 @@
   - 백엔드 API 주소 (예: `http://localhost:8080`)
 - `JUDGE_WORKER_POLL_INTERVAL_MS`  
   - judge-job 폴링 간격(밀리초)
+- `JUDGE_WORKER_STALE_AFTER_SECONDS`  
+  - 실행 중인 채점 작업이 해당 시간(초) 이상 멈춰 있으면 QUEUED로 재큐합니다.  
+  - 값 미설정 시 기본값은 `60`입니다.
 - `JAVA_DOCKER_IMAGE`  
   - Java 채점용 Docker 이미지 (예: `eclipse-temurin:17-jdk`)
 

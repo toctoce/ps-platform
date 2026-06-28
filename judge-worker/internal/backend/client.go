@@ -10,6 +10,10 @@ import (
 	"time"
 )
 
+type requeueStaleRequest struct {
+	StaleAfterSeconds int64 `json:"staleAfterSeconds"`
+}
+
 // Client는 worker가 사용하는 backend judge job API 호출을 담당합니다.
 type Client struct {
 	baseURL    string
@@ -90,6 +94,39 @@ func (c *Client) CompleteJob(ctx context.Context, jobID int64, verdict string, j
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return fmt.Errorf("complete judge job failed: status=%d", resp.StatusCode)
+	}
+
+	return nil
+}
+
+// RequeueStaleJobs는 오랫동안 실행 중으로 남아 있는 채점 작업을 큐로 되돌립니다.
+func (c *Client) RequeueStaleJobs(ctx context.Context, staleAfterSeconds int64) error {
+	body, err := json.Marshal(requeueStaleRequest{
+		StaleAfterSeconds: staleAfterSeconds,
+	})
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		http.MethodPost,
+		fmt.Sprintf("%s/api/judge-jobs/requeue-stale", c.baseURL),
+		bytes.NewReader(body),
+	)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("requeue stale judge jobs failed: status=%d", resp.StatusCode)
 	}
 
 	return nil

@@ -8,6 +8,7 @@ func TestLoadSuccess(t *testing.T) {
 	t.Setenv("BACKEND_BASE_URL", "http://localhost:8080")
 	t.Setenv("JUDGE_WORKER_POLL_INTERVAL_MS", "1200")
 	t.Setenv("JAVA_DOCKER_IMAGE", "eclipse-temurin:17-jdk")
+	t.Setenv("JUDGE_WORKER_STALE_AFTER_SECONDS", "45")
 
 	cfg, err := Load()
 	if err != nil {
@@ -21,6 +22,9 @@ func TestLoadSuccess(t *testing.T) {
 	}
 	if cfg.JavaDockerImage != "eclipse-temurin:17-jdk" {
 		t.Fatalf("javaDockerImage = %q, want %q", cfg.JavaDockerImage, "eclipse-temurin:17-jdk")
+	}
+	if cfg.StaleAfterSeconds != 45 {
+		t.Fatalf("staleAfterSeconds = %d, want %d", cfg.StaleAfterSeconds, 45)
 	}
 }
 
@@ -46,5 +50,30 @@ func TestLoadInvalidPollInterval(t *testing.T) {
 
 	if _, err := Load(); err == nil {
 		t.Fatal("expected error for invalid JUDGE_WORKER_POLL_INTERVAL_MS, got nil")
+	}
+}
+
+func TestLoadDefaultStaleAfterSecondsWhenMissing(t *testing.T) {
+	t.Setenv("BACKEND_BASE_URL", "http://localhost:8080")
+	t.Setenv("JUDGE_WORKER_POLL_INTERVAL_MS", "1200")
+	t.Setenv("JAVA_DOCKER_IMAGE", "eclipse-temurin:17-jdk")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() error = %v", err)
+	}
+	if cfg.StaleAfterSeconds != defaultStaleAfterSecs {
+		t.Fatalf("staleAfterSeconds = %d, want %d", cfg.StaleAfterSeconds, defaultStaleAfterSecs)
+	}
+}
+
+func TestLoadInvalidStaleAfterSeconds(t *testing.T) {
+	t.Setenv("BACKEND_BASE_URL", "http://localhost:8080")
+	t.Setenv("JUDGE_WORKER_POLL_INTERVAL_MS", "1200")
+	t.Setenv("JAVA_DOCKER_IMAGE", "eclipse-temurin:17-jdk")
+	t.Setenv("JUDGE_WORKER_STALE_AFTER_SECONDS", "0")
+
+	if _, err := Load(); err == nil {
+		t.Fatal("expected error for invalid JUDGE_WORKER_STALE_AFTER_SECONDS, got nil")
 	}
 }
