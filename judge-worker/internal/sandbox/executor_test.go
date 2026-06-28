@@ -50,6 +50,14 @@ func TestJavaExecutorAcceptsWhenAllTestCasesPass(t *testing.T) {
 	if len(executor.runner.(*fakeCommandRunner).calls) != 3 {
 		t.Fatalf("expected 3 command invocations, got %d", len(executor.runner.(*fakeCommandRunner).calls))
 	}
+
+	calls := executor.runner.(*fakeCommandRunner).calls
+	if !containsArg(calls[0].args, "--memory", "128m") {
+		t.Fatalf("compile command should apply default memory limit, got args: %v", calls[0].args)
+	}
+	if !containsArg(calls[1].args, "--memory", "128m") {
+		t.Fatalf("run command should apply default memory limit, got args: %v", calls[1].args)
+	}
 }
 
 func TestJavaExecutorReturnsCompileErrorOnCompileFailure(t *testing.T) {
@@ -77,6 +85,37 @@ func TestJavaExecutorReturnsCompileErrorOnCompileFailure(t *testing.T) {
 	}
 }
 
+func TestJavaExecutorReturnsMemoryLimitExceededWhenCompileKilledByMemoryCap(t *testing.T) {
+	executor := NewJavaExecutorWithRunner(&fakeCommandRunner{
+		responses: []commandResponse{
+			{result: commandResult{exitCode: 137, stderr: "Killed"}},
+		},
+	}, testJavaDockerImage)
+
+	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
+		Language:      "java",
+		SourceCode:    "public class Main {}",
+		MemoryLimitMb: 32,
+		TimeLimitMs:   1000,
+		TestCases:     []backend.JudgeTestCase{},
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Verdict != VerdictMemoryLimitExceeded {
+		t.Fatalf("verdict = %s, want %s", result.Verdict, VerdictMemoryLimitExceeded)
+	}
+	if result.Message != "memory limit exceeded on compile" {
+		t.Fatalf("judge message = %q, want %q", result.Message, "memory limit exceeded on compile")
+	}
+
+	calls := executor.runner.(*fakeCommandRunner).calls
+	if !containsArg(calls[0].args, "--memory", "32m") {
+		t.Fatalf("compile command should use configured memory limit, got args: %v", calls[0].args)
+	}
+}
+
 func TestJavaExecutorReturnsWrongAnswerWhenOutputDiffers(t *testing.T) {
 	executor := NewJavaExecutorWithRunner(&fakeCommandRunner{
 		responses: []commandResponse{
@@ -101,6 +140,35 @@ func TestJavaExecutorReturnsWrongAnswerWhenOutputDiffers(t *testing.T) {
 	}
 	if result.Message == "" {
 		t.Fatalf("judge message should be set for wrong answers")
+	}
+}
+
+func TestJavaExecutorReturnsMemoryLimitExceededWhenExecutionKilledByMemoryCap(t *testing.T) {
+	executor := NewJavaExecutorWithRunner(&fakeCommandRunner{
+		responses: []commandResponse{
+			{result: commandResult{exitCode: 0}},
+			{result: commandResult{exitCode: 137, stderr: "Killed"}},
+		},
+	}, testJavaDockerImage)
+
+	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
+		Language:      "java",
+		SourceCode:    "public class Main {}",
+		MemoryLimitMb: 64,
+		TimeLimitMs:   1000,
+		TestCases: []backend.JudgeTestCase{
+			{Input: "1 2\n", ExpectedOutput: "3\n"},
+		},
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Verdict != VerdictMemoryLimitExceeded {
+		t.Fatalf("verdict = %s, want %s", result.Verdict, VerdictMemoryLimitExceeded)
+	}
+	if result.Message != "memory limit exceeded on test case 1" {
+		t.Fatalf("judge message = %q, want %q", result.Message, "memory limit exceeded on test case 1")
 	}
 }
 
@@ -191,6 +259,19 @@ type fakeCommandCall struct {
 	command string
 	args    []string
 	input   string
+}
+
+func containsArg(args []string, key string, expected string) bool {
+	for i := 0; i < len(args); i++ {
+		if args[i] != key {
+			continue
+		}
+		if i+1 >= len(args) {
+			return false
+		}
+		return args[i+1] == expected
+	}
+	return false
 }
 
 func (r *fakeCommandRunner) Run(_ context.Context, command string, args []string, _ string, stdin io.Reader) (commandResult, error) {

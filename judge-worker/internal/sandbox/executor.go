@@ -28,6 +28,7 @@ const (
 
 const (
 	defaultTimeLimitMs    = 1000
+	defaultMemoryLimitMb  = 128
 	javaCompileTimeout    = 10 * time.Second
 	javaSourceFile        = "Main.java"
 	containerWorkspaceDir = "/workspace"
@@ -103,7 +104,9 @@ func (e *JavaExecutor) Execute(ctx context.Context, job backend.JudgeJobAssignme
 		return ExecutionResult{}, err
 	}
 
-	if result, err := e.compile(ctx, tempDir); err != nil {
+	memoryLimitMb := determineMemoryLimitMb(job.MemoryLimitMb)
+
+	if result, err := e.compile(ctx, tempDir, memoryLimitMb); err != nil {
 		return ExecutionResult{}, err
 	} else if result.Verdict != "" {
 		return result, nil
@@ -111,7 +114,7 @@ func (e *JavaExecutor) Execute(ctx context.Context, job backend.JudgeJobAssignme
 
 	timeLimit := determineTimeLimit(job.TimeLimitMs)
 	for index, tc := range job.TestCases {
-		result, err := e.runTestCase(ctx, tempDir, tc, index+1, timeLimit)
+		result, err := e.runTestCase(ctx, tempDir, tc, index+1, timeLimit, memoryLimitMb)
 		if err != nil {
 			return ExecutionResult{}, err
 		}
@@ -130,13 +133,24 @@ func determineTimeLimit(timeLimitMs int) time.Duration {
 	return time.Duration(timeLimitMs) * time.Millisecond
 }
 
-func (e *JavaExecutor) compile(ctx context.Context, tempDir string) (ExecutionResult, error) {
+func determineMemoryLimitMb(memoryLimitMb int) int {
+	if memoryLimitMb <= 0 {
+		return defaultMemoryLimitMb
+	}
+
+	return memoryLimitMb
+}
+
+func (e *JavaExecutor) compile(ctx context.Context, tempDir string, memoryLimitMb int) (ExecutionResult, error) {
 	compileCtx, cancel := context.WithTimeout(ctx, javaCompileTimeout)
 	defer cancel()
 
+	memoryLimit := memoryLimitArgument(memoryLimitMb)
 	args := []string{
 		"run", "--rm", "-i",
 		"--network=none",
+		"--memory", memoryLimit,
+		"--memory-swap", memoryLimit,
 		"-v", tempDir + ":" + containerWorkspaceDir,
 		"-w", containerWorkspaceDir,
 		e.image,
@@ -155,6 +169,13 @@ func (e *JavaExecutor) compile(ctx context.Context, tempDir string) (ExecutionRe
 	}
 
 	if result.exitCode != 0 {
+		if isMemoryLimitExceeded(result.exitCode, result.stderr, result.stdout) {
+			return ExecutionResult{
+				Verdict: VerdictMemoryLimitExceeded,
+				Message: "memory limit exceeded on compile",
+			}, nil
+		}
+
 		return ExecutionResult{
 			Verdict: VerdictCompileError,
 			Message: firstNonEmpty("compile error", result.stderr, result.stdout),
@@ -170,13 +191,17 @@ func (e *JavaExecutor) runTestCase(
 	testCase backend.JudgeTestCase,
 	testCaseIndex int,
 	timeLimit time.Duration,
+	memoryLimitMb int,
 ) (ExecutionResult, error) {
 	runCtx, cancel := context.WithTimeout(ctx, timeLimit)
 	defer cancel()
 
+	memoryLimit := memoryLimitArgument(memoryLimitMb)
 	args := []string{
 		"run", "--rm", "-i",
 		"--network=none",
+		"--memory", memoryLimit,
+		"--memory-swap", memoryLimit,
 		"-v", tempDir + ":" + containerWorkspaceDir,
 		"-w", containerWorkspaceDir,
 		e.image,
@@ -195,6 +220,13 @@ func (e *JavaExecutor) runTestCase(
 	}
 
 	if result.exitCode != 0 {
+		if isMemoryLimitExceeded(result.exitCode, result.stderr, result.stdout) {
+			return ExecutionResult{
+				Verdict: VerdictMemoryLimitExceeded,
+				Message: fmt.Sprintf("memory limit exceeded on test case %d", testCaseIndex),
+			}, nil
+		}
+
 		return ExecutionResult{
 			Verdict: VerdictRuntimeError,
 			Message: fmt.Sprintf("runtime error on test case %d: %s", testCaseIndex, firstNonEmpty("", result.stderr, result.stdout)),
@@ -210,6 +242,10 @@ func (e *JavaExecutor) runTestCase(
 	}
 
 	return ExecutionResult{}, nil
+}
+
+func memoryLimitArgument(memoryLimitMb int) string {
+	return fmt.Sprintf("%dm", memoryLimitMb)
 }
 
 func firstNonEmpty(fallback string, values ...string) string {
@@ -253,6 +289,19 @@ func isTimeout(parentCtx context.Context, commandCtx context.Context, err error)
 		return true
 	}
 	return false
+}
+
+func isMemoryLimitExceeded(exitCode int, stdout string, stderr string) bool {
+	if exitCode == 137 {
+		return true
+	}
+
+	standardOut := strings.ToLower(stdout)
+	standardErr := strings.ToLower(stderr)
+	return strings.Contains(standardOut, "out of memory") ||
+		strings.Contains(standardErr, "out of memory") ||
+		(strings.Contains(standardErr, "exceeded") &&
+			strings.Contains(standardErr, "memory"))
 }
 
 // dockerCommandRunner는 docker CLI를 호출해 격리된 컨테이너에서 명령을 실행합니다.
