@@ -27,6 +27,7 @@ CREATE TABLE IF NOT EXISTS submissions (
     source_code CLOB NOT NULL,
     status VARCHAR(30) NOT NULL,
     verdict VARCHAR(30),
+    judge_message CLOB,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     judged_at TIMESTAMP,
     CONSTRAINT fk_submissions_problem

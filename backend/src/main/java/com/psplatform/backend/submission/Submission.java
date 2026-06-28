@@ -10,6 +10,7 @@ public class Submission {
 	private final String sourceCode;
 	private final SubmissionStatus status;
 	private final SubmissionVerdict verdict;
+	private final String judgeMessage;
 	private final LocalDateTime createdAt;
 	private final LocalDateTime judgedAt;
 
@@ -20,6 +21,7 @@ public class Submission {
 		String sourceCode,
 		SubmissionStatus status,
 		SubmissionVerdict verdict,
+		String judgeMessage,
 		LocalDateTime createdAt,
 		LocalDateTime judgedAt
 	) {
@@ -29,6 +31,7 @@ public class Submission {
 		this.sourceCode = sourceCode;
 		this.status = status;
 		this.verdict = verdict;
+		this.judgeMessage = judgeMessage;
 		this.createdAt = createdAt;
 		this.judgedAt = judgedAt;
 	}
@@ -55,6 +58,10 @@ public class Submission {
 
 	public SubmissionVerdict getVerdict() {
 		return verdict;
+	}
+
+	public String getJudgeMessage() {
+		return judgeMessage;
 	}
 
 	public LocalDateTime getCreatedAt() {

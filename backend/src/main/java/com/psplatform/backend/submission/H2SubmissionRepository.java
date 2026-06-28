@@ -26,6 +26,7 @@ public class H2SubmissionRepository implements SubmissionRepository {
 			rs.getString("source_code"),
 			SubmissionStatus.valueOf(rs.getString("status")),
 			verdict == null ? null : SubmissionVerdict.valueOf(verdict),
+			rs.getString("judge_message"),
 			rs.getTimestamp("created_at").toLocalDateTime(),
 			judgedAt == null ? null : judgedAt.toLocalDateTime()
 		);
@@ -70,7 +71,7 @@ public class H2SubmissionRepository implements SubmissionRepository {
 	public Optional<Submission> findById(long id) {
 		List<Submission> submissions = jdbcTemplate.query(
 			"""
-			SELECT id, problem_id, language, source_code, status, verdict, created_at, judged_at
+			SELECT id, problem_id, language, source_code, status, verdict, judge_message, created_at, judged_at
 			FROM submissions
 			WHERE id = ?
 			""",
@@ -84,7 +85,7 @@ public class H2SubmissionRepository implements SubmissionRepository {
 	public List<Submission> findByProblemId(long problemId) {
 		return jdbcTemplate.query(
 			"""
-			SELECT id, problem_id, language, source_code, status, verdict, created_at, judged_at
+			SELECT id, problem_id, language, source_code, status, verdict, judge_message, created_at, judged_at
 			FROM submissions
 			WHERE problem_id = ?
 			ORDER BY id DESC

@@ -536,7 +536,7 @@ function ProblemDetailPage({ problemId, navigate, setMessage }) {
               <FileText size={17} />
               <h2>제출 기록</h2>
             </div>
-            {submissions.length === 0 ? (
+          {submissions.length === 0 ? (
               <p className="empty">아직 제출이 없습니다.</p>
             ) : (
               submissions.map((submission) => (
@@ -545,6 +545,9 @@ function ProblemDetailPage({ problemId, navigate, setMessage }) {
                   <strong>{submission.status}</strong>
                   <small>{submission.language}</small>
                   <small>{submission.verdict ?? '채점 대기'}</small>
+                  {submission.judgeMessage ? (
+                    <pre className="submission-message">{submission.judgeMessage}</pre>
+                  ) : null}
                 </div>
               ))
             )}

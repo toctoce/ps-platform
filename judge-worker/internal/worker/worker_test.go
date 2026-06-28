@@ -19,7 +19,11 @@ func TestRunProcessesAvailableJobsBackToBack(t *testing.T) {
 		},
 		nextJobCalls: make(chan time.Time, 4),
 	}
-	executor := &fakeExecutor{verdict: sandbox.VerdictAccepted}
+	executor := &fakeExecutor{
+		execution: sandbox.ExecutionResult{
+			Verdict: sandbox.VerdictAccepted,
+		},
+	}
 	w := &Worker{
 		client:       client,
 		executor:     executor,
@@ -72,7 +76,7 @@ func TestProcessOnceReturnsFalseWhenNoJob(t *testing.T) {
 	}
 	w := &Worker{
 		client:       client,
-		executor:     &fakeExecutor{verdict: sandbox.VerdictAccepted},
+		executor:     &fakeExecutor{execution: sandbox.ExecutionResult{Verdict: sandbox.VerdictAccepted}},
 		pollInterval: time.Second,
 	}
 
@@ -91,7 +95,7 @@ func TestProcessOnceReturnsFalseWhenNextJobErrors(t *testing.T) {
 	}
 	w := &Worker{
 		client:   client,
-		executor: &fakeExecutor{verdict: sandbox.VerdictAccepted},
+		executor: &fakeExecutor{execution: sandbox.ExecutionResult{Verdict: sandbox.VerdictAccepted}},
 	}
 
 	processed, err := w.processOnce(context.Background())
@@ -111,8 +115,10 @@ func TestProcessOnceCompletesRuntimeErrorOnExecutorError(t *testing.T) {
 	}
 	execErr := errors.New("executor panic")
 	executor := &fakeExecutor{
-		err:     execErr,
-		verdict: sandbox.VerdictAccepted,
+		err: execErr,
+		execution: sandbox.ExecutionResult{
+			Verdict: sandbox.VerdictAccepted,
+		},
 	}
 	w := &Worker{
 		client:       client,
@@ -130,6 +136,9 @@ func TestProcessOnceCompletesRuntimeErrorOnExecutorError(t *testing.T) {
 	if got := client.lastVerdict; got != sandbox.VerdictRuntimeError {
 		t.Fatalf("verdict = %s, want %s", got, sandbox.VerdictRuntimeError)
 	}
+	if client.lastJudgeMessage == "" {
+		t.Fatalf("expected judge message on executor error")
+	}
 	if client.lastJobID != 201 {
 		t.Fatalf("job id = %d, want %d", client.lastJobID, 201)
 	}
@@ -141,8 +150,12 @@ func TestRunExitsAfterContextCancelWhenNoJobs(t *testing.T) {
 		nextJobCalls: make(chan time.Time, 1),
 	}
 	w := &Worker{
-		client:       client,
-		executor:     &fakeExecutor{verdict: sandbox.VerdictAccepted},
+		client: client,
+		executor: &fakeExecutor{
+			execution: sandbox.ExecutionResult{
+				Verdict: sandbox.VerdictAccepted,
+			},
+		},
 		pollInterval: 10 * time.Minute,
 	}
 
@@ -177,7 +190,7 @@ func TestProcessOnceReturnsErrorWhenCompleteJobFails(t *testing.T) {
 		completeErr: errors.New("complete failed"),
 	}
 	executor := &fakeExecutor{
-		verdict: sandbox.VerdictAccepted,
+		execution: sandbox.ExecutionResult{Verdict: sandbox.VerdictAccepted},
 	}
 	w := &Worker{
 		client:       client,
@@ -195,15 +208,16 @@ func TestProcessOnceReturnsErrorWhenCompleteJobFails(t *testing.T) {
 }
 
 type fakeBackendClient struct {
-	mu            sync.Mutex
-	jobs          []backend.JudgeJobAssignment
-	nextErr       error
-	completeErr   error
-	lastJobID     int64
-	lastVerdict   string
-	nextJobCalls  chan time.Time
-	calledNext    int
-	completeCalls int
+	mu               sync.Mutex
+	jobs             []backend.JudgeJobAssignment
+	nextErr          error
+	completeErr      error
+	lastJobID        int64
+	lastVerdict      string
+	lastJudgeMessage string
+	nextJobCalls     chan time.Time
+	calledNext       int
+	completeCalls    int
 }
 
 func (c *fakeBackendClient) NextJob(context.Context) (*backend.JudgeJobAssignment, error) {
@@ -228,12 +242,13 @@ func (c *fakeBackendClient) NextJob(context.Context) (*backend.JudgeJobAssignmen
 	return &job, nil
 }
 
-func (c *fakeBackendClient) CompleteJob(_ context.Context, jobID int64, verdict string) error {
+func (c *fakeBackendClient) CompleteJob(_ context.Context, jobID int64, verdict string, judgeMessage string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.completeCalls++
 	c.lastJobID = jobID
 	c.lastVerdict = verdict
+	c.lastJudgeMessage = judgeMessage
 	if c.completeErr != nil {
 		return c.completeErr
 	}
@@ -248,17 +263,17 @@ func (c *fakeBackendClient) recordCall(t time.Time) {
 
 type fakeExecutor struct {
 	mu          sync.Mutex
-	verdict     string
+	execution   sandbox.ExecutionResult
 	invocations int
 	err         error
 }
 
-func (e *fakeExecutor) Execute(_ context.Context, job backend.JudgeJobAssignment) (string, error) {
+func (e *fakeExecutor) Execute(_ context.Context, job backend.JudgeJobAssignment) (sandbox.ExecutionResult, error) {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.invocations++
 
-	return e.verdict, e.err
+	return e.execution, e.err
 }
 
 func waitNextCall(c chan time.Time, timeout time.Duration) (time.Time, error) {

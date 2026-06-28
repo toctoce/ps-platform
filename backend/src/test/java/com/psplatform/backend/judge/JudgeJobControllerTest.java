@@ -83,12 +83,13 @@ class JudgeJobControllerTest {
 		JudgeJobAssignment assignment = judgeJobRepository.findNextAndMarkRunning().orElseThrow();
 
 		mockMvc.perform(post("/api/judge-jobs/{jobId}/complete", assignment.jobId())
-				.contentType(MediaType.APPLICATION_JSON)
-				.content("""
-					{
-					  "verdict": "WRONG_ANSWER"
-					}
-					"""))
+			.contentType(MediaType.APPLICATION_JSON)
+			.content("""
+				{
+				  "verdict": "WRONG_ANSWER",
+				  "judgeMessage": "wrong answer on test case 1: expected=3, actual=4"
+				}
+				"""))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.id").value(submission.getId()))
 			.andExpect(jsonPath("$.status").value("JUDGED"))
@@ -97,6 +98,7 @@ class JudgeJobControllerTest {
 		Submission judgedSubmission = submissionRepository.findById(submission.getId()).orElseThrow();
 		assertThat(judgedSubmission.getStatus()).isEqualTo(SubmissionStatus.JUDGED);
 		assertThat(judgedSubmission.getVerdict()).isEqualTo(SubmissionVerdict.WRONG_ANSWER);
+		assertThat(judgedSubmission.getJudgeMessage()).contains("wrong answer on test case 1");
 		assertThat(judgedSubmission.getJudgedAt()).isNotNull();
 	}
 

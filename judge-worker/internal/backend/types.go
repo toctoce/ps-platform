@@ -20,5 +20,6 @@ type JudgeTestCase struct {
 
 // CompleteRequest는 worker가 채점 완료 후 backend에 보내는 요청 본문입니다.
 type CompleteRequest struct {
-	Verdict string `json:"verdict"`
+	Verdict      string `json:"verdict"`
+	JudgeMessage string `json:"judgeMessage"`
 }

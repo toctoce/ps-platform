@@ -62,9 +62,10 @@ func (c *Client) NextJob(ctx context.Context) (*JudgeJobAssignment, error) {
 }
 
 // CompleteJob은 실행 중인 채점 작업의 최종 verdict를 backend에 보고합니다.
-func (c *Client) CompleteJob(ctx context.Context, jobID int64, verdict string) error {
+func (c *Client) CompleteJob(ctx context.Context, jobID int64, verdict string, judgeMessage string) error {
 	body, err := json.Marshal(CompleteRequest{
-		Verdict: verdict,
+		Verdict:      verdict,
+		JudgeMessage: judgeMessage,
 	})
 	if err != nil {
 		return err

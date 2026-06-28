@@ -9,6 +9,7 @@ public record SubmissionResponse(
 	String sourceCode,
 	SubmissionStatus status,
 	SubmissionVerdict verdict,
+	String judgeMessage,
 	LocalDateTime createdAt,
 	LocalDateTime judgedAt
 ) {
@@ -21,6 +22,7 @@ public record SubmissionResponse(
 			submission.getSourceCode(),
 			submission.getStatus(),
 			submission.getVerdict(),
+			submission.getJudgeMessage(),
 			submission.getCreatedAt(),
 			submission.getJudgedAt()
 		);

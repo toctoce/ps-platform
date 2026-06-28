@@ -18,7 +18,7 @@ func TestJavaExecutorAcceptsWhenAllTestCasesPass(t *testing.T) {
 		},
 	})
 
-	verdict, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
+	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
 		Language: "java",
 		SourceCode: "public class Main {\n" +
 			"    public static void main(String[] args) {\n" +
@@ -38,8 +38,11 @@ func TestJavaExecutorAcceptsWhenAllTestCasesPass(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if verdict != VerdictAccepted {
-		t.Fatalf("verdict = %s, want %s", verdict, VerdictAccepted)
+	if result.Verdict != VerdictAccepted {
+		t.Fatalf("verdict = %s, want %s", result.Verdict, VerdictAccepted)
+	}
+	if result.Message != "" {
+		t.Fatalf("judge message should be empty, got %q", result.Message)
 	}
 
 	if len(executor.runner.(*fakeCommandRunner).calls) != 3 {
@@ -50,11 +53,11 @@ func TestJavaExecutorAcceptsWhenAllTestCasesPass(t *testing.T) {
 func TestJavaExecutorReturnsCompileErrorOnCompileFailure(t *testing.T) {
 	executor := NewJavaExecutorWithRunner(&fakeCommandRunner{
 		responses: []commandResponse{
-			{result: commandResult{exitCode: 1}},
+			{result: commandResult{exitCode: 1, stderr: "Compilation failed"}},
 		},
 	})
 
-	verdict, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
+	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
 		Language:    "java",
 		SourceCode:  "invalid source",
 		TimeLimitMs: 1000,
@@ -64,8 +67,11 @@ func TestJavaExecutorReturnsCompileErrorOnCompileFailure(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if verdict != VerdictCompileError {
-		t.Fatalf("verdict = %s, want %s", verdict, VerdictCompileError)
+	if result.Verdict != VerdictCompileError {
+		t.Fatalf("verdict = %s, want %s", result.Verdict, VerdictCompileError)
+	}
+	if result.Message != "Compilation failed" {
+		t.Fatalf("judge message = %q, want %q", result.Message, "Compilation failed")
 	}
 }
 
@@ -77,7 +83,7 @@ func TestJavaExecutorReturnsWrongAnswerWhenOutputDiffers(t *testing.T) {
 		},
 	})
 
-	verdict, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
+	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
 		Language:   "java",
 		SourceCode: "public class Main {}",
 		TestCases: []backend.JudgeTestCase{
@@ -88,8 +94,11 @@ func TestJavaExecutorReturnsWrongAnswerWhenOutputDiffers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if verdict != VerdictWrongAnswer {
-		t.Fatalf("verdict = %s, want %s", verdict, VerdictWrongAnswer)
+	if result.Verdict != VerdictWrongAnswer {
+		t.Fatalf("verdict = %s, want %s", result.Verdict, VerdictWrongAnswer)
+	}
+	if result.Message == "" {
+		t.Fatalf("judge message should be set for wrong answers")
 	}
 }
 
@@ -101,7 +110,7 @@ func TestJavaExecutorReturnsRuntimeErrorOnNonZeroExit(t *testing.T) {
 		},
 	})
 
-	verdict, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
+	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
 		Language:   "java",
 		SourceCode: "public class Main {}",
 		TestCases: []backend.JudgeTestCase{
@@ -112,8 +121,11 @@ func TestJavaExecutorReturnsRuntimeErrorOnNonZeroExit(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if verdict != VerdictRuntimeError {
-		t.Fatalf("verdict = %s, want %s", verdict, VerdictRuntimeError)
+	if result.Verdict != VerdictRuntimeError {
+		t.Fatalf("verdict = %s, want %s", result.Verdict, VerdictRuntimeError)
+	}
+	if result.Message != "runtime error on test case 1: RuntimeError" {
+		t.Fatalf("judge message = %q, want %q", result.Message, "runtime error on test case 1: RuntimeError")
 	}
 }
 
@@ -129,7 +141,7 @@ func TestJavaExecutorReturnsTimeLimitExceededOnTimedOutRun(t *testing.T) {
 		},
 	})
 
-	verdict, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
+	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
 		Language:   "java",
 		SourceCode: "public class Main {}",
 		TestCases: []backend.JudgeTestCase{
@@ -140,8 +152,11 @@ func TestJavaExecutorReturnsTimeLimitExceededOnTimedOutRun(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if verdict != VerdictTimeLimitExceeded {
-		t.Fatalf("verdict = %s, want %s", verdict, VerdictTimeLimitExceeded)
+	if result.Verdict != VerdictTimeLimitExceeded {
+		t.Fatalf("verdict = %s, want %s", result.Verdict, VerdictTimeLimitExceeded)
+	}
+	if result.Message != "time limit exceeded on test case 1" {
+		t.Fatalf("judge message = %q, want %q", result.Message, "time limit exceeded on test case 1")
 	}
 }
 

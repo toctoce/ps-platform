@@ -44,6 +44,7 @@ public class H2JudgeJobRepository implements JudgeJobRepository {
 			rs.getString("source_code"),
 			SubmissionStatus.valueOf(rs.getString("status")),
 			verdict == null ? null : SubmissionVerdict.valueOf(verdict),
+			rs.getString("judge_message"),
 			rs.getTimestamp("created_at").toLocalDateTime(),
 			judgedAt == null ? null : judgedAt.toLocalDateTime()
 		);
@@ -116,7 +117,7 @@ public class H2JudgeJobRepository implements JudgeJobRepository {
 	}
 
 	@Override
-	public Submission complete(long jobId, SubmissionVerdict verdict) {
+	public Submission complete(long jobId, SubmissionVerdict verdict, String judgeMessage) {
 		int updatedJobs = jdbcTemplate.update(
 			"""
 			UPDATE judge_jobs
@@ -135,7 +136,7 @@ public class H2JudgeJobRepository implements JudgeJobRepository {
 			PreparedStatement ps = connection.prepareStatement(
 				"""
 				UPDATE submissions
-				SET status = ?, verdict = ?, judged_at = CURRENT_TIMESTAMP
+				SET status = ?, verdict = ?, judge_message = ?, judged_at = CURRENT_TIMESTAMP
 				WHERE id = (
 					SELECT submission_id
 					FROM judge_jobs
@@ -145,7 +146,8 @@ public class H2JudgeJobRepository implements JudgeJobRepository {
 			);
 			ps.setString(1, SubmissionStatus.JUDGED.name());
 			ps.setString(2, verdict.name());
-			ps.setLong(3, jobId);
+			ps.setString(3, judgeMessage);
+			ps.setLong(4, jobId);
 			return ps;
 		});
 
@@ -238,7 +240,7 @@ public class H2JudgeJobRepository implements JudgeJobRepository {
 		List<Submission> submissions = jdbcTemplate.query(
 			"""
 			SELECT s.id, s.problem_id, s.language, s.source_code, s.status,
-			       s.verdict, s.created_at, s.judged_at
+			       s.verdict, s.judge_message, s.created_at, s.judged_at
 			FROM submissions s
 			JOIN judge_jobs jj ON jj.submission_id = s.id
 			WHERE jj.id = ?

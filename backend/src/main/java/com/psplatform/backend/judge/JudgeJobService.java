@@ -23,7 +23,7 @@ public class JudgeJobService {
 
 	@Transactional
 	public Submission complete(long jobId, JudgeJobCompleteRequest request) {
-		return judgeJobRepository.complete(jobId, request.verdict());
+		return judgeJobRepository.complete(jobId, request.verdict(), request.judgeMessage());
 	}
 
 	@Transactional

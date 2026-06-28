@@ -393,6 +393,20 @@ dd {
   background: #ffffff;
 }
 
+.submission-message {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 8px 9px;
+  border-radius: 6px;
+  border: 1px solid #f0c0b5;
+  background: #fff5f2;
+  color: #7c2a1a;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 .submission-row span,
 .submission-row small {
   color: #5f6368;

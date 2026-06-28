@@ -109,7 +109,8 @@ func TestNextJobReturnsErrorOnInvalidResponse(t *testing.T) {
 
 func TestCompleteJobPostsVerdictToCorrectEndpoint(t *testing.T) {
 	received := struct {
-		verdict string
+		verdict      string
+		judgeMessage string
 	}{}
 
 	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
@@ -128,14 +129,18 @@ func TestCompleteJobPostsVerdictToCorrectEndpoint(t *testing.T) {
 			t.Fatalf("decode request: %v", err)
 		}
 		received.verdict = req.Verdict
+		received.judgeMessage = req.JudgeMessage
 		w.WriteHeader(http.StatusOK)
 	})
 
-	if err := client.CompleteJob(context.Background(), 7, "RUNTIME_ERROR"); err != nil {
+	if err := client.CompleteJob(context.Background(), 7, "RUNTIME_ERROR", "runtime failed"); err != nil {
 		t.Fatalf("CompleteJob error: %v", err)
 	}
 	if received.verdict != "RUNTIME_ERROR" {
 		t.Fatalf("verdict = %s, want %s", received.verdict, "RUNTIME_ERROR")
+	}
+	if received.judgeMessage != "runtime failed" {
+		t.Fatalf("judgeMessage = %s, want %s", received.judgeMessage, "runtime failed")
 	}
 }
 
@@ -144,7 +149,7 @@ func TestCompleteJobReturnsErrorOnHTTPError(t *testing.T) {
 		w.WriteHeader(http.StatusBadGateway)
 	})
 
-	if err := client.CompleteJob(context.Background(), 7, "ACCEPTED"); err == nil {
+	if err := client.CompleteJob(context.Background(), 7, "ACCEPTED", ""); err == nil {
 		t.Fatalf("expected error")
 	}
 }

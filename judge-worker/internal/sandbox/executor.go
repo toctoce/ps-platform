@@ -32,11 +32,18 @@ const (
 	javaSourceFile        = "Main.java"
 	javaImage             = "openjdk:17-jdk"
 	containerWorkspaceDir = "/workspace"
+	judgeMessageMaxBytes  = 1024
 )
+
+// ExecutionResult는 채점 결과 판정 값과 실패 사유를 동시에 담습니다.
+type ExecutionResult struct {
+	Verdict string
+	Message string
+}
 
 // Executor는 채점 작업을 sandbox에서 실행하고 verdict를 반환하는 실행기입니다.
 type Executor interface {
-	Execute(ctx context.Context, job backend.JudgeJobAssignment) (string, error)
+	Execute(ctx context.Context, job backend.JudgeJobAssignment) (ExecutionResult, error)
 }
 
 // commandResult는 sandbox 내부 명령 실행 결과를 담는 값입니다.
@@ -69,43 +76,47 @@ func NewJavaExecutorWithRunner(runner commandRunner) *JavaExecutor {
 }
 
 // Execute는 소스코드를 Main.java로 저장해 javac, java 실행을 수행한 뒤 verdict를 반환합니다.
-func (e *JavaExecutor) Execute(ctx context.Context, job backend.JudgeJobAssignment) (string, error) {
+
+func (e *JavaExecutor) Execute(ctx context.Context, job backend.JudgeJobAssignment) (ExecutionResult, error) {
 	if strings.TrimSpace(job.SourceCode) == "" {
-		return VerdictCompileError, nil
+		return ExecutionResult{
+			Verdict: VerdictCompileError,
+			Message: "source code is empty",
+		}, nil
 	}
 
 	if !strings.EqualFold(job.Language, "java") {
-		return "", fmt.Errorf("unsupported language: %s", job.Language)
+		return ExecutionResult{}, fmt.Errorf("unsupported language: %s", job.Language)
 	}
 
 	tempDir, err := os.MkdirTemp("", "judge-worker-java-*")
 	if err != nil {
-		return "", err
+		return ExecutionResult{}, err
 	}
 	defer os.RemoveAll(tempDir) //nolint:all // 실행 종료 후 정리해야 해서 항상 제거.
 
 	if err := os.WriteFile(filepath.Join(tempDir, javaSourceFile), []byte(job.SourceCode), 0o600); err != nil {
-		return "", err
+		return ExecutionResult{}, err
 	}
 
-	if verdict, err := e.compile(ctx, tempDir); err != nil {
-		return "", err
-	} else if verdict != "" {
-		return verdict, nil
+	if result, err := e.compile(ctx, tempDir); err != nil {
+		return ExecutionResult{}, err
+	} else if result.Verdict != "" {
+		return result, nil
 	}
 
 	timeLimit := determineTimeLimit(job.TimeLimitMs)
-	for _, tc := range job.TestCases {
-		verdict, err := e.runTestCase(ctx, tempDir, tc, timeLimit)
+	for index, tc := range job.TestCases {
+		result, err := e.runTestCase(ctx, tempDir, tc, index+1, timeLimit)
 		if err != nil {
-			return "", err
+			return ExecutionResult{}, err
 		}
-		if verdict != "" {
-			return verdict, nil
+		if result.Verdict != "" {
+			return result, nil
 		}
 	}
 
-	return VerdictAccepted, nil
+	return ExecutionResult{Verdict: VerdictAccepted}, nil
 }
 
 func determineTimeLimit(timeLimitMs int) time.Duration {
@@ -115,7 +126,7 @@ func determineTimeLimit(timeLimitMs int) time.Duration {
 	return time.Duration(timeLimitMs) * time.Millisecond
 }
 
-func (e *JavaExecutor) compile(ctx context.Context, tempDir string) (string, error) {
+func (e *JavaExecutor) compile(ctx context.Context, tempDir string) (ExecutionResult, error) {
 	compileCtx, cancel := context.WithTimeout(ctx, javaCompileTimeout)
 	defer cancel()
 
@@ -131,24 +142,31 @@ func (e *JavaExecutor) compile(ctx context.Context, tempDir string) (string, err
 	result, err := e.runner.Run(compileCtx, "docker", args, "", nil)
 	if err != nil {
 		if isTimeout(ctx, compileCtx, err) {
-			return VerdictTimeLimitExceeded, nil
+			return ExecutionResult{
+				Verdict: VerdictTimeLimitExceeded,
+				Message: "compile timed out",
+			}, nil
 		}
-		return "", err
+		return ExecutionResult{}, err
 	}
 
 	if result.exitCode != 0 {
-		return VerdictCompileError, nil
+		return ExecutionResult{
+			Verdict: VerdictCompileError,
+			Message: firstNonEmpty("compile error", result.stderr, result.stdout),
+		}, nil
 	}
 
-	return "", nil
+	return ExecutionResult{}, nil
 }
 
 func (e *JavaExecutor) runTestCase(
 	ctx context.Context,
 	tempDir string,
 	testCase backend.JudgeTestCase,
+	testCaseIndex int,
 	timeLimit time.Duration,
-) (string, error) {
+) (ExecutionResult, error) {
 	runCtx, cancel := context.WithTimeout(ctx, timeLimit)
 	defer cancel()
 
@@ -164,20 +182,60 @@ func (e *JavaExecutor) runTestCase(
 	result, err := e.runner.Run(runCtx, "docker", args, "", bytes.NewBufferString(testCase.Input))
 	if err != nil {
 		if isTimeout(ctx, runCtx, err) {
-			return VerdictTimeLimitExceeded, nil
+			return ExecutionResult{
+				Verdict: VerdictTimeLimitExceeded,
+				Message: fmt.Sprintf("time limit exceeded on test case %d", testCaseIndex),
+			}, nil
 		}
-		return "", err
+		return ExecutionResult{}, err
 	}
 
 	if result.exitCode != 0 {
-		return VerdictRuntimeError, nil
+		return ExecutionResult{
+			Verdict: VerdictRuntimeError,
+			Message: fmt.Sprintf("runtime error on test case %d: %s", testCaseIndex, firstNonEmpty("", result.stderr, result.stdout)),
+		}, nil
 	}
 
 	if judge.EvaluateOutput(testCase.ExpectedOutput, result.stdout) != judge.VerdictAccepted {
-		return VerdictWrongAnswer, nil
+		normalizedExpected, normalizedActual := judge.NormalizeOutput(testCase.ExpectedOutput), judge.NormalizeOutput(result.stdout)
+		return ExecutionResult{
+			Verdict: VerdictWrongAnswer,
+			Message: buildWrongAnswerMessage(testCaseIndex, normalizedExpected, normalizedActual),
+		}, nil
 	}
 
-	return "", nil
+	return ExecutionResult{}, nil
+}
+
+func firstNonEmpty(fallback string, values ...string) string {
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed != "" {
+			return clipMessage(trimmed)
+		}
+	}
+	if fallback == "" {
+		return ""
+	}
+	return fallback
+}
+
+func buildWrongAnswerMessage(testCaseIndex int, expected string, actual string) string {
+	return fmt.Sprintf(
+		"wrong answer on test case %d: expected=%q, actual=%q",
+		testCaseIndex,
+		clipMessage(expected),
+		clipMessage(actual),
+	)
+}
+
+func clipMessage(value string) string {
+	if len(value) <= judgeMessageMaxBytes {
+		return value
+	}
+
+	return value[:judgeMessageMaxBytes] + "..."
 }
 
 func isTimeout(parentCtx context.Context, commandCtx context.Context, err error) bool {

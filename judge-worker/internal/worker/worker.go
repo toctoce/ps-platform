@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -18,7 +19,7 @@ type Worker struct {
 
 type backendClient interface {
 	NextJob(ctx context.Context) (*backend.JudgeJobAssignment, error)
-	CompleteJob(ctx context.Context, jobID int64, verdict string) error
+	CompleteJob(ctx context.Context, jobID int64, verdict string, judgeMessage string) error
 }
 
 // NewWorker는 backend client, sandbox executor, polling 간격을 조합해 Worker를 생성합니다.
@@ -83,13 +84,16 @@ func (w *Worker) processOnce(ctx context.Context) (bool, error) {
 		"language", job.Language,
 	)
 
-	verdict, err := w.executor.Execute(ctx, *job)
+	execution, err := w.executor.Execute(ctx, *job)
+	verdict := execution.Verdict
+	judgeMessage := execution.Message
 	if err != nil {
 		slog.Error("sandbox execution failed", "jobId", job.JobID, "error", err)
 		verdict = sandbox.VerdictRuntimeError
+		judgeMessage = fmt.Sprintf("execution failed: %v", err)
 	}
 
-	if err := w.client.CompleteJob(ctx, job.JobID, verdict); err != nil {
+	if err := w.client.CompleteJob(ctx, job.JobID, verdict, judgeMessage); err != nil {
 		return true, err
 	}
 

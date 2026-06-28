@@ -11,7 +11,7 @@ public interface JudgeJobRepository {
 
 	Optional<JudgeJobAssignment> findNextAndMarkRunning();
 
-	Submission complete(long jobId, SubmissionVerdict verdict);
+	Submission complete(long jobId, SubmissionVerdict verdict, String judgeMessage);
 
 	int requeueStale(long staleAfterSeconds);
 
