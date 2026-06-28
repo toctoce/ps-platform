@@ -11,9 +11,14 @@ import (
 
 // Worker는 backend에서 채점 작업을 가져와 executor로 처리하는 polling worker입니다.
 type Worker struct {
-	client       *backend.Client
+	client       backendClient
 	executor     sandbox.Executor
 	pollInterval time.Duration
+}
+
+type backendClient interface {
+	NextJob(ctx context.Context) (*backend.JudgeJobAssignment, error)
+	CompleteJob(ctx context.Context, jobID int64, verdict string) error
 }
 
 // NewWorker는 backend client, sandbox executor, polling 간격을 조합해 Worker를 생성합니다.
@@ -31,8 +36,24 @@ func (w *Worker) Run(ctx context.Context) error {
 	defer ticker.Stop()
 
 	for {
-		if err := w.processOnce(ctx); err != nil {
-			slog.Error("failed to process judge job", "error", err)
+		processedAny := false
+
+		for {
+			processed, err := w.processOnce(ctx)
+			if err != nil {
+				slog.Error("failed to process judge job", "error", err)
+				break
+			}
+
+			if !processed {
+				break
+			}
+
+			processedAny = true
+		}
+
+		if processedAny {
+			continue
 		}
 
 		select {
@@ -44,15 +65,15 @@ func (w *Worker) Run(ctx context.Context) error {
 }
 
 // processOnce는 채점 작업 하나를 가져와 실행하고 결과를 backend에 보고합니다.
-func (w *Worker) processOnce(ctx context.Context) error {
+func (w *Worker) processOnce(ctx context.Context) (bool, error) {
 	job, err := w.client.NextJob(ctx)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if job == nil {
 		slog.Debug("no judge job available")
-		return nil
+		return false, nil
 	}
 
 	slog.Info("judge job picked",
@@ -69,9 +90,9 @@ func (w *Worker) processOnce(ctx context.Context) error {
 	}
 
 	if err := w.client.CompleteJob(ctx, job.JobID, verdict); err != nil {
-		return err
+		return true, err
 	}
 
 	slog.Info("judge job completed", "jobId", job.JobID, "verdict", verdict)
-	return nil
+	return true, nil
 }
