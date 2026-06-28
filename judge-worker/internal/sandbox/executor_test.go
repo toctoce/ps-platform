@@ -86,6 +86,31 @@ func TestJavaExecutorReturnsCompileErrorOnCompileFailure(t *testing.T) {
 	}
 }
 
+func TestJavaExecutorReturnsDefaultCompileErrorMessage(t *testing.T) {
+	executor := NewJavaExecutorWithRunner(&fakeCommandRunner{
+		responses: []commandResponse{
+			{result: commandResult{exitCode: 1}},
+		},
+	}, testJavaDockerImage)
+
+	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
+		Language:    "java",
+		SourceCode:  "invalid source",
+		TimeLimitMs: 1000,
+		TestCases:   []backend.JudgeTestCase{},
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Verdict != VerdictCompileError {
+		t.Fatalf("verdict = %s, want %s", result.Verdict, VerdictCompileError)
+	}
+	if result.Message != "compile error" {
+		t.Fatalf("judge message = %q, want %q", result.Message, "compile error")
+	}
+}
+
 func TestJavaExecutorReturnsMemoryLimitExceededWhenCompileKilledByMemoryCap(t *testing.T) {
 	executor := NewJavaExecutorWithRunner(&fakeCommandRunner{
 		responses: []commandResponse{
@@ -141,6 +166,10 @@ func TestJavaExecutorReturnsWrongAnswerWhenOutputDiffers(t *testing.T) {
 	}
 	if result.Message == "" {
 		t.Fatalf("judge message should be set for wrong answers")
+	}
+
+	if !strings.Contains(result.Message, "wrong answer on test case 1") {
+		t.Fatalf("judge message should include testcase index: %q", result.Message)
 	}
 }
 

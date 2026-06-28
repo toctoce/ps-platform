@@ -107,6 +107,70 @@ func TestProcessOnceReturnsFalseWhenNextJobErrors(t *testing.T) {
 	}
 }
 
+func TestProcessOnceForwardsAllExecutorVerdicts(t *testing.T) {
+	testCases := []struct {
+		name       string
+		execution  sandbox.ExecutionResult
+	}{
+		{
+			name:      "accepted",
+			execution: sandbox.ExecutionResult{Verdict: sandbox.VerdictAccepted, Message: ""},
+		},
+		{
+			name:      "wrong answer",
+			execution: sandbox.ExecutionResult{Verdict: sandbox.VerdictWrongAnswer, Message: "wrong answer on test case 1"},
+		},
+		{
+			name:      "runtime error",
+			execution: sandbox.ExecutionResult{Verdict: sandbox.VerdictRuntimeError, Message: "runtime error on test case 1"},
+		},
+		{
+			name:      "time limit exceeded",
+			execution: sandbox.ExecutionResult{Verdict: sandbox.VerdictTimeLimitExceeded, Message: "time limit exceeded on test case 1"},
+		},
+		{
+			name:      "memory limit exceeded",
+			execution: sandbox.ExecutionResult{Verdict: sandbox.VerdictMemoryLimitExceeded, Message: "memory limit exceeded on test case 1"},
+		},
+		{
+			name:      "compile error",
+			execution: sandbox.ExecutionResult{Verdict: sandbox.VerdictCompileError, Message: "compile error"},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			client := &fakeBackendClient{
+				jobs: []backend.JudgeJobAssignment{
+					{JobID: 401},
+				},
+			}
+			executor := &fakeExecutor{
+				execution: tc.execution,
+			}
+			w := &Worker{
+				client:       client,
+				executor:     executor,
+				pollInterval: time.Second,
+			}
+
+			processed, err := w.processOnce(context.Background())
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if !processed {
+				t.Fatalf("expected job to be processed")
+			}
+			if client.lastVerdict != tc.execution.Verdict {
+				t.Fatalf("verdict = %s, want %s", client.lastVerdict, tc.execution.Verdict)
+			}
+			if client.lastJudgeMessage != tc.execution.Message {
+				t.Fatalf("judge message = %q, want %q", client.lastJudgeMessage, tc.execution.Message)
+			}
+		})
+	}
+}
+
 func TestProcessOnceCompletesRuntimeErrorOnExecutorError(t *testing.T) {
 	client := &fakeBackendClient{
 		jobs: []backend.JudgeJobAssignment{
