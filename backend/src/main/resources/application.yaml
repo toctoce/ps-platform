@@ -9,3 +9,10 @@ spring:
   sql:
     init:
       mode: always
+
+app:
+  auth:
+    jwt:
+      secret: ${JWT_SECRET:backend-dev-secret-key-for-local-development-change-this}
+      access-token-ttl-seconds: ${JWT_ACCESS_TOKEN_TTL_SECONDS:900}
+      refresh-token-ttl-seconds: ${JWT_REFRESH_TOKEN_TTL_SECONDS:1209600}
