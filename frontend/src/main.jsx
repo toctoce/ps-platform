@@ -39,8 +39,40 @@ public class Main {
 }`,
 };
 
+const authStorageKey = 'ps-platform-auth';
+
+function getStoredAuth() {
+  const raw = localStorage.getItem(authStorageKey);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(raw);
+    return {
+      accessToken: parsed.accessToken || '',
+      refreshToken: parsed.refreshToken || '',
+      user: parsed.user || null,
+    };
+  } catch (_error) {
+    return null;
+  }
+}
+
+function saveStoredAuth(auth) {
+  localStorage.setItem(authStorageKey, JSON.stringify(auth));
+}
+
+function clearStoredAuth() {
+  localStorage.removeItem(authStorageKey);
+}
+
 function parseRoute() {
-  const path = window.location.pathname;
+  const path = window.location.pathname.replace(/\/+$/, '');
+  if (path === '/login') {
+    return { name: 'login' };
+  }
+
   const detailMatch = path.match(/^\/problems\/(\d+)$/);
 
   if (detailMatch) {
@@ -61,13 +93,64 @@ async function request(path, options) {
 
 function App() {
   const [route, setRoute] = useState(parseRoute);
+  const [auth, setAuth] = useState(() => getStoredAuth());
   const [health, setHealth] = useState('확인 전');
   const [healthBusy, setHealthBusy] = useState(false);
   const [message, setMessage] = useState('');
+  const [authBusy, setAuthBusy] = useState(false);
+  const isAuthenticated = Boolean(auth?.accessToken);
+  const pageTitle = route.name === 'problem-detail'
+    ? '문제 상세'
+    : route.name === 'login'
+      ? '로그인'
+      : '문제 목록';
+
+  function applyAuth(nextAuth) {
+    setAuth(nextAuth);
+    saveStoredAuth(nextAuth);
+  }
+
+  function clearAuth() {
+    setAuth(null);
+    clearStoredAuth();
+  }
 
   function navigate(path) {
     window.history.pushState(null, '', path);
     setRoute(parseRoute());
+  }
+
+  function handleLoginSuccess(authResponse) {
+    applyAuth({
+      accessToken: authResponse.accessToken,
+      refreshToken: authResponse.refreshToken,
+      user: authResponse.user,
+    });
+    setMessage('로그인에 성공했습니다.');
+    navigate('/problems');
+  }
+
+  async function logout() {
+    setAuthBusy(true);
+
+    try {
+      if (auth?.refreshToken) {
+        await request('/api/auth/logout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken: auth.refreshToken }),
+        });
+      }
+      clearAuth();
+      setMessage('로그아웃했습니다.');
+      navigate('/login');
+    } catch (error) {
+      clearAuth();
+      setMessage(`로그아웃 중 오류가 발생해 로그인 정보를 초기화합니다. (${error.message})`);
+      navigate('/login');
+    } finally {
+      setAuthBusy(false);
+    }
   }
 
   async function checkHealth() {
@@ -83,8 +166,28 @@ function App() {
     }
   }
 
+  async function checkCurrentUser() {
+    if (!auth?.accessToken) {
+      return;
+    }
+
+    try {
+      setAuthBusy(true);
+      const user = await request('/api/auth/me', {
+        headers: { Authorization: `Bearer ${auth.accessToken}` },
+      });
+      applyAuth({ ...auth, user });
+    } catch (error) {
+      clearAuth();
+      setMessage(`자동 로그인 세션이 만료되어 로그인이 해제되었습니다. (${error.message})`);
+    } finally {
+      setAuthBusy(false);
+    }
+  }
+
   useEffect(() => {
     checkHealth();
+    checkCurrentUser();
 
     function handlePopState() {
       setRoute(parseRoute());
@@ -99,17 +202,47 @@ function App() {
       <section className="topbar">
         <button className="brand-button" type="button" onClick={() => navigate('/problems')}>
           <p className="eyebrow">PS Platform</p>
-          <h1>{route.name === 'problem-detail' ? '문제 상세' : '문제 목록'}</h1>
+          <h1>{pageTitle}</h1>
         </button>
-        <button className="icon-button" type="button" onClick={checkHealth} disabled={healthBusy} title="헬스체크">
-          <Activity size={18} />
-          <span>{health}</span>
-        </button>
+        <div className="topbar-actions">
+          {isAuthenticated ? (
+            <>
+              <span className="user-chip">{auth.user?.email ?? '로그인됨'}</span>
+              <button
+                className="ghost-button with-text"
+                type="button"
+                onClick={logout}
+                disabled={authBusy}
+              >
+                로그아웃
+              </button>
+            </>
+          ) : (
+            <button
+              className="ghost-button with-text"
+              type="button"
+              onClick={() => navigate('/login')}
+            >
+              로그인
+            </button>
+          )}
+          <button className="icon-button" type="button" onClick={checkHealth} disabled={healthBusy} title="헬스체크">
+            <Activity size={18} />
+            <span>{health}</span>
+          </button>
+        </div>
       </section>
 
       {message && <div className="notice">{message}</div>}
 
-      {route.name === 'problem-detail' ? (
+      {route.name === 'login' ? (
+        <LoginPage
+          onLoginSuccess={handleLoginSuccess}
+          setMessage={setMessage}
+          isAuthenticated={isAuthenticated}
+          navigate={navigate}
+        />
+      ) : route.name === 'problem-detail' ? (
         <ProblemDetailPage
           problemId={route.problemId}
           navigate={navigate}
@@ -122,6 +255,90 @@ function App() {
         />
       )}
     </main>
+  );
+}
+
+function LoginPage({ onLoginSuccess, setMessage, isAuthenticated, navigate }) {
+  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState({ email: '', password: '' });
+
+  async function login(event) {
+    event.preventDefault();
+    if (!form.email.trim() || !form.password.trim()) {
+      setMessage('이메일/비밀번호를 입력해 주세요.');
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const auth = await request('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: 'local',
+          credentials: {
+            email: form.email,
+            password: form.password,
+          },
+        }),
+      });
+      onLoginSuccess(auth);
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function update(field, value) {
+    setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  return (
+    <section className="auth-page">
+      <form className="panel form-panel auth-form" onSubmit={login}>
+        <div className="panel-header">
+          <Code2 size={18} />
+          <h2>로그인</h2>
+        </div>
+
+        {isAuthenticated ? (
+          <p className="empty">이미 로그인되어 있습니다.</p>
+        ) : (
+          <>
+            <label>
+              이메일
+              <input
+                type="email"
+                value={form.email}
+                onChange={(event) => update('email', event.target.value)}
+                autoComplete="username"
+              />
+            </label>
+            <label>
+              비밀번호
+              <input
+                type="password"
+                value={form.password}
+                onChange={(event) => update('password', event.target.value)}
+                autoComplete="current-password"
+              />
+            </label>
+            <button className="primary-button" type="submit" disabled={busy}>
+              로그인
+            </button>
+          </>
+        )}
+
+        <button
+          className="ghost-button with-text"
+          type="button"
+          onClick={() => navigate('/problems')}
+        >
+          문제 목록 보기
+        </button>
+      </form>
+    </section>
   );
 }
 
