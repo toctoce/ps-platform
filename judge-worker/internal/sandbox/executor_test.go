@@ -16,7 +16,7 @@ func TestJavaExecutorAcceptsWhenAllTestCasesPass(t *testing.T) {
 			{result: commandResult{exitCode: 0, stdout: "3\n"}},
 			{result: commandResult{exitCode: 0, stdout: "11\n"}},
 		},
-	})
+	}, "")
 
 	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
 		Language: "java",
@@ -55,7 +55,7 @@ func TestJavaExecutorReturnsCompileErrorOnCompileFailure(t *testing.T) {
 		responses: []commandResponse{
 			{result: commandResult{exitCode: 1, stderr: "Compilation failed"}},
 		},
-	})
+	}, "")
 
 	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
 		Language:    "java",
@@ -81,7 +81,7 @@ func TestJavaExecutorReturnsWrongAnswerWhenOutputDiffers(t *testing.T) {
 			{result: commandResult{exitCode: 0}},
 			{result: commandResult{exitCode: 0, stdout: "4\n"}},
 		},
-	})
+	}, "")
 
 	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
 		Language:   "java",
@@ -108,7 +108,7 @@ func TestJavaExecutorReturnsRuntimeErrorOnNonZeroExit(t *testing.T) {
 			{result: commandResult{exitCode: 0}},
 			{result: commandResult{exitCode: 1, stderr: "RuntimeError"}},
 		},
-	})
+	}, "")
 
 	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
 		Language:   "java",
@@ -139,7 +139,7 @@ func TestJavaExecutorReturnsTimeLimitExceededOnTimedOutRun(t *testing.T) {
 			nil,
 			timeoutErr,
 		},
-	})
+	}, "")
 
 	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
 		Language:   "java",
@@ -161,7 +161,7 @@ func TestJavaExecutorReturnsTimeLimitExceededOnTimedOutRun(t *testing.T) {
 }
 
 func TestJavaExecutorReturnsErrorOnUnsupportedLanguage(t *testing.T) {
-	executor := NewJavaExecutorWithRunner(&fakeCommandRunner{})
+	executor := NewJavaExecutorWithRunner(&fakeCommandRunner{}, "")
 	_, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
 		Language:   "python",
 		SourceCode: "print(1)",

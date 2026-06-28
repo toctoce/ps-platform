@@ -27,12 +27,12 @@ const (
 )
 
 const (
-	defaultTimeLimitMs    = 1000
-	javaCompileTimeout    = 10 * time.Second
-	javaSourceFile        = "Main.java"
-	javaImage             = "openjdk:17-jdk"
-	containerWorkspaceDir = "/workspace"
-	judgeMessageMaxBytes  = 1024
+	defaultTimeLimitMs     = 1000
+	javaCompileTimeout     = 10 * time.Second
+	javaSourceFile         = "Main.java"
+	defaultJavaDockerImage = "eclipse-temurin:17-jdk"
+	containerWorkspaceDir  = "/workspace"
+	judgeMessageMaxBytes   = 1024
 )
 
 // ExecutionResult는 채점 결과 판정 값과 실패 사유를 동시에 담습니다.
@@ -61,17 +61,24 @@ type commandRunner interface {
 // JavaExecutor는 Java 제출 코드를 sandbox에서 실행해 판정 결과를 계산합니다.
 type JavaExecutor struct {
 	runner commandRunner
+	image  string
 }
 
 // NewJavaExecutor는 운영 환경에서 Java 실행기를 생성합니다.
 func NewJavaExecutor() *JavaExecutor {
-	return NewJavaExecutorWithRunner(&dockerCommandRunner{})
+	image := os.Getenv("JAVA_DOCKER_IMAGE")
+	return NewJavaExecutorWithRunner(&dockerCommandRunner{}, image)
 }
 
 // NewJavaExecutorWithRunner는 테스트에서 fake runner를 주입하기 위한 생성자입니다.
-func NewJavaExecutorWithRunner(runner commandRunner) *JavaExecutor {
+func NewJavaExecutorWithRunner(runner commandRunner, image string) *JavaExecutor {
+	if image == "" {
+		image = defaultJavaDockerImage
+	}
+
 	return &JavaExecutor{
 		runner: runner,
+		image:  image,
 	}
 }
 
@@ -135,7 +142,7 @@ func (e *JavaExecutor) compile(ctx context.Context, tempDir string) (ExecutionRe
 		"--network=none",
 		"-v", tempDir + ":" + containerWorkspaceDir,
 		"-w", containerWorkspaceDir,
-		javaImage,
+		e.image,
 		"javac", javaSourceFile,
 	}
 
@@ -175,7 +182,7 @@ func (e *JavaExecutor) runTestCase(
 		"--network=none",
 		"-v", tempDir + ":" + containerWorkspaceDir,
 		"-w", containerWorkspaceDir,
-		javaImage,
+		e.image,
 		"java", "Main",
 	}
 
