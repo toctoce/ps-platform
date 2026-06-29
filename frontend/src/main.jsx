@@ -528,8 +528,6 @@ function App() {
       ) : route.name === 'admin' ? (
         <AdminPage
           auth={auth}
-          isAuthenticated={isAuthenticated}
-          isAdmin={isAdmin}
           setMessage={setMessage}
           navigate={navigate}
         />
@@ -545,7 +543,6 @@ function App() {
           navigate={navigate}
           setMessage={setMessage}
           isAdmin={isAdmin}
-          isAuthenticated={isAuthenticated}
         />
       )}
     </main>
@@ -746,7 +743,7 @@ function SignupPage({ setMessage, navigate }) {
   );
 }
 
-function HomePage({ navigate, setMessage, isAdmin, isAuthenticated }) {
+function HomePage({ navigate, isAdmin }) {
   const [problems, setProblems] = useState([]);
   const [busy, setBusy] = useState(false);
   const [randomSeed, setRandomSeed] = useState(0);
@@ -883,13 +880,12 @@ function HomePage({ navigate, setMessage, isAdmin, isAuthenticated }) {
         <p className="helper-text">
           {isAdmin
             ? '문제 등록과 테스트케이스 등록은 관리자 페이지에서 수행합니다.'
-            : '문제 등록·테스트케이스 등록은 관리자 권한 전용입니다.'}
+            : '문제 등록·테스트케이스 등록은 현재는 누구나 접근 가능한 관리자 페이지에서 수행할 수 있습니다. 단, 실제 저장은 백엔드 권한이 있어야 성공합니다.'}
         </p>
         <button
           className="primary-button"
           type="button"
           onClick={() => navigate('/admin')}
-          disabled={!isAuthenticated}
         >
           관리자 페이지로 이동
         </button>
@@ -898,7 +894,7 @@ function HomePage({ navigate, setMessage, isAdmin, isAuthenticated }) {
   );
 }
 
-function AdminPage({ auth, isAuthenticated, isAdmin, setMessage, navigate }) {
+function AdminPage({ auth, setMessage, navigate }) {
   const [problems, setProblems] = useState([]);
   const [loadingProblems, setLoadingProblems] = useState(false);
   const [problemForm, setProblemForm] = useState(initialForm);
@@ -1018,30 +1014,8 @@ function AdminPage({ auth, isAuthenticated, isAdmin, setMessage, navigate }) {
   }
 
   useEffect(() => {
-    if (isAuthenticated && isAdmin) {
-      loadProblems();
-    }
-  }, [isAuthenticated, isAdmin]);
-
-  if (!isAuthenticated || !isAdmin) {
-    return (
-      <section className="home-page">
-        <div className="page-actions">
-          <button className="ghost-button with-text" type="button" onClick={() => navigate('/')}>
-            <ArrowLeft size={17} />
-            홈으로
-          </button>
-        </div>
-        <section className="panel">
-          <div className="panel-header">
-            <Lock size={18} />
-            <h2>관리자 전용</h2>
-          </div>
-          <p className="empty">관리자 권한으로 로그인해야 접근할 수 있습니다.</p>
-        </section>
-      </section>
-    );
-  }
+    loadProblems();
+  }, []);
 
   return (
     <section className="home-page">
