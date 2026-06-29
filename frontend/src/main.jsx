@@ -20,6 +20,8 @@ const initialForm = {
   description: '두 수를 더하는 문제',
   inputDescription: '정수 A와 B가 주어진다.',
   outputDescription: 'A+B를 출력한다.',
+  difficulty: 'NORMAL',
+  categories: '',
   timeLimitMs: 1000,
   memoryLimitMb: 128,
   testCases: [
@@ -30,9 +32,20 @@ const initialForm = {
   ],
 };
 
-const initialSubmissionForm = {
-  language: 'java',
-  sourceCode: `import java.io.*;
+const authStorageKey = 'ps-platform-auth';
+const editorStorageKeyPrefix = 'ps-platform-editor';
+const IDE_TAB_SIZE = 2;
+const IDE_TABS = ' '.repeat(IDE_TAB_SIZE);
+const IDE_OPEN_CLOSE = {
+  '(': ')',
+  '{': '}',
+  '[': ']',
+  '"': '"',
+  "'": "'",
+};
+
+const LANGUAGE_TEMPLATES = {
+  java: `import java.io.*;
 import java.util.*;
 
 public class Main {
@@ -44,45 +57,50 @@ public class Main {
     System.out.println(a + b);
   }
 }`,
+  python: `import sys
+
+def main():
+    input_data = sys.stdin.readline().rstrip()
+    if not input_data:
+        return
+    a, b = map(int, input_data.split())
+    print(a + b)
+
+
+if __name__ == "__main__":
+    main()
+`,
+  cpp: `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+  ios::sync_with_stdio(false);
+  cin.tie(nullptr);
+
+  long long a, b;
+  if (!(cin >> a >> b)) {
+    return 0;
+  }
+  cout << (a + b) << "\\n";
+  return 0;
+}`,
 };
 
-const authStorageKey = 'ps-platform-auth';
-const editorStorageKeyPrefix = 'ps-platform-editor';
-const IDE_TAB_SIZE = 2;
-const IDE_OPEN_CLOSE = {
-  '(': ')',
-  '{': '}',
-  '[': ']',
-  '"': '"',
-  "'": "'",
+const initialSubmissionForm = {
+  language: 'java',
+  sourceCode: LANGUAGE_TEMPLATES.java,
 };
 
-const categoryRules = [
-  {
-    name: '배열',
-    keywords: ['배열', 'array', '정렬', 'sort'],
-  },
-  {
-    name: '문자열',
-    keywords: ['문자열', 'string', 'substring', '문자'],
-  },
-  {
-    name: '구현',
-    keywords: ['구현', 'implement', '시뮬레이션'],
-  },
-  {
-    name: '구간',
-    keywords: ['구간', '투포인터', 'prefix', '누적'],
-  },
-  {
-    name: '그래프',
-    keywords: ['그래프', 'bfs', 'dfs', '최단거리', '다익스트라'],
-  },
-  {
-    name: '자료구조',
-    keywords: ['스택', '큐', '스택', '스택', 'hash', '맵', '큐', '트리'],
-  },
+const DIFFICULTY_OPTIONS = [
+  { value: 'EASY', label: '쉬움' },
+  { value: 'NORMAL', label: '보통' },
+  { value: 'HARD', label: '어려움' },
+  { value: 'VERY_HARD', label: '매우 어려움' },
 ];
+
+function difficultyLabel(value) {
+  return DIFFICULTY_OPTIONS.find((item) => item.value === value)?.label ?? '보통';
+}
 
 function getStoredAuth() {
   const raw = localStorage.getItem(authStorageKey);
@@ -147,48 +165,40 @@ function parseRoute() {
   return { name: 'home' };
 }
 
-function getProblemCategory(problem) {
-  if (problem.category) {
-    return problem.category;
-  }
+function problemCategoryNames(problem) {
+  if (Array.isArray(problem?.categories)) {
+    const names = problem.categories
+      .map((category) => {
+        if (typeof category === 'string') {
+          return category;
+        }
+        return category?.name;
+      })
+      .filter((category) => Boolean(category));
 
-  const source = `${problem.title ?? ''} ${problem.description ?? ''} ${problem.inputDescription ?? ''}`.toLowerCase();
-
-  for (const rule of categoryRules) {
-    if (rule.keywords.some((keyword) => source.includes(keyword.toLowerCase()))) {
-      return rule.name;
+    if (names.length > 0) {
+      return names;
     }
   }
 
-  return '기타';
+  return ['미분류'];
 }
 
 function buildCategoryGroups(problems) {
   const map = new Map();
   for (const problem of problems) {
-    const category = getProblemCategory(problem);
-    if (!map.has(category)) {
-      map.set(category, []);
+    const categoryNames = problemCategoryNames(problem);
+    for (const category of categoryNames) {
+      if (!map.has(category)) {
+        map.set(category, []);
+      }
+      map.get(category).push(problem);
     }
-    map.get(category).push(problem);
   }
   return map;
 }
 
-function pickRandomProblems(problems, count) {
-  const copied = [...problems];
-  for (let i = copied.length - 1; i > 0; i--) {
-    const swapIndex = Math.floor(Math.random() * (i + 1));
-    [copied[i], copied[swapIndex]] = [copied[swapIndex], copied[i]];
-  }
-  return copied.slice(0, count);
-}
-
 function safeJsonRequest(response) {
-  const contentLength = Number(response.headers.get('content-length') || 0);
-  if (contentLength === 0) {
-    return null;
-  }
   return response.text().then((text) => {
     if (!text) {
       return null;
@@ -280,15 +290,25 @@ function submissionBadgeClass(status) {
 }
 
 function ProblemRow({ problem, navigate }) {
-  const category = getProblemCategory(problem);
+  const categories = problemCategoryNames(problem);
   return (
     <button className="problem-row" type="button" onClick={() => navigate(`/problems/${problem.id}`)}>
       <div className="problem-row-header">
         <span>#{problem.id}</span>
-        <span className="category-chip">{category}</span>
+        <div className="category-chip-list">
+          {categories.map((category) => (
+            <span className="category-chip" key={`${problem.id}-${category}`}>
+              {category}
+            </span>
+          ))}
+        </div>
       </div>
       <strong>{problem.title}</strong>
-      <small>{problem.timeLimitMs}ms / {problem.memoryLimitMb}MB</small>
+      <small>
+        <span className="difficulty-chip">{difficultyLabel(problem.difficulty)}</span>
+        {' '}
+        {problem.timeLimitMs}ms / {problem.memoryLimitMb}MB
+      </small>
     </button>
   );
 }
@@ -573,6 +593,14 @@ function LoginPage({ onLoginSuccess, setMessage, isAuthenticated, navigate }) {
           },
         }),
       });
+      if (!auth) {
+        setMessage('로그인 응답이 비어 있습니다.');
+        return;
+      }
+      if (!auth.accessToken) {
+        setMessage('로그인 응답 포맷이 올바르지 않습니다.');
+        return;
+      }
       onLoginSuccess(auth);
     } catch (error) {
       setMessage(error.message);
@@ -745,8 +773,8 @@ function SignupPage({ setMessage, navigate }) {
 
 function HomePage({ navigate, isAdmin }) {
   const [problems, setProblems] = useState([]);
+  const [randomProblems, setRandomProblems] = useState([]);
   const [busy, setBusy] = useState(false);
-  const [randomSeed, setRandomSeed] = useState(0);
 
   const categoryGroups = useMemo(() => buildCategoryGroups(problems), [problems]);
   const categories = useMemo(
@@ -759,17 +787,29 @@ function HomePage({ navigate, isAdmin }) {
     () => [...problems].sort((a, b) => b.id - a.id).slice(0, 10),
     [problems]
   );
-  const randomProblems = useMemo(
-    () => pickRandomProblems(problems, 5),
-    [problems, randomSeed]
-  );
 
   async function loadProblems() {
     setBusy(true);
     try {
-      const data = await request('/api/problems');
-      setProblems(data);
-      setMessage(`문제 ${data.length}개를 조회했습니다.`);
+      const [problemData, randomData] = await Promise.all([
+        request('/api/problems'),
+        request('/api/problems/random?count=5'),
+      ]);
+      setProblems(problemData);
+      setRandomProblems(randomData);
+      setMessage(`문제 ${problemData.length}개, 랜덤 ${randomData.length}개를 조회했습니다.`);
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function loadRandomProblems() {
+    try {
+      setBusy(true);
+      const randomData = await request('/api/problems/random?count=5');
+      setRandomProblems(randomData);
     } catch (error) {
       setMessage(error.message);
     } finally {
@@ -826,7 +866,7 @@ function HomePage({ navigate, isAdmin }) {
             <button
               className="ghost-button with-text"
               type="button"
-              onClick={() => setRandomSeed((current) => current + 1)}
+              onClick={loadRandomProblems}
               disabled={busy}
             >
               다시 뽑기
@@ -952,10 +992,19 @@ function AdminPage({ auth, setMessage, navigate }) {
 
   async function createProblem(event) {
     event.preventDefault();
+    const categories = Array.from(
+      new Set(
+        (problemForm.categories ?? '')
+          .split(',')
+          .map((category) => category.trim())
+          .filter((category) => category.length > 0)
+      )
+    );
     setCreateBusy(true);
     try {
       const payload = {
         ...problemForm,
+        categories,
         timeLimitMs: Number(problemForm.timeLimitMs),
         memoryLimitMb: Number(problemForm.memoryLimitMb),
         testCases: [],
@@ -1045,6 +1094,19 @@ function AdminPage({ auth, setMessage, navigate }) {
               />
             </label>
             <label>
+              난이도
+              <select
+                value={problemForm.difficulty}
+                onChange={(event) => updateProblemForm('difficulty', event.target.value)}
+              >
+                {DIFFICULTY_OPTIONS.map((item) => (
+                  <option key={item.value} value={item.value}>
+                    {item.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
               시간 제한(ms)
               <input
                 type="number"
@@ -1060,6 +1122,14 @@ function AdminPage({ auth, setMessage, navigate }) {
                 min="1"
                 value={problemForm.memoryLimitMb}
                 onChange={(event) => updateProblemForm('memoryLimitMb', event.target.value)}
+              />
+            </label>
+            <label>
+              카테고리(쉼표 구분)
+              <input
+                value={problemForm.categories}
+                onChange={(event) => updateProblemForm('categories', event.target.value)}
+                placeholder="예: 구현, 자료구조, 그래프"
               />
             </label>
           </div>
@@ -1179,22 +1249,21 @@ function CategoryPage({ category, navigate, setMessage }) {
   }, [category, groups]);
 
   const selectedProblems = useMemo(() => {
-    if (!category) {
-      return [];
-    }
-    return [...(groups.get(category) ?? [])];
-  }, [category, groups]);
+    return category ? [...problems] : [];
+  }, [category, problems]);
 
   async function loadProblems() {
     setBusy(true);
     try {
-      const data = await request('/api/problems');
+      const endpoint = category
+        ? `/api/problems?category=${encodeURIComponent(category)}`
+        : '/api/problems';
+      const data = await request(endpoint);
       setProblems(data);
       if (!category) {
         setMessage(`카테고리 목록을 불러왔습니다.`);
       } else {
-        const target = data.filter((problem) => getProblemCategory(problem) === category);
-        setMessage(`${category} 카테고리 문제 ${target.length}개`);
+        setMessage(`${category} 카테고리 문제 ${data.length}개`);
       }
     } catch (error) {
       setMessage(error.message);
@@ -1276,16 +1345,14 @@ function CategoryPage({ category, navigate, setMessage }) {
 function RandomProblemPage({ navigate, setMessage }) {
   const [problems, setProblems] = useState([]);
   const [busy, setBusy] = useState(false);
-  const [seed, setSeed] = useState(0);
-
-  const randomProblems = useMemo(() => pickRandomProblems(problems, 5), [problems, seed]);
+  const randomProblems = useMemo(() => problems, [problems]);
 
   async function loadProblems() {
     setBusy(true);
     try {
-      const data = await request('/api/problems');
+      const data = await request('/api/problems/random?count=5');
       setProblems(data);
-      setMessage(`문제 ${data.length}개 중 5개를 무작위로 추출했습니다.`);
+      setMessage(`랜덤으로 ${data.length}문제를 조회했습니다.`);
     } catch (error) {
       setMessage(error.message);
     } finally {
@@ -1305,7 +1372,7 @@ function RandomProblemPage({ navigate, setMessage }) {
             <RefreshCw size={18} />
             <h2>랜덤 5문제</h2>
           </span>
-          <button className="ghost-button with-text" type="button" onClick={() => setSeed((current) => current + 1)}>
+          <button className="ghost-button with-text" type="button" onClick={loadProblems}>
             새로 뽑기
           </button>
         </div>
@@ -1378,7 +1445,7 @@ function ProblemDetailPage({ problemId, navigate, setMessage, isAuthenticated })
   const [submissionBusy, setSubmissionBusy] = useState(false);
   const [submissionForm, setSubmissionForm] = useState(initialSubmissionForm);
   const [testCaseCount, setTestCaseCount] = useState(0);
-  const [editorHint, setEditorHint] = useState('Ctrl+Enter: 제출 / Tab: 들여쓰기 / 괄호 자동 닫힘');
+  const [editorHint, setEditorHint] = useState('Ctrl/Cmd+Enter: 제출 / Tab: 들여쓰기 / Ctrl/Cmd+/ 주석 토글 / Ctrl/Cmd+D: 줄 복제');
   const pollingRef = useRef({});
   const lastSubmissionStatus = useRef({});
   const editorRef = useRef(null);
@@ -1414,6 +1481,100 @@ function ProblemDetailPage({ problemId, navigate, setMessage, isAuthenticated })
     });
   }
 
+  function getLineRange(code, index) {
+    const lineStart = code.lastIndexOf('\n', Math.max(index - 1, 0)) + 1;
+    const newlineIndex = code.indexOf('\n', index);
+    const lineEnd = newlineIndex === -1 ? code.length : newlineIndex;
+    return { lineStart, lineEnd };
+  }
+
+  function toggleLineComment() {
+    const currentCode = submissionForm.sourceCode;
+    const start = editorRef.current?.selectionStart ?? 0;
+    const end = editorRef.current?.selectionEnd ?? 0;
+    const { lineStart } = getLineRange(currentCode, start);
+    const endMarker = end === start ? end + 1 : end - 1;
+    const { lineEnd } = getLineRange(currentCode, endMarker);
+    const segment = currentCode.slice(lineStart, lineEnd);
+    const lines = segment.split('\n');
+    const commentPrefix = submissionForm.language === 'python' ? '# ' : '// ';
+    const trimmedPrefix = commentPrefix.trim();
+    const allCommented = lines.every((line) => {
+      const trimmed = line.trimStart();
+      return trimmed.startsWith(trimmedPrefix);
+    });
+
+    const nextLines = lines.map((line) => {
+      if (allCommented) {
+        const idx = line.indexOf(trimmedPrefix);
+        if (idx === -1) {
+          return line;
+        }
+        return `${line.slice(0, idx)}${line.slice(idx + trimmedPrefix.length)}`;
+      }
+      const match = line.match(/^(\s*)/);
+      const indent = match ? match[1] : '';
+      return `${indent}${commentPrefix}${line.slice(indent.length)}`;
+    });
+
+    applyCode(
+      `${currentCode.slice(0, lineStart)}${nextLines.join('\n')}${currentCode.slice(lineEnd)}`,
+      Math.max(0, start + (allCommented ? 0 : commentPrefix.length))
+    );
+    setEditorHint(`주석 ${allCommented ? '해제' : '추가'}됨`);
+  }
+
+  function duplicateCurrentLine() {
+    const currentCode = submissionForm.sourceCode;
+    const start = editorRef.current?.selectionStart ?? 0;
+    const { lineStart, lineEnd } = getLineRange(currentCode, start);
+    const line = currentCode.slice(lineStart, lineEnd);
+    const nextCode = `${currentCode.slice(0, lineEnd)}\n${line}${currentCode.slice(lineEnd)}`;
+    const nextCursor = Math.min(currentCode.length + 1, lineEnd + line.length + 1);
+    applyCode(nextCode, nextCursor);
+    setEditorHint('줄 복제');
+  }
+
+  function removeCurrentLine() {
+    const currentCode = submissionForm.sourceCode;
+    const start = editorRef.current?.selectionStart ?? 0;
+    const { lineStart, lineEnd } = getLineRange(currentCode, start);
+    const deleteFrom = lineStart;
+    const deleteTo = lineEnd < currentCode.length ? lineEnd + 1 : lineEnd;
+    const nextCode = `${currentCode.slice(0, deleteFrom)}${currentCode.slice(deleteTo)}`;
+    applyCode(nextCode, deleteFrom);
+    setEditorHint('줄 삭제');
+  }
+
+  function shiftIndentSelection(direction) {
+    const currentCode = submissionForm.sourceCode;
+    const start = editorRef.current?.selectionStart ?? 0;
+    const end = editorRef.current?.selectionEnd ?? 0;
+    const { lineStart } = getLineRange(currentCode, start);
+    const endMarker = end === start ? end + 1 : end - 1;
+    const { lineEnd } = getLineRange(currentCode, endMarker);
+    const segment = currentCode.slice(lineStart, lineEnd);
+    const lines = segment.split('\n');
+
+    let delta = 0;
+    const nextLines = lines.map((line) => {
+      if (direction > 0) {
+        delta += IDE_TABS.length;
+        return `${IDE_TABS}${line}`;
+      }
+      const match = line.match(/^[ \t]+/);
+      const indent = match ? match[0] : '';
+      const remove = Math.min(IDE_TAB_SIZE, indent.length);
+      delta -= remove;
+      return line.slice(remove);
+    });
+    applyCode(
+      `${currentCode.slice(0, lineStart)}${nextLines.join('\n')}${currentCode.slice(lineEnd)}`,
+      Math.max(0, start + delta)
+    );
+    setEditorHint(direction > 0 ? '들여쓰기' : '내어쓰기');
+  }
+
   function handleEditorKeyDown(event) {
     const currentCode = submissionForm.sourceCode;
     const key = event.key;
@@ -1441,33 +1602,43 @@ function ProblemDetailPage({ problemId, navigate, setMessage, isAuthenticated })
       return;
     }
 
+    if ((event.ctrlKey || event.metaKey) && key.toLowerCase() === '/' && start === end) {
+      event.preventDefault();
+      toggleLineComment();
+      return;
+    }
+
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey && key.toLowerCase() === 'k' && start === end) {
+      event.preventDefault();
+      removeCurrentLine();
+      return;
+    }
+
+    if ((event.ctrlKey || event.metaKey) && key.toLowerCase() === 'd' && start === end) {
+      event.preventDefault();
+      duplicateCurrentLine();
+      return;
+    }
+
     if (key === 'Tab') {
       event.preventDefault();
       if (event.shiftKey) {
-        const lineStart = currentCode.lastIndexOf('\n', start - 1) + 1;
-        const lineHeadEnd = (() => {
-          let idx = lineStart;
-          while (idx < currentCode.length && currentCode[idx] === ' ') {
-            idx += 1;
-          }
-          return idx;
-        })();
-        const removeCount = Math.min(IDE_TAB_SIZE, lineHeadEnd - lineStart);
-        if (removeCount <= 0) {
-          applyCode(currentCode.slice(0, start) + currentCode.slice(start), start);
+        if (start !== end) {
+          shiftIndentSelection(-1);
           return;
         }
-        const nextCode = currentCode.slice(0, lineStart) + currentCode.slice(lineStart + removeCount);
-        const nextCursor = Math.max(lineStart, start - removeCount);
-        applyCode(nextCode, nextCursor);
-        setEditorHint('들여쓰기 제거');
+        shiftIndentSelection(-1);
         return;
       }
 
-      const nextCode = currentCode.slice(0, start) + '  ' + currentCode.slice(end);
-      const nextCursor = start + 2;
+      if (start !== end) {
+        shiftIndentSelection(1);
+        return;
+      }
+      const nextCode = currentCode.slice(0, start) + IDE_TABS + currentCode.slice(end);
+      const nextCursor = start + IDE_TAB_SIZE;
       applyCode(nextCode, nextCursor);
-      setEditorHint('탭 2칸 삽입');
+      setEditorHint('탭 삽입');
       return;
     }
 
@@ -1508,6 +1679,29 @@ function ProblemDetailPage({ problemId, navigate, setMessage, isAuthenticated })
 
   function updateSubmissionForm(field, value) {
     setSubmissionForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function changeSubmissionLanguage(nextLanguage) {
+    setSubmissionForm((current) => {
+      const isFromTemplate = current.sourceCode.trim() === (LANGUAGE_TEMPLATES[current.language] ?? '').trim();
+      return {
+        ...current,
+        language: nextLanguage,
+        sourceCode: isFromTemplate ? LANGUAGE_TEMPLATES[nextLanguage] ?? current.sourceCode : current.sourceCode,
+      };
+    });
+    setMessage(
+      `언어를 ${nextLanguage}로 변경했습니다.`
+    );
+  }
+
+  function resetEditorCode() {
+    setSubmissionForm((current) => ({
+      ...current,
+      sourceCode: LANGUAGE_TEMPLATES[current.language] ?? current.sourceCode,
+    }));
+    setEditorHint('에디터 초기화');
+    setMessage('템플릿으로 되돌렸습니다.');
   }
 
   async function refreshSubmission(submissionId) {
@@ -1666,10 +1860,14 @@ function ProblemDetailPage({ problemId, navigate, setMessage, isAuthenticated })
                 <dd>{problem.inputDescription}</dd>
                 <dt>출력</dt>
                 <dd>{problem.outputDescription}</dd>
+                <dt>난이도</dt>
+                <dd>{difficultyLabel(problem.difficulty)}</dd>
                 <dt>제한</dt>
                 <dd>{problem.timeLimitMs}ms / {problem.memoryLimitMb}MB</dd>
                 <dt>카테고리</dt>
-                <dd>{getProblemCategory(problem)}</dd>
+                <dd>
+                  {problemCategoryNames(problem).join(', ')}
+                </dd>
                 <dt>테스트케이스</dt>
                 <dd>{testCaseCount}개</dd>
               </dl>
@@ -1690,7 +1888,7 @@ function ProblemDetailPage({ problemId, navigate, setMessage, isAuthenticated })
               언어
               <select
                 value={submissionForm.language}
-                onChange={(event) => updateSubmissionForm('language', event.target.value)}
+                onChange={(event) => changeSubmissionLanguage(event.target.value)}
               >
                 <option value="java">Java</option>
                 <option value="python">Python</option>
@@ -1699,7 +1897,16 @@ function ProblemDetailPage({ problemId, navigate, setMessage, isAuthenticated })
             </label>
 
             <label>
-              소스 코드
+              <div className="editor-toolbar">
+                <span>소스 코드</span>
+                <button
+                  className="ghost-button with-text editor-toolbar-button"
+                  type="button"
+                  onClick={resetEditorCode}
+                >
+                  템플릿으로 초기화
+                </button>
+              </div>
               <textarea
                 className="code-editor"
                 ref={editorRef}

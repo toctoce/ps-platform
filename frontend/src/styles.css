@@ -256,15 +256,64 @@ textarea:focus {
   text-align: left;
 }
 
+.problem-row-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.category-chip-list {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
 .problem-row:hover {
   border-color: #8ab4f8;
   background: #f8fbff;
+}
+
+.category-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #ced6de;
+  background: #f5f7fa;
+  color: #38434d;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.1;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.category-chip--button {
+  justify-content: space-between;
+  text-align: left;
 }
 
 .problem-row span {
   grid-row: span 2;
   color: #5f6368;
   font-size: 13px;
+  font-weight: 700;
+}
+
+.difficulty-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  margin-right: 8px;
+  border-radius: 999px;
+  background: #f0f4ff;
+  border: 1px solid #c9d6ff;
+  color: #244ea8;
+  font-size: 12px;
+  line-height: 1.1;
   font-weight: 700;
 }
 
@@ -340,6 +389,20 @@ dd {
 .testcase-list {
   display: grid;
   gap: 12px;
+}
+
+.editor-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.editor-toolbar .editor-toolbar-button {
+  height: 30px;
+  min-width: auto;
+  padding: 0 10px;
+  font-size: 12px;
 }
 
 .code-editor {
