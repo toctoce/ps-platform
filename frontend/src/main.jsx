@@ -771,7 +771,7 @@ function SignupPage({ setMessage, navigate }) {
   );
 }
 
-function HomePage({ navigate, isAdmin }) {
+function HomePage({ navigate, isAdmin, setMessage }) {
   const [problems, setProblems] = useState([]);
   const [randomProblems, setRandomProblems] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -787,6 +787,7 @@ function HomePage({ navigate, isAdmin }) {
     () => [...problems].sort((a, b) => b.id - a.id).slice(0, 10),
     [problems]
   );
+  const categoryCount = categories.length;
 
   async function loadProblems() {
     setBusy(true);
@@ -807,7 +808,7 @@ function HomePage({ navigate, isAdmin }) {
 
   async function loadRandomProblems() {
     try {
-      setBusy(true);
+    setBusy(true);
       const randomData = await request('/api/problems/random?count=5');
       setRandomProblems(randomData);
     } catch (error) {
@@ -823,19 +824,57 @@ function HomePage({ navigate, isAdmin }) {
 
   return (
     <section className="home-page">
+      <section className="hero">
+        <div className="hero-copy">
+          <p className="hero-eyebrow">PS Platform</p>
+          <h1>알고리즘 문제를 빠르게 찾아 풀어보세요</h1>
+          <p>문제를 분류별로 탐색하거나, 랜덤 추천으로 시작해서 연습 루틴을 잡을 수 있습니다.</p>
+        </div>
+        <div className="hero-actions">
+          <button className="primary-button" type="button" onClick={() => navigate('/categories')}>
+            <FolderKanban size={16} />
+            카테고리 보기
+          </button>
+          <button className="ghost-button with-text" type="button" onClick={() => navigate('/random')}>
+            <Shuffle size={16} />
+            랜덤 추천 받기
+          </button>
+        </div>
+      </section>
+
+      <section className="stats-grid">
+        <article className="stat-card">
+          <p>등록 문제</p>
+          <strong>{problems.length}</strong>
+          <small>전체 공개 문제 수</small>
+        </article>
+        <article className="stat-card">
+          <p>카테고리</p>
+          <strong>{categoryCount}</strong>
+          <small>분류된 문제군</small>
+        </article>
+        <article className="stat-card">
+          <p>랜덤 추천</p>
+          <strong>{randomProblems.length}</strong>
+          <small>현재 추천 세트</small>
+        </article>
+      </section>
+
       <section className="home-grid">
         <section className="panel">
           <div className="panel-header split">
             <span className="heading-inline">
               <FolderKanban size={18} />
-              <h2>카테고리별로 풀기</h2>
+              <h2>카테고리</h2>
             </span>
             <button
               className="ghost-button with-text"
               type="button"
-              onClick={() => navigate('/categories')}
+              onClick={loadProblems}
+              disabled={busy}
             >
-              전체 보기
+              <RefreshCw size={16} />
+              새로고침
             </button>
           </div>
           <div className="category-summary">
@@ -861,7 +900,7 @@ function HomePage({ navigate, isAdmin }) {
           <div className="panel-header split">
             <span className="heading-inline">
               <Shuffle size={18} />
-              <h2>랜덤 5문제</h2>
+              <h2>랜덤 추천 문제</h2>
             </span>
             <button
               className="ghost-button with-text"
@@ -872,7 +911,7 @@ function HomePage({ navigate, isAdmin }) {
               다시 뽑기
             </button>
           </div>
-          <div className="problem-list">
+          <div className="problem-list compact-list">
             {randomProblems.length === 0 ? (
               <p className="empty">문제가 없습니다.</p>
             ) : (
@@ -892,13 +931,13 @@ function HomePage({ navigate, isAdmin }) {
         <div className="panel-header split">
           <span className="heading-inline">
             <FileText size={18} />
-            <h2>최근 문제</h2>
+            <h2>최근 등록 문제</h2>
           </span>
-          <button className="ghost-button" type="button" onClick={loadProblems} disabled={busy} title="새로고침">
-            <RefreshCw size={17} />
+          <button className="ghost-button with-text" type="button" onClick={() => setMessage('최근 목록은 ID 역순으로 정렬됩니다.')}>
+            정렬 안내
           </button>
         </div>
-        <div className="problem-list">
+        <div className="problem-list compact-list">
           {recentProblems.length === 0 ? (
             <p className="empty">등록된 문제가 없습니다.</p>
           ) : (
@@ -912,6 +951,7 @@ function HomePage({ navigate, isAdmin }) {
           )}
         </div>
       </section>
+
       <section className="panel">
         <div className="panel-header">
           <Lock size={18} />
@@ -920,7 +960,7 @@ function HomePage({ navigate, isAdmin }) {
         <p className="helper-text">
           {isAdmin
             ? '문제 등록과 테스트케이스 등록은 관리자 페이지에서 수행합니다.'
-            : '문제 등록·테스트케이스 등록은 현재는 누구나 접근 가능한 관리자 페이지에서 수행할 수 있습니다. 단, 실제 저장은 백엔드 권한이 있어야 성공합니다.'}
+            : '문제 등록·테스트케이스 등록은 현재 누구나 접근 가능한 관리자 페이지에서 수행할 수 있습니다. 단, 권한이 필요한 기능은 서버에서 차단될 수 있습니다.'}
         </p>
         <button
           className="primary-button"
