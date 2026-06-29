@@ -9,6 +9,8 @@ spring:
   sql:
     init:
       mode: always
+      data-locations:
+        - optional:file:./seed-data.sql
 
 app:
   auth:
