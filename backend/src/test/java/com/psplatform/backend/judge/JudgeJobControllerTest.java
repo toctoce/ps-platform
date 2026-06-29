@@ -17,6 +17,7 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.psplatform.backend.problem.Problem;
 import com.psplatform.backend.problem.ProblemCreateRequest;
+import com.psplatform.backend.problem.ProblemDifficulty;
 import com.psplatform.backend.problem.ProblemRepository;
 import com.psplatform.backend.problem.ProblemTestCaseCreateRequest;
 import com.psplatform.backend.problem.ProblemTestCaseRepository;
@@ -168,6 +169,8 @@ class JudgeJobControllerTest {
 			"A+B를 출력한다.",
 			1000,
 			128,
+			ProblemDifficulty.NORMAL,
+			List.of(),
 			List.of()
 		));
 		problemTestCaseRepository.saveAll(

@@ -1,6 +1,7 @@
 package com.psplatform.backend.problem;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record ProblemResponse(
 	Long id,
@@ -10,7 +11,9 @@ public record ProblemResponse(
 	String outputDescription,
 	int timeLimitMs,
 	int memoryLimitMb,
-	LocalDateTime createdAt
+	ProblemDifficulty difficulty,
+	LocalDateTime createdAt,
+	List<ProblemCategoryResponse> categories
 ) {
 	public static ProblemResponse from(Problem problem) {
 		return new ProblemResponse(
@@ -21,7 +24,11 @@ public record ProblemResponse(
 			problem.getOutputDescription(),
 			problem.getTimeLimitMs(),
 			problem.getMemoryLimitMb(),
-			problem.getCreatedAt()
+			problem.getDifficulty(),
+			problem.getCreatedAt(),
+			problem.getCategories().stream()
+				.map(ProblemCategoryResponse::from)
+				.toList()
 		);
 	}
 }

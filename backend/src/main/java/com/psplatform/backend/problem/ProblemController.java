@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -30,8 +31,8 @@ public class ProblemController {
 	}
 
 	@GetMapping
-	public List<ProblemResponse> findAll() {
-		return problemService.findAll()
+	public List<ProblemResponse> findAll(@RequestParam(required = false) String category) {
+		return problemService.findAll(category)
 			.stream()
 			.map(ProblemResponse::from)
 			.toList();
@@ -47,6 +48,14 @@ public class ProblemController {
 		return problemService.findTestCasesByProblemId(id)
 			.stream()
 			.map(ProblemTestCaseResponse::from)
+			.toList();
+	}
+
+	@GetMapping("/random")
+	public List<ProblemResponse> findRandomProblems(@RequestParam(defaultValue = "5") int count) {
+		return problemService.findRandomProblems(count)
+			.stream()
+			.map(ProblemResponse::from)
 			.toList();
 	}
 

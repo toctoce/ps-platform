@@ -9,6 +9,10 @@ public interface ProblemRepository {
 
 	List<Problem> findAll();
 
+	List<Problem> findByCategory(String category);
+
+	List<Problem> findRandom(int count);
+
 	Optional<Problem> findById(long id);
 
 	void deleteAll();

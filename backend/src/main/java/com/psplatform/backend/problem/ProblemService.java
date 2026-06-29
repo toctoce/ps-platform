@@ -1,6 +1,7 @@
 package com.psplatform.backend.problem;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -10,28 +11,63 @@ public class ProblemService {
 
 	private final ProblemRepository problemRepository;
 	private final ProblemTestCaseRepository problemTestCaseRepository;
+	private final ProblemCategoryRepository problemCategoryRepository;
 
-	public ProblemService(ProblemRepository problemRepository, ProblemTestCaseRepository problemTestCaseRepository) {
+	public ProblemService(
+		ProblemRepository problemRepository,
+		ProblemTestCaseRepository problemTestCaseRepository,
+		ProblemCategoryRepository problemCategoryRepository
+	) {
 		this.problemRepository = problemRepository;
 		this.problemTestCaseRepository = problemTestCaseRepository;
+		this.problemCategoryRepository = problemCategoryRepository;
 	}
 
 	@Transactional
 	public Problem create(ProblemCreateRequest request) {
 		Problem problem = problemRepository.save(request);
+		problemCategoryRepository.addLinks(problem.getId(), request.categories());
 		if (request.testCases() != null) {
 			problemTestCaseRepository.saveAll(problem.getId(), request.testCases());
 		}
-		return problem;
+		return hydrateProblems(List.of(problem)).getFirst();
 	}
 
 	public List<Problem> findAll() {
-		return problemRepository.findAll();
+		return hydrateCategories(problemRepository.findAll());
+	}
+
+	public List<Problem> findAll(String category) {
+		if (category == null || category.isBlank()) {
+			return findAll();
+		}
+		return hydrateCategories(problemRepository.findByCategory(category));
+	}
+
+	public List<Problem> findRandomProblems(int count) {
+		int safeCount = Math.max(0, Math.min(count, 100));
+		return hydrateCategories(problemRepository.findRandom(safeCount));
 	}
 
 	public Problem findById(long id) {
-		return problemRepository.findById(id)
+		Problem problem = problemRepository.findById(id)
 			.orElseThrow(() -> new ProblemNotFoundException(id));
+		return hydrateProblems(List.of(problem)).getFirst();
+	}
+
+	private List<Problem> hydrateProblems(List<Problem> problems) {
+		List<Long> problemIds = problems.stream()
+			.map(Problem::getId)
+			.filter(id -> id != null)
+			.toList();
+		Map<Long, List<ProblemCategory>> categoryByProblemId = problemCategoryRepository.findByProblemIds(problemIds);
+		return problems.stream()
+			.map(problem -> problem.withCategories(categoryByProblemId.getOrDefault(problem.getId(), List.of())))
+			.toList();
+	}
+
+	private List<Problem> hydrateCategories(List<Problem> problems) {
+		return hydrateProblems(problems);
 	}
 
 	@Transactional
