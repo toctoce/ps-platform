@@ -755,7 +755,7 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
                       type="button"
                       onClick={runCode}
                       disabled={testRunBusy || submissionBusy || !problem}
-                      data-tooltip="`⌘ + '`"
+                      data-tooltip="⌘ / Ctrl + '"
                     >
                       <Play size={14} />
                       실행
@@ -801,10 +801,9 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
 
               <div className="ide-actions">
                 <button
-                  className="ghost-button ide-small-button has-tooltip"
+                  className="ide-testcase-toggle"
                   type="button"
                   onClick={() => setTestCasePanelOpen((current) => !current)}
-                  data-tooltip="테스트케이스 패널 열기/닫기"
                 >
                   {testCasePanelOpen ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
                   테스트케이스
@@ -813,7 +812,7 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
                   className="primary-button ide-small-button has-tooltip"
                   type="submit"
                   disabled={submissionBusy || !problem}
-                  data-tooltip="`⌘ + Enter`"
+                  data-tooltip="⌘ / Ctrl + Enter"
                 >
                   <Send size={14} />
                   제출
