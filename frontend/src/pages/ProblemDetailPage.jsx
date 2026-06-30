@@ -755,7 +755,7 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
                       type="button"
                       onClick={runCode}
                       disabled={testRunBusy || submissionBusy || !problem}
-                      data-tooltip="Cmd/Ctrl + ' 로 실행"
+                      data-tooltip="`⌘ + '`"
                     >
                       <Play size={14} />
                       실행
@@ -813,7 +813,7 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
                   className="primary-button ide-small-button has-tooltip"
                   type="submit"
                   disabled={submissionBusy || !problem}
-                  data-tooltip="Cmd/Ctrl + Enter 로 제출"
+                  data-tooltip="`⌘ + Enter`"
                 >
                   <Send size={14} />
                   제출
