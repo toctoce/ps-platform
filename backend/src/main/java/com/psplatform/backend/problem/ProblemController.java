@@ -51,6 +51,14 @@ public class ProblemController {
 			.toList();
 	}
 
+	@GetMapping("/{id}/examples")
+	public List<ProblemExampleResponse> findExamples(@PathVariable long id) {
+		return problemService.findExamplesByProblemId(id)
+			.stream()
+			.map(ProblemExampleResponse::from)
+			.toList();
+	}
+
 	@GetMapping("/random")
 	public List<ProblemResponse> findRandomProblems(@RequestParam(defaultValue = "5") int count) {
 		return problemService.findRandomProblems(count)
@@ -68,5 +76,16 @@ public class ProblemController {
 		return ResponseEntity
 			.created(URI.create("/api/problems/" + id + "/test-cases/" + testCase.getId()))
 			.body(ProblemTestCaseResponse.from(testCase));
+	}
+
+	@PostMapping("/{id}/examples")
+	public ResponseEntity<ProblemExampleResponse> addExample(
+		@PathVariable long id,
+		@RequestBody ProblemExampleCreateRequest request
+	) {
+		ProblemExample example = problemService.addExample(id, request);
+		return ResponseEntity
+			.created(URI.create("/api/problems/" + id + "/examples/" + example.getId()))
+			.body(ProblemExampleResponse.from(example));
 	}
 }

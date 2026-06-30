@@ -32,6 +32,9 @@ class ProblemControllerTest {
 	private ProblemTestCaseRepository problemTestCaseRepository;
 
 	@Autowired
+	private ProblemExampleRepository problemExampleRepository;
+
+	@Autowired
 	private ProblemService problemService;
 
 	@BeforeEach
@@ -47,6 +50,7 @@ class ProblemControllerTest {
 					{
 					  "title": "A+B",
 					  "description": "두 수를 더하는 문제",
+					  "solution": "## 풀이\\n두 수를 읽고 더합니다.",
 					  "inputDescription": "정수 A와 B가 주어진다.",
 					  "outputDescription": "A+B를 출력한다.",
 					  "difficulty": "HARD",
@@ -58,6 +62,13 @@ class ProblemControllerTest {
 					      "input": "1 2\\n",
 					      "expectedOutput": "3\\n"
 					    }
+					  ],
+					  "examples": [
+					    {
+					      "input": "1 2\\n",
+					      "expectedOutput": "3\\n",
+					      "description": "1과 2를 더하면 3입니다."
+					    }
 					  ]
 					}
 					"""))
@@ -66,6 +77,7 @@ class ProblemControllerTest {
 			.andExpect(jsonPath("$.id").isNumber())
 			.andExpect(jsonPath("$.title").value("A+B"))
 			.andExpect(jsonPath("$.description").value("두 수를 더하는 문제"))
+			.andExpect(jsonPath("$.solution").value("## 풀이\n두 수를 읽고 더합니다."))
 			.andExpect(jsonPath("$.inputDescription").value("정수 A와 B가 주어진다."))
 			.andExpect(jsonPath("$.outputDescription").value("A+B를 출력한다."))
 			.andExpect(jsonPath("$.difficulty").value("HARD"))
@@ -78,6 +90,11 @@ class ProblemControllerTest {
 		assertThat(testCases).hasSize(1);
 		assertThat(testCases.getFirst().getInput()).isEqualTo("1 2\n");
 		assertThat(testCases.getFirst().getExpectedOutput()).isEqualTo("3\n");
+		List<ProblemExample> examples = problemExampleRepository.findByProblemId(problem.getId());
+		assertThat(examples).hasSize(1);
+		assertThat(examples.getFirst().getInput()).isEqualTo("1 2\n");
+		assertThat(examples.getFirst().getExpectedOutput()).isEqualTo("3\n");
+		assertThat(examples.getFirst().getDescription()).isEqualTo("1과 2를 더하면 3입니다.");
 	}
 
 	@Test
@@ -85,6 +102,7 @@ class ProblemControllerTest {
 		problemRepository.save(new ProblemCreateRequest(
 			"A+B",
 			"두 수를 더하는 문제",
+			"## 풀이\n두 수를 읽고 더합니다.",
 			"정수 A와 B가 주어진다.",
 			"A+B를 출력한다.",
 			1000,
@@ -101,12 +119,13 @@ class ProblemControllerTest {
 
 	@Test
 	void findProblemById() throws Exception {
-		Problem problem = problemService.create(new ProblemCreateRequest(
-			"A+B",
-			"두 수를 더하는 문제",
-			"정수 A와 B가 주어진다.",
-			"A+B를 출력한다.",
-			1000,
+			Problem problem = problemService.create(new ProblemCreateRequest(
+				"A+B",
+				"두 수를 더하는 문제",
+				"## 풀이\n두 수를 읽고 더합니다.",
+				"정수 A와 B가 주어진다.",
+				"A+B를 출력한다.",
+				1000,
 			128,
 			ProblemDifficulty.NORMAL,
 			List.of("배열"),
@@ -117,6 +136,7 @@ class ProblemControllerTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.id").value(problem.getId()))
 			.andExpect(jsonPath("$.title").value("A+B"))
+			.andExpect(jsonPath("$.solution").value("## 풀이\n두 수를 읽고 더합니다."))
 			.andExpect(jsonPath("$.categories[0].name").value("배열"));
 	}
 
@@ -195,6 +215,42 @@ class ProblemControllerTest {
 	}
 
 	@Test
+	void addExampleToProblem() throws Exception {
+		Problem problem = problemRepository.save(new ProblemCreateRequest(
+			"A+B",
+			"두 수를 더하는 문제",
+			"정수 A와 B가 주어진다.",
+			"A+B를 출력한다.",
+			1000,
+			128,
+			ProblemDifficulty.NORMAL,
+			List.of(),
+			List.of()
+		));
+
+		mockMvc.perform(post("/api/problems/{id}/examples", problem.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "input": "10 20\\n",
+					  "expectedOutput": "30\\n",
+					  "description": "10과 20을 더하면 30입니다."
+					}
+					"""))
+			.andExpect(status().isCreated())
+			.andExpect(header().string(
+				"Location",
+				org.hamcrest.Matchers.matchesPattern("/api/problems/[0-9]+/examples/[0-9]+")
+			))
+			.andExpect(jsonPath("$.id").isNumber())
+			.andExpect(jsonPath("$.problemId").value(problem.getId()))
+			.andExpect(jsonPath("$.input").value("10 20\n"))
+			.andExpect(jsonPath("$.expectedOutput").value("30\n"))
+			.andExpect(jsonPath("$.description").value("10과 20을 더하면 30입니다."))
+			.andExpect(jsonPath("$.sortOrder").value(0));
+	}
+
+	@Test
 	void findTestCasesByProblemId() throws Exception {
 		Problem problem = problemRepository.save(new ProblemCreateRequest(
 			"A+B",
@@ -222,6 +278,39 @@ class ProblemControllerTest {
 			.andExpect(jsonPath("$[0].sortOrder").value(0))
 			.andExpect(jsonPath("$[1].input").value("10 20\n"))
 			.andExpect(jsonPath("$[1].expectedOutput").value("30\n"))
+			.andExpect(jsonPath("$[1].sortOrder").value(1));
+	}
+
+	@Test
+	void findExamplesByProblemId() throws Exception {
+		Problem problem = problemRepository.save(new ProblemCreateRequest(
+			"A+B",
+			"두 수를 더하는 문제",
+			"정수 A와 B가 주어진다.",
+			"A+B를 출력한다.",
+			1000,
+			128,
+			ProblemDifficulty.NORMAL,
+			List.of(),
+			List.of()
+		));
+		problemExampleRepository.saveAll(
+			problem.getId(),
+			List.of(
+				new ProblemExampleCreateRequest("1 2\n", "3\n", "1과 2를 더하면 3입니다."),
+				new ProblemExampleCreateRequest("10 20\n", "30\n", null)
+			)
+		);
+
+		mockMvc.perform(get("/api/problems/{id}/examples", problem.getId()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$[0].input").value("1 2\n"))
+			.andExpect(jsonPath("$[0].expectedOutput").value("3\n"))
+			.andExpect(jsonPath("$[0].description").value("1과 2를 더하면 3입니다."))
+			.andExpect(jsonPath("$[0].sortOrder").value(0))
+			.andExpect(jsonPath("$[1].input").value("10 20\n"))
+			.andExpect(jsonPath("$[1].expectedOutput").value("30\n"))
+			.andExpect(jsonPath("$[1].description").doesNotExist())
 			.andExpect(jsonPath("$[1].sortOrder").value(1));
 	}
 

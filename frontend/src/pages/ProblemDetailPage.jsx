@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import { BookOpen, ChevronDown, ChevronUp, Code2, Moon, Play, Plus, RefreshCw, Send, Sun } from 'lucide-react';
 import { request } from '../api/client.js';
+import { MarkdownContent } from '../components/MarkdownContent.jsx';
 import {
   editorFileName,
   editorLanguage,
@@ -375,12 +376,16 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
         request(`/api/problems/${problemId}`),
         request(`/api/problems/${problemId}/submissions`),
       ]);
-      const testCaseData = await request(`/api/problems/${problemId}/test-cases`);
+      const [testCaseData, exampleData] = await Promise.all([
+        request(`/api/problems/${problemId}/test-cases`),
+        request(`/api/problems/${problemId}/examples`),
+      ]);
       const fetchedSubmissions = Array.isArray(submissionData) ? submissionData : [];
 
       setProblem(problemData);
       const fetchedTestCases = Array.isArray(testCaseData) ? testCaseData : [];
-      setExampleCases(fetchedTestCases);
+      const fetchedExamples = Array.isArray(exampleData) ? exampleData : [];
+      setExampleCases(fetchedExamples);
       setTestCases(fetchedTestCases);
       setActiveIdeTestCaseIndex(0);
       setTestCaseForm({ input: fetchedTestCases[0]?.input ?? '' });
@@ -555,10 +560,12 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
                               <pre>{testCase.expectedOutput}</pre>
                             </div>
                           </div>
-                          <details className="example-description">
-                            <summary>설명</summary>
-                            <p>{testCase.description ?? '예제 설명이 등록되지 않았습니다.'}</p>
-                          </details>
+                          {testCase.description ? (
+                            <details className="example-description">
+                              <summary>설명</summary>
+                              <p>{testCase.description}</p>
+                            </details>
+                          ) : null}
                         </div>
                       ))}
                     </div>
@@ -598,7 +605,9 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
                 )}
               </section>
             ) : activeProblemTab === 'solution' ? (
-              <p className="empty">풀이 기능은 추가 개발 예정입니다.</p>
+              <section className="solution-tab">
+                <MarkdownContent source={problem?.solution} emptyMessage="등록된 풀이가 없습니다." />
+              </section>
             ) : (
               <p className="empty">문제를 불러오지 못했습니다.</p>
             )}

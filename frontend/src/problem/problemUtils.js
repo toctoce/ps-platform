@@ -1,6 +1,7 @@
 export const initialProblemForm = {
   title: 'A+B',
   description: '두 수를 더하는 문제',
+  solution: '## 풀이\n입력으로 받은 두 정수를 더해 출력합니다.',
   inputDescription: '정수 A와 B가 주어진다.',
   outputDescription: 'A+B를 출력한다.',
   difficulty: 'NORMAL',
@@ -8,6 +9,12 @@ export const initialProblemForm = {
   timeLimitMs: 1000,
   memoryLimitMb: 128,
   testCases: [
+    {
+      input: '1 2\n',
+      expectedOutput: '3\n',
+    },
+  ],
+  examples: [
     {
       input: '1 2\n',
       expectedOutput: '3\n',

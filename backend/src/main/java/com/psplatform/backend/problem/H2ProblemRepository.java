@@ -19,6 +19,7 @@ public class H2ProblemRepository implements ProblemRepository {
 		rs.getLong("id"),
 		rs.getString("title"),
 		rs.getString("description"),
+		rs.getString("solution"),
 		rs.getString("input_description"),
 		rs.getString("output_description"),
 		rs.getInt("time_limit_ms"),
@@ -37,13 +38,14 @@ public class H2ProblemRepository implements ProblemRepository {
 			INSERT INTO problems (
 				title,
 				description,
+				solution,
 				input_description,
 				output_description,
 				time_limit_ms,
 				memory_limit_mb,
 				difficulty
 			)
-			VALUES (?, ?, ?, ?, ?, ?, ?)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 			""";
 
 		KeyHolder keyHolder = new GeneratedKeyHolder();
@@ -51,11 +53,12 @@ public class H2ProblemRepository implements ProblemRepository {
 			PreparedStatement ps = connection.prepareStatement(sql, new String[] {"id"});
 			ps.setString(1, request.title());
 			ps.setString(2, request.description());
-			ps.setString(3, request.inputDescription());
-			ps.setString(4, request.outputDescription());
-			ps.setInt(5, request.timeLimitMs());
-			ps.setInt(6, request.memoryLimitMb());
-			ps.setString(7, request.difficulty().name());
+			ps.setString(3, normalizeSolution(request.solution()));
+			ps.setString(4, request.inputDescription());
+			ps.setString(5, request.outputDescription());
+			ps.setInt(6, request.timeLimitMs());
+			ps.setInt(7, request.memoryLimitMb());
+			ps.setString(8, request.difficulty().name());
 			return ps;
 		}, keyHolder);
 
@@ -72,7 +75,7 @@ public class H2ProblemRepository implements ProblemRepository {
 	public List<Problem> findAll() {
 		return jdbcTemplate.query(
 			"""
-			SELECT id, title, description, input_description, output_description,
+			SELECT id, title, description, solution, input_description, output_description,
 			       time_limit_ms, memory_limit_mb, difficulty, created_at
 			FROM problems
 			ORDER BY id DESC
@@ -85,7 +88,7 @@ public class H2ProblemRepository implements ProblemRepository {
 	public Optional<Problem> findById(long id) {
 		List<Problem> problems = jdbcTemplate.query(
 			"""
-			SELECT id, title, description, input_description, output_description,
+			SELECT id, title, description, solution, input_description, output_description,
 			       time_limit_ms, memory_limit_mb, difficulty, created_at
 			FROM problems
 			WHERE id = ?
@@ -103,7 +106,7 @@ public class H2ProblemRepository implements ProblemRepository {
 		}
 		return jdbcTemplate.query(
 			"""
-			SELECT p.id, p.title, p.description, p.input_description, p.output_description,
+			SELECT p.id, p.title, p.description, p.solution, p.input_description, p.output_description,
 			       p.time_limit_ms, p.memory_limit_mb, p.difficulty, p.created_at
 			FROM problems p
 			INNER JOIN problem_category_links pcl ON p.id = pcl.problem_id
@@ -123,7 +126,7 @@ public class H2ProblemRepository implements ProblemRepository {
 		}
 		return jdbcTemplate.query(
 			"""
-			SELECT id, title, description, input_description, output_description,
+			SELECT id, title, description, solution, input_description, output_description,
 			       time_limit_ms, memory_limit_mb, difficulty, created_at
 			FROM problems
 			ORDER BY RAND()
@@ -138,9 +141,17 @@ public class H2ProblemRepository implements ProblemRepository {
 	public void deleteAll() {
 		jdbcTemplate.update("DELETE FROM judge_jobs");
 		jdbcTemplate.update("DELETE FROM submissions");
+		jdbcTemplate.update("DELETE FROM problem_examples");
 		jdbcTemplate.update("DELETE FROM problem_test_cases");
 		jdbcTemplate.update("DELETE FROM problem_category_links");
 		jdbcTemplate.update("DELETE FROM problem_categories");
 		jdbcTemplate.update("DELETE FROM problems");
+	}
+
+	private String normalizeSolution(String solution) {
+		if (solution == null || solution.isBlank()) {
+			return null;
+		}
+		return solution;
 	}
 }

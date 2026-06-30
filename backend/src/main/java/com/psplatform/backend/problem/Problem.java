@@ -8,6 +8,7 @@ public class Problem {
 	private final Long id;
 	private final String title;
 	private final String description;
+	private final String solution;
 	private final String inputDescription;
 	private final String outputDescription;
 	private final int timeLimitMs;
@@ -20,6 +21,7 @@ public class Problem {
 		Long id,
 		String title,
 		String description,
+		String solution,
 		String inputDescription,
 		String outputDescription,
 		int timeLimitMs,
@@ -31,6 +33,7 @@ public class Problem {
 			id,
 			title,
 			description,
+			solution,
 			inputDescription,
 			outputDescription,
 			timeLimitMs,
@@ -44,11 +47,12 @@ public class Problem {
 	public Problem(
 		Long id,
 		String title,
-	String description,
-	String inputDescription,
-	String outputDescription,
-	int timeLimitMs,
-	int memoryLimitMb,
+		String description,
+		String solution,
+		String inputDescription,
+		String outputDescription,
+		int timeLimitMs,
+		int memoryLimitMb,
 		ProblemDifficulty difficulty,
 		LocalDateTime createdAt,
 		List<ProblemCategory> categories
@@ -56,6 +60,7 @@ public class Problem {
 		this.id = id;
 		this.title = title;
 		this.description = description;
+		this.solution = solution;
 		this.inputDescription = inputDescription;
 		this.outputDescription = outputDescription;
 		this.timeLimitMs = timeLimitMs;
@@ -75,6 +80,10 @@ public class Problem {
 
 	public String getDescription() {
 		return description;
+	}
+
+	public String getSolution() {
+		return solution;
 	}
 
 	public String getInputDescription() {
@@ -110,6 +119,7 @@ public class Problem {
 			id,
 			title,
 			description,
+			solution,
 			inputDescription,
 			outputDescription,
 			timeLimitMs,

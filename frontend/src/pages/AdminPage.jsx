@@ -9,8 +9,10 @@ export function AdminPage({ auth, setMessage, navigate }) {
   const [problemForm, setProblemForm] = useState(initialProblemForm);
   const [createBusy, setCreateBusy] = useState(false);
   const [problemId, setProblemId] = useState('');
-  const [testCaseForms, setTestCaseForms] = useState([{ input: '', expectedOutput: '', description: '' }]);
+  const [testCaseForms, setTestCaseForms] = useState([{ input: '', expectedOutput: '' }]);
+  const [exampleForms, setExampleForms] = useState([{ input: '', expectedOutput: '', description: '' }]);
   const [testCaseBusy, setTestCaseBusy] = useState(false);
+  const [exampleBusy, setExampleBusy] = useState(false);
   const isAuthenticated = Boolean(auth?.accessToken);
   const isAdmin = auth?.user?.role === 'ADMIN';
 
@@ -49,11 +51,32 @@ export function AdminPage({ auth, setMessage, navigate }) {
   }
 
   function addTestCaseForm() {
-    setTestCaseForms((current) => [...current, { input: '', expectedOutput: '', description: '' }]);
+    setTestCaseForms((current) => [...current, { input: '', expectedOutput: '' }]);
   }
 
   function removeTestCaseForm(index) {
     setTestCaseForms((current) => {
+      if (current.length <= 1) {
+        return current;
+      }
+      return current.filter((_, currentIndex) => currentIndex !== index);
+    });
+  }
+
+  function updateExampleForm(index, field, value) {
+    setExampleForms((current) => (
+      current.map((item, currentIndex) => (
+        currentIndex === index ? { ...item, [field]: value } : item
+      ))
+    ));
+  }
+
+  function addExampleForm() {
+    setExampleForms((current) => [...current, { input: '', expectedOutput: '', description: '' }]);
+  }
+
+  function removeExampleForm(index) {
+    setExampleForms((current) => {
       if (current.length <= 1) {
         return current;
       }
@@ -79,6 +102,7 @@ export function AdminPage({ auth, setMessage, navigate }) {
         timeLimitMs: Number(problemForm.timeLimitMs),
         memoryLimitMb: Number(problemForm.memoryLimitMb),
         testCases: [],
+        examples: [],
       };
       const created = await request('/api/problems', {
         method: 'POST',
@@ -109,9 +133,8 @@ export function AdminPage({ auth, setMessage, navigate }) {
       .map((item) => ({
         input: item.input,
         expectedOutput: item.expectedOutput,
-        description: item.description,
       }))
-      .filter((item) => item.input.trim() !== '' || item.expectedOutput.trim() !== '' || item.description.trim() !== '');
+      .filter((item) => item.input.trim() !== '' || item.expectedOutput.trim() !== '');
 
     if (cases.length === 0) {
       setMessage('저장할 테스트케이스가 없습니다.');
@@ -128,12 +151,52 @@ export function AdminPage({ auth, setMessage, navigate }) {
         }))
       );
       setMessage(`문제 #${targetProblemId} 테스트케이스 ${cases.length}개를 등록했습니다.`);
-      setTestCaseForms([{ input: '', expectedOutput: '', description: '' }]);
+      setTestCaseForms([{ input: '', expectedOutput: '' }]);
       await loadProblems();
     } catch (error) {
       setMessage(error.message);
     } finally {
       setTestCaseBusy(false);
+    }
+  }
+
+  async function addExamples(event) {
+    event.preventDefault();
+    const targetProblemId = Number(problemId);
+    if (!Number.isInteger(targetProblemId) || targetProblemId <= 0) {
+      setMessage('문제를 선택해 주세요.');
+      return;
+    }
+
+    const examples = exampleForms
+      .map((item) => ({
+        input: item.input,
+        expectedOutput: item.expectedOutput,
+        description: item.description.trim() === '' ? null : item.description,
+      }))
+      .filter((item) => item.input.trim() !== '' || item.expectedOutput.trim() !== '' || item.description !== null);
+
+    if (examples.length === 0) {
+      setMessage('저장할 예제가 없습니다.');
+      return;
+    }
+
+    setExampleBusy(true);
+    try {
+      await Promise.all(
+        examples.map((item) => request(`/api/problems/${targetProblemId}/examples`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...authHeaders() },
+          body: JSON.stringify(item),
+        }))
+      );
+      setMessage(`문제 #${targetProblemId} 예제 ${examples.length}개를 등록했습니다.`);
+      setExampleForms([{ input: '', expectedOutput: '', description: '' }]);
+      await loadProblems();
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setExampleBusy(false);
     }
   }
 
@@ -183,7 +246,7 @@ export function AdminPage({ auth, setMessage, navigate }) {
         </span>
         <div>
           <h1>관리자 페이지</h1>
-          <p>문제 추가와 테스트케이스 추가를 관리합니다.</p>
+          <p>문제, 예제, 채점용 테스트케이스를 관리합니다.</p>
         </div>
       </div>
       <div className="page-actions">
@@ -256,6 +319,13 @@ export function AdminPage({ auth, setMessage, navigate }) {
             <textarea
               value={problemForm.description}
               onChange={(event) => updateProblemForm('description', event.target.value)}
+            />
+          </label>
+          <label>
+            해설(Markdown)
+            <textarea
+              value={problemForm.solution}
+              onChange={(event) => updateProblemForm('solution', event.target.value)}
             />
           </label>
           <label>
@@ -338,20 +408,89 @@ export function AdminPage({ auth, setMessage, navigate }) {
                     onChange={(event) => updateTestCaseForm(index, 'expectedOutput', event.target.value)}
                   />
                 </label>
-                <label>
-                  설명
-                  <textarea
-                    className="case-textarea"
-                    value={testCaseForm.description}
-                    onChange={(event) => updateTestCaseForm(index, 'description', event.target.value)}
-                  />
-                </label>
               </div>
             ))}
           </div>
           <button className="primary-button" type="submit" disabled={testCaseBusy}>
             <Plus size={17} />
             테스트케이스 등록
+          </button>
+        </form>
+      </section>
+
+      <section className="panel">
+        <div className="panel-header">
+          <FileText size={18} />
+          <h2>예제 등록</h2>
+        </div>
+        <p className="helper-text">문제 화면에 공개할 입출력 예제와 설명을 추가합니다. 설명은 비워둘 수 있습니다.</p>
+        <label>
+          문제 선택
+          <select value={problemId} onChange={(event) => setProblemId(event.target.value)}>
+            <option value="">문제 선택</option>
+            {problems.map((problem) => (
+              <option key={problem.id} value={String(problem.id)}>
+                #{problem.id} {problem.title}
+              </option>
+            ))}
+          </select>
+        </label>
+
+        <form className="form-panel" onSubmit={addExamples}>
+          <div className="testcase-editor">
+            <div className="panel-header compact-header split">
+              <span className="heading-inline">
+                <FileText size={17} />
+                <h2>예제 목록</h2>
+              </span>
+              <button className="ghost-button" type="button" onClick={addExampleForm} title="예제 추가">
+                <Plus size={16} />
+              </button>
+            </div>
+            {exampleForms.map((exampleForm, index) => (
+              <div className="testcase-fields" key={`example-${index}`}>
+                <div className="testcase-title">
+                  <strong>#{index + 1}</strong>
+                  <button
+                    className="ghost-button icon-only"
+                    type="button"
+                    onClick={() => removeExampleForm(index)}
+                    disabled={exampleForms.length === 1}
+                    title="예제 제거"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+                <label>
+                  입력
+                  <textarea
+                    className="case-textarea"
+                    value={exampleForm.input}
+                    onChange={(event) => updateExampleForm(index, 'input', event.target.value)}
+                  />
+                </label>
+                <label>
+                  출력
+                  <textarea
+                    className="case-textarea"
+                    value={exampleForm.expectedOutput}
+                    onChange={(event) => updateExampleForm(index, 'expectedOutput', event.target.value)}
+                  />
+                </label>
+                <label>
+                  설명
+                  <textarea
+                    className="case-textarea"
+                    value={exampleForm.description}
+                    onChange={(event) => updateExampleForm(index, 'description', event.target.value)}
+                  />
+                </label>
+              </div>
+            ))}
+          </div>
+          <button className="primary-button" type="submit" disabled={exampleBusy}>
+            <Plus size={17} />
+            예제 등록
           </button>
         </form>
       </section>

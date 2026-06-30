@@ -6,13 +6,15 @@ import java.util.stream.Collectors;
 public record ProblemCreateRequest(
 	String title,
 	String description,
+	String solution,
 	String inputDescription,
 	String outputDescription,
 	int timeLimitMs,
 	int memoryLimitMb,
 	ProblemDifficulty difficulty,
 	List<String> categories,
-	List<ProblemTestCaseCreateRequest> testCases
+	List<ProblemTestCaseCreateRequest> testCases,
+	List<ProblemExampleCreateRequest> examples
 ) {
 
 	public ProblemCreateRequest {
@@ -26,5 +28,58 @@ public record ProblemCreateRequest(
 				.distinct()
 				.collect(Collectors.toList());
 		}
+	}
+
+	public ProblemCreateRequest(
+		String title,
+		String description,
+		String solution,
+		String inputDescription,
+		String outputDescription,
+		int timeLimitMs,
+		int memoryLimitMb,
+		ProblemDifficulty difficulty,
+		List<String> categories,
+		List<ProblemTestCaseCreateRequest> testCases
+	) {
+		this(
+			title,
+			description,
+			solution,
+			inputDescription,
+			outputDescription,
+			timeLimitMs,
+			memoryLimitMb,
+			difficulty,
+			categories,
+			testCases,
+			List.of()
+		);
+	}
+
+	public ProblemCreateRequest(
+		String title,
+		String description,
+		String inputDescription,
+		String outputDescription,
+		int timeLimitMs,
+		int memoryLimitMb,
+		ProblemDifficulty difficulty,
+		List<String> categories,
+		List<ProblemTestCaseCreateRequest> testCases
+	) {
+		this(
+			title,
+			description,
+			null,
+			inputDescription,
+			outputDescription,
+			timeLimitMs,
+			memoryLimitMb,
+			difficulty,
+			categories,
+			testCases,
+			List.of()
+		);
 	}
 }

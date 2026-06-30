@@ -11,15 +11,18 @@ public class ProblemService {
 
 	private final ProblemRepository problemRepository;
 	private final ProblemTestCaseRepository problemTestCaseRepository;
+	private final ProblemExampleRepository problemExampleRepository;
 	private final ProblemCategoryRepository problemCategoryRepository;
 
 	public ProblemService(
 		ProblemRepository problemRepository,
 		ProblemTestCaseRepository problemTestCaseRepository,
+		ProblemExampleRepository problemExampleRepository,
 		ProblemCategoryRepository problemCategoryRepository
 	) {
 		this.problemRepository = problemRepository;
 		this.problemTestCaseRepository = problemTestCaseRepository;
+		this.problemExampleRepository = problemExampleRepository;
 		this.problemCategoryRepository = problemCategoryRepository;
 	}
 
@@ -29,6 +32,9 @@ public class ProblemService {
 		problemCategoryRepository.addLinks(problem.getId(), request.categories());
 		if (request.testCases() != null) {
 			problemTestCaseRepository.saveAll(problem.getId(), request.testCases());
+		}
+		if (request.examples() != null) {
+			problemExampleRepository.saveAll(problem.getId(), request.examples());
 		}
 		return hydrateProblems(List.of(problem)).getFirst();
 	}
@@ -79,5 +85,16 @@ public class ProblemService {
 	public List<ProblemTestCase> findTestCasesByProblemId(long problemId) {
 		findById(problemId);
 		return problemTestCaseRepository.findByProblemId(problemId);
+	}
+
+	@Transactional
+	public ProblemExample addExample(long problemId, ProblemExampleCreateRequest request) {
+		findById(problemId);
+		return problemExampleRepository.save(problemId, request);
+	}
+
+	public List<ProblemExample> findExamplesByProblemId(long problemId) {
+		findById(problemId);
+		return problemExampleRepository.findByProblemId(problemId);
 	}
 }
