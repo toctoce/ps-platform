@@ -54,6 +54,8 @@ button:disabled {
 }
 
 .site-header {
+  position: relative;
+  z-index: 100;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -161,7 +163,7 @@ button:disabled {
   position: absolute;
   top: calc(100% + 8px);
   right: 0;
-  z-index: 20;
+  z-index: 110;
   display: grid;
   gap: 4px;
   min-width: 210px;
