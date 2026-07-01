@@ -5,6 +5,8 @@ import java.time.LocalDateTime;
 public record SubmissionResponse(
 	Long id,
 	Long problemId,
+	Long userId,
+	String username,
 	String language,
 	String sourceCode,
 	SubmissionStatus status,
@@ -18,6 +20,8 @@ public record SubmissionResponse(
 		return new SubmissionResponse(
 			submission.getId(),
 			submission.getProblemId(),
+			submission.getUserId(),
+			submission.getUsername(),
 			submission.getLanguage(),
 			submission.getSourceCode(),
 			submission.getStatus(),

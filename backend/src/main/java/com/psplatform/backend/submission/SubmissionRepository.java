@@ -5,7 +5,11 @@ import java.util.Optional;
 
 public interface SubmissionRepository {
 
-	Submission save(long problemId, SubmissionCreateRequest request);
+	Submission save(long problemId, Long userId, SubmissionCreateRequest request);
+
+	default Submission save(long problemId, SubmissionCreateRequest request) {
+		return save(problemId, null, request);
+	}
 
 	Optional<Submission> findById(long id);
 

@@ -6,6 +6,8 @@ public class Submission {
 
 	private final Long id;
 	private final Long problemId;
+	private final Long userId;
+	private final String username;
 	private final String language;
 	private final String sourceCode;
 	private final SubmissionStatus status;
@@ -13,6 +15,32 @@ public class Submission {
 	private final String judgeMessage;
 	private final LocalDateTime createdAt;
 	private final LocalDateTime judgedAt;
+
+	public Submission(
+		Long id,
+		Long problemId,
+		Long userId,
+		String username,
+		String language,
+		String sourceCode,
+		SubmissionStatus status,
+		SubmissionVerdict verdict,
+		String judgeMessage,
+		LocalDateTime createdAt,
+		LocalDateTime judgedAt
+	) {
+		this.id = id;
+		this.problemId = problemId;
+		this.userId = userId;
+		this.username = username;
+		this.language = language;
+		this.sourceCode = sourceCode;
+		this.status = status;
+		this.verdict = verdict;
+		this.judgeMessage = judgeMessage;
+		this.createdAt = createdAt;
+		this.judgedAt = judgedAt;
+	}
 
 	public Submission(
 		Long id,
@@ -25,15 +53,7 @@ public class Submission {
 		LocalDateTime createdAt,
 		LocalDateTime judgedAt
 	) {
-		this.id = id;
-		this.problemId = problemId;
-		this.language = language;
-		this.sourceCode = sourceCode;
-		this.status = status;
-		this.verdict = verdict;
-		this.judgeMessage = judgeMessage;
-		this.createdAt = createdAt;
-		this.judgedAt = judgedAt;
+		this(id, problemId, null, null, language, sourceCode, status, verdict, judgeMessage, createdAt, judgedAt);
 	}
 
 	public Long getId() {
@@ -42,6 +62,14 @@ public class Submission {
 
 	public Long getProblemId() {
 		return problemId;
+	}
+
+	public Long getUserId() {
+		return userId;
+	}
+
+	public String getUsername() {
+		return username;
 	}
 
 	public String getLanguage() {

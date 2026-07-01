@@ -1,6 +1,8 @@
 package com.psplatform.backend.judge;
 
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -40,6 +42,8 @@ public class H2JudgeJobRepository implements JudgeJobRepository {
 		return new Submission(
 			rs.getLong("id"),
 			rs.getLong("problem_id"),
+			getLongOrNull(rs, "user_id"),
+			rs.getString("username"),
 			rs.getString("language"),
 			rs.getString("source_code"),
 			SubmissionStatus.valueOf(rs.getString("status")),
@@ -239,9 +243,10 @@ public class H2JudgeJobRepository implements JudgeJobRepository {
 	private Optional<Submission> findSubmissionByJobId(long jobId) {
 		List<Submission> submissions = jdbcTemplate.query(
 			"""
-			SELECT s.id, s.problem_id, s.language, s.source_code, s.status,
+			SELECT s.id, s.problem_id, s.user_id, u.username, s.language, s.source_code, s.status,
 			       s.verdict, s.judge_message, s.created_at, s.judged_at
 			FROM submissions s
+			LEFT JOIN users u ON u.id = s.user_id
 			JOIN judge_jobs jj ON jj.submission_id = s.id
 			WHERE jj.id = ?
 			""",
@@ -249,5 +254,10 @@ public class H2JudgeJobRepository implements JudgeJobRepository {
 			jobId
 		);
 		return submissions.stream().findFirst();
+	}
+
+	private Long getLongOrNull(ResultSet rs, String column) throws SQLException {
+		long value = rs.getLong(column);
+		return rs.wasNull() ? null : value;
 	}
 }

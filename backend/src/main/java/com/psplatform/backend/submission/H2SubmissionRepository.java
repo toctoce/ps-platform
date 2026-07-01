@@ -1,6 +1,8 @@
 package com.psplatform.backend.submission;
 
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
@@ -19,9 +21,12 @@ public class H2SubmissionRepository implements SubmissionRepository {
 	private final RowMapper<Submission> rowMapper = (rs, rowNum) -> {
 		Timestamp judgedAt = rs.getTimestamp("judged_at");
 		String verdict = rs.getString("verdict");
+		Long userId = getLongOrNull(rs, "user_id");
 		return new Submission(
 			rs.getLong("id"),
 			rs.getLong("problem_id"),
+			userId,
+			rs.getString("username"),
 			rs.getString("language"),
 			rs.getString("source_code"),
 			SubmissionStatus.valueOf(rs.getString("status")),
@@ -37,24 +42,30 @@ public class H2SubmissionRepository implements SubmissionRepository {
 	}
 
 	@Override
-	public Submission save(long problemId, SubmissionCreateRequest request) {
+	public Submission save(long problemId, Long userId, SubmissionCreateRequest request) {
 		String sql = """
 			INSERT INTO submissions (
 				problem_id,
+				user_id,
 				language,
 				source_code,
 				status
 			)
-			VALUES (?, ?, ?, ?)
+			VALUES (?, ?, ?, ?, ?)
 			""";
 
 		KeyHolder keyHolder = new GeneratedKeyHolder();
 		jdbcTemplate.update(connection -> {
 			PreparedStatement ps = connection.prepareStatement(sql, new String[] {"id"});
 			ps.setLong(1, problemId);
-			ps.setString(2, request.language());
-			ps.setString(3, request.sourceCode());
-			ps.setString(4, SubmissionStatus.PENDING.name());
+			if (userId == null) {
+				ps.setNull(2, java.sql.Types.BIGINT);
+			} else {
+				ps.setLong(2, userId);
+			}
+			ps.setString(3, request.language());
+			ps.setString(4, request.sourceCode());
+			ps.setString(5, SubmissionStatus.PENDING.name());
 			return ps;
 		}, keyHolder);
 
@@ -71,9 +82,11 @@ public class H2SubmissionRepository implements SubmissionRepository {
 	public Optional<Submission> findById(long id) {
 		List<Submission> submissions = jdbcTemplate.query(
 			"""
-			SELECT id, problem_id, language, source_code, status, verdict, judge_message, created_at, judged_at
-			FROM submissions
-			WHERE id = ?
+			SELECT s.id, s.problem_id, s.user_id, u.username, s.language, s.source_code, s.status,
+			       s.verdict, s.judge_message, s.created_at, s.judged_at
+			FROM submissions s
+			LEFT JOIN users u ON u.id = s.user_id
+			WHERE s.id = ?
 			""",
 			rowMapper,
 			id
@@ -85,14 +98,21 @@ public class H2SubmissionRepository implements SubmissionRepository {
 	public List<Submission> findByProblemId(long problemId) {
 		return jdbcTemplate.query(
 			"""
-			SELECT id, problem_id, language, source_code, status, verdict, judge_message, created_at, judged_at
-			FROM submissions
-			WHERE problem_id = ?
+			SELECT s.id, s.problem_id, s.user_id, u.username, s.language, s.source_code, s.status,
+			       s.verdict, s.judge_message, s.created_at, s.judged_at
+			FROM submissions s
+			LEFT JOIN users u ON u.id = s.user_id
+			WHERE s.problem_id = ?
 			ORDER BY id DESC
 			""",
 			rowMapper,
 			problemId
 		);
+	}
+
+	private Long getLongOrNull(ResultSet rs, String column) throws SQLException {
+		long value = rs.getLong(column);
+		return rs.wasNull() ? null : value;
 	}
 
 	@Override

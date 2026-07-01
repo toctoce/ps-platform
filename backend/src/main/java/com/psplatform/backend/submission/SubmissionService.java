@@ -27,14 +27,18 @@ public class SubmissionService {
 	}
 
 	@Transactional
-	public Submission create(long problemId, SubmissionCreateRequest request) {
+	public Submission create(long problemId, SubmissionCreateRequest request, Long userId) {
 		if (problemRepository.findById(problemId).isEmpty()) {
 			throw new ProblemNotFoundException(problemId);
 		}
 
-		Submission submission = submissionRepository.save(problemId, request);
+		Submission submission = submissionRepository.save(problemId, userId, request);
 		judgeJobRepository.create(submission.getId());
 		return submission;
+	}
+
+	public Submission create(long problemId, SubmissionCreateRequest request) {
+		return create(problemId, request, null);
 	}
 
 	public Submission findById(long id) {
