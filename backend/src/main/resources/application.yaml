@@ -4,6 +4,11 @@ spring:
   devtools:
     restart:
       enabled: true
+      additional-paths:
+        - src/main/java
+        - src/main/resources
+      poll-interval: 1s
+      quiet-period: 400ms
   datasource:
     url: jdbc:h2:mem:ps-platform;MODE=PostgreSQL;DATABASE_TO_UPPER=false
     driver-class-name: org.h2.Driver
