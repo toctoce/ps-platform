@@ -1,7 +1,9 @@
 package com.psplatform.backend.problem;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasItems;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -40,6 +42,49 @@ class ProblemControllerTest {
 	@BeforeEach
 	void setUp() {
 		problemRepository.deleteAll();
+	}
+
+	@Test
+	void createProblemNormalizesPlainSolutionToMarkdown() throws Exception {
+		mockMvc.perform(post("/api/problems")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "title": "B+A",
+					  "description": "두 수를 더하는 또 다른 문제",
+					  "solution": "두 수를 더하고 결과를 출력합니다.",
+					  "inputDescription": "정수 A와 B가 주어진다.",
+					  "outputDescription": "A+B를 출력한다.",
+					  "difficulty": "NORMAL",
+					  "categories": ["수학"],
+					  "timeLimitMs": 1000,
+					  "memoryLimitMb": 128
+					}
+					"""))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.solution").value("## 해설\n\n두 수를 더하고 결과를 출력합니다."));
+	}
+
+	@Test
+	void createProblemDecodesEscapedNewlinesFromRequest() throws Exception {
+		mockMvc.perform(post("/api/problems")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "title": "EscapedNewlineTest",
+					  "description": "백슬래시 문자 처리 테스트",
+					  "solution": "## 접근\\\\n\\\\n`A+B`는 두 수의 합을 구합니다.\\\\n```java\\\\npublic class Main {}\\\\n```",
+					  "inputDescription": "두 정수 A, B",
+					  "outputDescription": "A + B",
+					  "difficulty": "NORMAL",
+					  "categories": ["구현"],
+					  "timeLimitMs": 1000,
+					  "memoryLimitMb": 128
+					}
+					"""))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.solution", containsString("## 접근")))
+			.andExpect(jsonPath("$.solution", not(containsString("\\\\n"))));
 	}
 
 	@Test

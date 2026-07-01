@@ -1,6 +1,7 @@
 package com.psplatform.backend.problem;
 
 import java.sql.PreparedStatement;
+import java.util.regex.Pattern;
 import java.util.List;
 import java.util.Optional;
 
@@ -19,7 +20,7 @@ public class H2ProblemRepository implements ProblemRepository {
 		rs.getLong("id"),
 		rs.getString("title"),
 		rs.getString("description"),
-		rs.getString("solution"),
+		decodeEscapedCharacters(rs.getString("solution")),
 		rs.getString("input_description"),
 		rs.getString("output_description"),
 		rs.getInt("time_limit_ms"),
@@ -31,6 +32,11 @@ public class H2ProblemRepository implements ProblemRepository {
 	public H2ProblemRepository(JdbcTemplate jdbcTemplate) {
 		this.jdbcTemplate = jdbcTemplate;
 	}
+
+	private static final Pattern MARKDOWN_HINT_PATTERN = Pattern.compile(
+		"(?m)^(\\s{0,3}#{1,6}\\s+|\\s{0,3}>\\s+|\\s{0,3}\\d+\\.\\s+|\\s{0,3}[-*+]\\s+|```|\\|.*\\||`{3,}|\\*{2}|#{1,6}\\s+)",
+		Pattern.MULTILINE
+	);
 
 	@Override
 	public Problem save(ProblemCreateRequest request) {
@@ -152,6 +158,22 @@ public class H2ProblemRepository implements ProblemRepository {
 		if (solution == null || solution.isBlank()) {
 			return null;
 		}
-		return solution;
+		String normalized = decodeEscapedCharacters(solution)
+			.replace("\r\n", "\n")
+			.trim();
+		if (MARKDOWN_HINT_PATTERN.matcher(normalized).find()) {
+			return normalized;
+		}
+		return "## 해설\n\n" + normalized.replace("\n", "\n\n");
+	}
+
+	private String decodeEscapedCharacters(String value) {
+		if (value == null) {
+			return null;
+		}
+		return value
+			.replace("\\n", "\n")
+			.replace("\\r", "\r")
+			.replace("\\t", "\t");
 	}
 }
