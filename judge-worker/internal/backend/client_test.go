@@ -111,6 +111,7 @@ func TestCompleteJobPostsVerdictToCorrectEndpoint(t *testing.T) {
 	received := struct {
 		verdict      string
 		judgeMessage string
+		caseResults  []JudgeCaseResult
 	}{}
 
 	client := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
@@ -130,10 +131,14 @@ func TestCompleteJobPostsVerdictToCorrectEndpoint(t *testing.T) {
 		}
 		received.verdict = req.Verdict
 		received.judgeMessage = req.JudgeMessage
+		received.caseResults = req.CaseResults
 		w.WriteHeader(http.StatusOK)
 	})
 
-	if err := client.CompleteJob(context.Background(), 7, "RUNTIME_ERROR", "runtime failed"); err != nil {
+	caseResults := []JudgeCaseResult{
+		{Index: 1, Verdict: "RUNTIME_ERROR", Stdout: "", ExpectedOutput: "3\n", Message: "runtime failed"},
+	}
+	if err := client.CompleteJob(context.Background(), 7, "RUNTIME_ERROR", "runtime failed", caseResults); err != nil {
 		t.Fatalf("CompleteJob error: %v", err)
 	}
 	if received.verdict != "RUNTIME_ERROR" {
@@ -142,6 +147,9 @@ func TestCompleteJobPostsVerdictToCorrectEndpoint(t *testing.T) {
 	if received.judgeMessage != "runtime failed" {
 		t.Fatalf("judgeMessage = %s, want %s", received.judgeMessage, "runtime failed")
 	}
+	if len(received.caseResults) != 1 || received.caseResults[0].Index != 1 {
+		t.Fatalf("caseResults = %+v", received.caseResults)
+	}
 }
 
 func TestCompleteJobReturnsErrorOnHTTPError(t *testing.T) {
@@ -149,7 +157,7 @@ func TestCompleteJobReturnsErrorOnHTTPError(t *testing.T) {
 		w.WriteHeader(http.StatusBadGateway)
 	})
 
-	if err := client.CompleteJob(context.Background(), 7, "ACCEPTED", ""); err == nil {
+	if err := client.CompleteJob(context.Background(), 7, "ACCEPTED", "", nil); err == nil {
 		t.Fatalf("expected error")
 	}
 }

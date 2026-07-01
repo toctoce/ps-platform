@@ -1,6 +1,7 @@
 package com.psplatform.backend.judge;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -104,6 +105,84 @@ class JudgeJobControllerTest {
 	}
 
 	@Test
+	void codeRunUsesProvidedTestCasesWithoutCreatingSubmission() throws Exception {
+		Problem problem = createProblem();
+
+		mockMvc.perform(post("/api/problems/{problemId}/runs", problem.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "language": "java",
+					  "sourceCode": "public class Main {}",
+					  "testCases": [
+					    {
+					      "input": "1 2\\n",
+					      "expectedOutput": "3\\n"
+					    }
+					  ]
+					}
+					"""))
+			.andExpect(status().isAccepted())
+			.andExpect(jsonPath("$.jobId").isNumber())
+			.andExpect(jsonPath("$.problemId").value(problem.getId()))
+			.andExpect(jsonPath("$.status").value("QUEUED"));
+
+		assertThat(submissionRepository.findByProblemId(problem.getId())).isEmpty();
+
+		mockMvc.perform(post("/api/judge-jobs/next"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.jobKind").value("CODE_RUN"))
+			.andExpect(jsonPath("$.submissionId").doesNotExist())
+			.andExpect(jsonPath("$.problemId").value(problem.getId()))
+			.andExpect(jsonPath("$.testCases[0].input").value("1 2\n"))
+			.andExpect(jsonPath("$.testCases[0].expectedOutput").value("3\n"));
+	}
+
+	@Test
+	void completeCodeRunStoresCaseResultsOnJudgeJob() throws Exception {
+		Problem problem = createProblem();
+		CodeRunResponse created = judgeJobRepository.createCodeRun(
+			problem.getId(),
+			problem.getTimeLimitMs(),
+			problem.getMemoryLimitMb(),
+			new CodeRunCreateRequest(
+				"java",
+				"public class Main {}",
+				List.of(new JudgeTestCase("1 2\n", "3\n"))
+			)
+		);
+		JudgeJobAssignment assignment = judgeJobRepository.findNextAndMarkRunning().orElseThrow();
+
+		mockMvc.perform(post("/api/judge-jobs/{jobId}/complete", assignment.jobId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "verdict": "ACCEPTED",
+					  "judgeMessage": "",
+					  "caseResults": [
+					    {
+					      "index": 1,
+					      "verdict": "ACCEPTED",
+					      "stdout": "3\\n",
+					      "expectedOutput": "3\\n",
+					      "message": ""
+					    }
+					  ]
+					}
+					"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.jobId").value(created.jobId()))
+			.andExpect(jsonPath("$.status").value("DONE"))
+			.andExpect(jsonPath("$.verdict").value("ACCEPTED"))
+			.andExpect(jsonPath("$.caseResults[0].verdict").value("ACCEPTED"));
+
+		mockMvc.perform(get("/api/runs/{jobId}", created.jobId()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.jobId").value(created.jobId()))
+			.andExpect(jsonPath("$.caseResults[0].stdout").value("3\n"));
+	}
+
+	@Test
 	void completeReturnsNotFoundWhenJobIsNotRunning() throws Exception {
 		mockMvc.perform(post("/api/judge-jobs/{jobId}/complete", 999)
 				.contentType(MediaType.APPLICATION_JSON)
@@ -162,17 +241,7 @@ class JudgeJobControllerTest {
 	}
 
 	private Submission createSubmissionWithJob() {
-		Problem problem = problemRepository.save(new ProblemCreateRequest(
-			"A+B",
-			"두 수를 더하는 문제",
-			"정수 A와 B가 주어진다.",
-			"A+B를 출력한다.",
-			1000,
-			128,
-			ProblemDifficulty.NORMAL,
-			List.of(),
-			List.of()
-		));
+		Problem problem = createProblem();
 		problemTestCaseRepository.saveAll(
 			problem.getId(),
 			List.of(new ProblemTestCaseCreateRequest("1 2\n", "3\n"))
@@ -183,5 +252,19 @@ class JudgeJobControllerTest {
 		);
 		judgeJobRepository.create(submission.getId());
 		return submission;
+	}
+
+	private Problem createProblem() {
+		return problemRepository.save(new ProblemCreateRequest(
+			"A+B",
+			"두 수를 더하는 문제",
+			"정수 A와 B가 주어진다.",
+			"A+B를 출력한다.",
+			1000,
+			128,
+			ProblemDifficulty.NORMAL,
+			List.of(),
+			List.of()
+		));
 	}
 }

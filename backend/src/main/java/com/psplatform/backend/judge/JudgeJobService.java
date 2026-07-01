@@ -5,8 +5,6 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.psplatform.backend.submission.Submission;
-
 @Service
 public class JudgeJobService {
 
@@ -22,8 +20,8 @@ public class JudgeJobService {
 	}
 
 	@Transactional
-	public Submission complete(long jobId, JudgeJobCompleteRequest request) {
-		return judgeJobRepository.complete(jobId, request.verdict(), request.judgeMessage());
+	public JudgeJobCompleteResult complete(long jobId, JudgeJobCompleteRequest request) {
+		return judgeJobRepository.complete(jobId, request.verdict(), request.judgeMessage(), request.caseResults());
 	}
 
 	@Transactional

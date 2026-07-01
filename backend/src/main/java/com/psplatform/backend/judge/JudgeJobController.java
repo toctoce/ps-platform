@@ -7,7 +7,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.psplatform.backend.submission.Submission;
 import com.psplatform.backend.submission.SubmissionResponse;
 
 @RestController
@@ -28,12 +27,15 @@ public class JudgeJobController {
 	}
 
 	@PostMapping("/{jobId}/complete")
-	public SubmissionResponse complete(
+	public Object complete(
 		@PathVariable long jobId,
 		@RequestBody JudgeJobCompleteRequest request
 	) {
-		Submission submission = judgeJobService.complete(jobId, request);
-		return SubmissionResponse.from(submission);
+		JudgeJobCompleteResult result = judgeJobService.complete(jobId, request);
+		if (result.jobKind() == JudgeJobKind.CODE_RUN) {
+			return result.codeRun();
+		}
+		return SubmissionResponse.from(result.submission());
 	}
 
 	@PostMapping("/requeue-stale")

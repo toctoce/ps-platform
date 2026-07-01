@@ -16,9 +16,9 @@ import { difficultyLabel, problemCategoryNames, problemInputRange } from '../pro
 import {
   buildInitialTestRunResults,
   formatDateTime,
-  inferTestRunResults,
   isFinishedStatus,
   isPendingStatus,
+  mapCodeRunResults,
   statusToLabel,
   submissionBadgeClass,
   submissionMemory,
@@ -38,14 +38,15 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
   const [ideTheme, setIdeTheme] = useState('dark');
   const [testCasePanelOpen, setTestCasePanelOpen] = useState(false);
-  const [testCaseForm, setTestCaseForm] = useState({ input: '' });
+  const [testCaseForm, setTestCaseForm] = useState({ input: '', expectedOutput: '' });
   const [activeIdeTestCaseIndex, setActiveIdeTestCaseIndex] = useState(0);
   const [testRunBusy, setTestRunBusy] = useState(false);
-  const [testRunSubmissionId, setTestRunSubmissionId] = useState(null);
+  const [testRunJobId, setTestRunJobId] = useState(null);
   const [testRunResults, setTestRunResults] = useState([]);
   const [problemPanelRatio, setProblemPanelRatio] = useState(44);
   const [isNarrowLayout, setIsNarrowLayout] = useState(false);
   const [editorOnlyMode, setEditorOnlyMode] = useState(false);
+  const [testCaseInputHeight, setTestCaseInputHeight] = useState(58);
   const pollingRef = useRef({});
   const lastSubmissionStatus = useRef({});
   const editorRef = useRef(null);
@@ -53,9 +54,10 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
   const runCodeRef = useRef(null);
   const submissionFormRef = useRef(submissionForm);
   const testCasesRef = useRef([]);
-  const testRunSubmissionIdRef = useRef(null);
+  const testRunJobIdRef = useRef(null);
   const languageMenuRef = useRef(null);
   const solveLayoutRef = useRef(null);
+  const testCaseInputRef = useRef(null);
 
   const problemKey = `${editorStorageKeyPrefix}:${problemId}`;
   const currentUsername = auth?.user?.username;
@@ -69,12 +71,26 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
   }, [testCases]);
 
   useEffect(() => {
-    testRunSubmissionIdRef.current = testRunSubmissionId;
-  }, [testRunSubmissionId]);
+    testRunJobIdRef.current = testRunJobId;
+  }, [testRunJobId]);
 
   useEffect(() => {
     runCodeRef.current = runCode;
   });
+
+  useEffect(() => {
+    function handleGlobalShortcut(event) {
+      if (!(event.metaKey || event.ctrlKey) || event.key.toLowerCase() !== 'j') {
+        return;
+      }
+
+      event.preventDefault();
+      setTestCasePanelOpen((current) => !current);
+    }
+
+    document.addEventListener('keydown', handleGlobalShortcut);
+    return () => document.removeEventListener('keydown', handleGlobalShortcut);
+  }, []);
 
   useEffect(() => {
     function closeLanguageMenu(event) {
@@ -187,12 +203,40 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Quote, () => {
       runCodeRef.current?.();
     });
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyJ, () => {
+      setTestCasePanelOpen((current) => !current);
+    });
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       const current = submissionFormRef.current;
       const draftKey = `${problemKey}:${current.language}`;
       localStorage.setItem(draftKey, editor.getValue());
       setMessage('임시 저장 완료');
     });
+  }
+
+  function startTestCaseInputResize(event) {
+    event.preventDefault();
+
+    const input = testCaseInputRef.current;
+    if (!input) {
+      return;
+    }
+
+    const startY = event.clientY;
+    const startHeight = input.getBoundingClientRect().height;
+
+    function resizeInput(pointerEvent) {
+      const nextHeight = startHeight + (startY - pointerEvent.clientY);
+      setTestCaseInputHeight(Math.max(58, Math.min(240, nextHeight)));
+    }
+
+    function stopResize() {
+      document.removeEventListener('pointermove', resizeInput);
+      document.removeEventListener('pointerup', stopResize);
+    }
+
+    document.addEventListener('pointermove', resizeInput);
+    document.addEventListener('pointerup', stopResize);
   }
 
   function updateSubmissionForm(field, value) {
@@ -231,11 +275,15 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
       setMessage('추가할 테스트케이스를 입력해 주세요.');
       return;
     }
+    if (testCaseForm.expectedOutput.trim() === '') {
+      setMessage('예상 출력을 입력해 주세요.');
+      return;
+    }
 
     const created = {
       id: `local-${Date.now()}`,
       input: testCaseForm.input,
-      expectedOutput: '',
+      expectedOutput: testCaseForm.expectedOutput,
       description: '',
       localOnly: true,
     };
@@ -243,7 +291,7 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
       setActiveIdeTestCaseIndex(current.length);
       return [...current, created];
     });
-    setTestCaseForm({ input: created.input });
+    setTestCaseForm({ input: created.input, expectedOutput: created.expectedOutput });
     setMessage('테스트케이스를 추가했습니다.');
   }
 
@@ -309,24 +357,23 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
     setTestRunBusy(true);
     setTestRunResults(buildInitialTestRunResults(testCases, '실행 중'));
     try {
-      const created = await request(`/api/problems/${problemId}/submissions`, {
+      const created = await request(`/api/problems/${problemId}/runs`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...authHeaders(),
         },
-        body: JSON.stringify(submissionForm),
+        body: JSON.stringify({
+          ...submissionForm,
+          testCases: testCases.map((testCase) => ({
+            input: testCase.input,
+            expectedOutput: testCase.expectedOutput,
+          })),
+        }),
       });
-      const visibleSubmission = {
-        ...created,
-        username: created.username ?? currentUsername,
-        isMine: true,
-      };
-      testRunSubmissionIdRef.current = visibleSubmission.id;
-      setTestRunSubmissionId(visibleSubmission.id);
-      lastSubmissionStatus.current[visibleSubmission.id] = visibleSubmission.status;
-      setSubmissions((current) => [visibleSubmission, ...current]);
-      startPolling(visibleSubmission.id);
+      testRunJobIdRef.current = created.jobId;
+      setTestRunJobId(created.jobId);
+      startRunPolling(created.jobId);
     } catch (error) {
       setTestRunBusy(false);
       setTestRunResults([]);
@@ -337,12 +384,49 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
   function selectIdeTestCase(index) {
     const selected = testCases[index];
     setActiveIdeTestCaseIndex(index);
-    setTestCaseForm({ input: selected?.input ?? '' });
+    setTestCaseForm({ input: selected?.input ?? '', expectedOutput: selected?.expectedOutput ?? '' });
   }
 
   function prepareNewIdeTestCase() {
     setActiveIdeTestCaseIndex(testCases.length);
-    setTestCaseForm({ input: '' });
+    setTestCaseForm({ input: '', expectedOutput: '' });
+  }
+
+  async function refreshCodeRun(jobId) {
+    try {
+      const codeRun = await request(`/api/runs/${jobId}`);
+      if (testRunJobIdRef.current === jobId) {
+        setTestRunResults(mapCodeRunResults(codeRun, testCasesRef.current));
+        if (!isPendingStatus(codeRun.status)) {
+          setTestRunBusy(false);
+          stopRunPolling(jobId);
+        }
+      }
+    } catch (error) {
+      stopRunPolling(jobId);
+      setTestRunBusy(false);
+      setMessage(`실행 결과 조회 실패 (${jobId}): ${error.message}`);
+    }
+  }
+
+  function stopRunPolling(jobId) {
+    const key = `run-${jobId}`;
+    const timer = pollingRef.current[key];
+    if (timer) {
+      clearInterval(timer);
+      delete pollingRef.current[key];
+    }
+  }
+
+  function startRunPolling(jobId) {
+    const key = `run-${jobId}`;
+    if (pollingRef.current[key]) {
+      return;
+    }
+    refreshCodeRun(jobId);
+    pollingRef.current[key] = setInterval(() => {
+      refreshCodeRun(jobId);
+    }, 1000);
   }
 
   async function refreshSubmission(submissionId) {
@@ -362,13 +446,6 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
         next[index] = mergedSubmission;
         return next;
       });
-
-      if (testRunSubmissionIdRef.current === submission.id) {
-        setTestRunResults(inferTestRunResults(mergedSubmission, testCasesRef.current));
-        if (!isPendingStatus(submission.status)) {
-          setTestRunBusy(false);
-        }
-      }
 
       if (previousStatus !== undefined && isFinishedStatus(previousStatus) && isFinishedStatus(submission.status)) {
         return;
@@ -413,7 +490,10 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
       setExampleCases(fetchedExamples);
       setTestCases(fetchedTestCases);
       setActiveIdeTestCaseIndex(0);
-      setTestCaseForm({ input: fetchedTestCases[0]?.input ?? '' });
+      setTestCaseForm({
+        input: fetchedTestCases[0]?.input ?? '',
+        expectedOutput: fetchedTestCases[0]?.expectedOutput ?? '',
+      });
       setSubmissions(fetchedSubmissions);
       lastSubmissionStatus.current = fetchedSubmissions.reduce((acc, submission) => {
         acc[submission.id] = submission.status;
@@ -779,54 +859,76 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
             <div className="ide-bottom-dock">
               {testCasePanelOpen ? (
                 <section className="ide-testcase-panel">
-                  <div className="ide-testcase-tabs">
-                    {testCases.map((testCase, index) => {
-                      const result = testRunResults.find((item) => item.index === index + 1);
-                      return (
-                        <button
-                          className={activeIdeTestCaseIndex === index ? 'is-active' : ''}
-                          type="button"
-                          key={testCase.id ?? index}
-                          onClick={() => selectIdeTestCase(index)}
-                        >
-                          #{index + 1}
-                          {result ? (
-                            <span className={`testcase-dot ${result.status === '성공' ? 'is-pass' : result.status === '실패' ? 'is-fail' : ''}`} />
-                          ) : null}
-                        </button>
-                      );
-                    })}
-                    <button
-                      className={activeIdeTestCaseIndex === testCases.length ? 'is-active' : ''}
-                      type="button"
-                      onClick={prepareNewIdeTestCase}
-                      title="테스트케이스 추가"
-                    >
-                      <Plus size={14} />
-                    </button>
+                  <button
+                    className="ide-testcase-resize-handle"
+                    type="button"
+                    onPointerDown={startTestCaseInputResize}
+                    aria-label="테스트케이스 입력 높이 조절"
+                  />
+                  <div className="ide-testcase-top-row">
+                    <div className="ide-testcase-tabs">
+                      {testCases.map((testCase, index) => {
+                        const result = testRunResults.find((item) => item.index === index + 1);
+                        return (
+                          <button
+                            className={activeIdeTestCaseIndex === index ? 'is-active' : ''}
+                            type="button"
+                            key={testCase.id ?? index}
+                            onClick={() => selectIdeTestCase(index)}
+                          >
+                            #{index + 1}
+                            {result ? (
+                              <span className={`testcase-dot ${result.status === '성공' ? 'is-pass' : result.status === '실패' ? 'is-fail' : ''}`} />
+                            ) : null}
+                          </button>
+                        );
+                      })}
+                      <button
+                        className={activeIdeTestCaseIndex === testCases.length ? 'is-active' : ''}
+                        type="button"
+                        onClick={prepareNewIdeTestCase}
+                        title="테스트케이스 추가"
+                      >
+                        <Plus size={14} />
+                      </button>
+                    </div>
+                    <div className="ide-testcase-action-row">
+                      <button
+                        className="ghost-button ide-small-button has-tooltip"
+                        type="button"
+                        onClick={runCode}
+                        disabled={testRunBusy || submissionBusy || !problem}
+                        data-tooltip="⌘ / Ctrl + '"
+                      >
+                        <Play size={14} />
+                        실행
+                      </button>
+                    </div>
                   </div>
-                  <div className="ide-testcase-action-row">
-                    <button
-                      className="ghost-button ide-small-button has-tooltip"
-                      type="button"
-                      onClick={runCode}
-                      disabled={testRunBusy || submissionBusy || !problem}
-                      data-tooltip="⌘ / Ctrl + '"
-                    >
-                      <Play size={14} />
-                      실행
-                    </button>
-                  </div>
+
                   <div className="ide-testcase-editor">
-                    <label>
-                      입력
-                      <textarea
-                        value={testCaseForm.input}
-                        onChange={(event) => setTestCaseForm({ input: event.target.value })}
-                        readOnly={activeIdeTestCaseIndex < testCases.length}
-                        placeholder="예: 1 2"
-                      />
-                    </label>
+                    <div className="ide-testcase-fields">
+                      <label>
+                        입력
+                        <textarea
+                          ref={testCaseInputRef}
+                          style={{ height: `${testCaseInputHeight}px` }}
+                          value={testCaseForm.input}
+                          onChange={(event) => setTestCaseForm((current) => ({ ...current, input: event.target.value }))}
+                          readOnly={activeIdeTestCaseIndex < testCases.length}
+                          placeholder="예: 1 2"
+                        />
+                      </label>
+                      <label>
+                        예상 출력
+                        <textarea
+                          value={testCaseForm.expectedOutput}
+                          onChange={(event) => setTestCaseForm((current) => ({ ...current, expectedOutput: event.target.value }))}
+                          readOnly={activeIdeTestCaseIndex < testCases.length}
+                          placeholder="예: 3"
+                        />
+                      </label>
+                    </div>
                     {activeIdeTestCaseIndex === testCases.length ? (
                       <button
                         className="ghost-button ide-small-button"
@@ -857,9 +959,10 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
 
               <div className="ide-actions">
                 <button
-                  className="ide-testcase-toggle"
+                  className="ide-testcase-toggle has-tooltip"
                   type="button"
                   onClick={() => setTestCasePanelOpen((current) => !current)}
+                  data-tooltip="⌘ / Ctrl + J"
                 >
                   {testCasePanelOpen ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
                   테스트케이스

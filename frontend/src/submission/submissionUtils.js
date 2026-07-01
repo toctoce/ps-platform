@@ -1,5 +1,5 @@
 export function isPendingStatus(status) {
-  return status === 'PENDING' || status === 'RUNNING';
+  return status === 'PENDING' || status === 'QUEUED' || status === 'RUNNING';
 }
 
 export function isFinishedStatus(status) {
@@ -109,6 +109,45 @@ export function inferTestRunResults(submission, testCases) {
       message: '',
     };
   });
+}
+
+export function mapCodeRunResults(codeRun, testCases) {
+  if (testCases.length === 0) {
+    return [];
+  }
+
+  if (isPendingStatus(codeRun.status)) {
+    return buildInitialTestRunResults(testCases, '실행 중');
+  }
+
+  if (Array.isArray(codeRun.caseResults) && codeRun.caseResults.length > 0) {
+    return testCases.map((testCase, index) => {
+      const result = codeRun.caseResults.find((item) => item.index === index + 1);
+      if (!result) {
+        return {
+          id: testCase.id ?? index,
+          index: index + 1,
+          status: '미실행',
+          message: '',
+        };
+      }
+      return {
+        id: testCase.id ?? index,
+        index: index + 1,
+        status: result.verdict === 'ACCEPTED' ? '성공' : '실패',
+        message: result.message || result.verdict,
+      };
+    });
+  }
+
+  return inferTestRunResults(
+    {
+      status: codeRun.status === 'DONE' ? 'JUDGED' : codeRun.status,
+      verdict: codeRun.verdict,
+      judgeMessage: codeRun.judgeMessage,
+    },
+    testCases
+  );
 }
 
 export function statusToLabel(status, verdict) {

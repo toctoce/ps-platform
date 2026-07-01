@@ -4,6 +4,7 @@ import java.util.List;
 
 public record JudgeJobAssignment(
 	Long jobId,
+	JudgeJobKind jobKind,
 	Long submissionId,
 	Long problemId,
 	String language,

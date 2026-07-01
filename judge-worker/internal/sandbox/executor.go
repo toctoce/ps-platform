@@ -37,8 +37,9 @@ const (
 
 // ExecutionResult는 채점 결과 판정 값과 실패 사유를 동시에 담습니다.
 type ExecutionResult struct {
-	Verdict string
-	Message string
+	Verdict     string
+	Message     string
+	CaseResults []backend.JudgeCaseResult
 }
 
 // Executor는 채점 작업을 sandbox에서 실행하고 verdict를 반환하는 실행기입니다.
@@ -109,21 +110,26 @@ func (e *JavaExecutor) Execute(ctx context.Context, job backend.JudgeJobAssignme
 	if result, err := e.compile(ctx, tempDir, memoryLimitMb); err != nil {
 		return ExecutionResult{}, err
 	} else if result.Verdict != "" {
+		result.CaseResults = buildGlobalCaseResults(job.TestCases, result.Verdict, result.Message)
 		return result, nil
 	}
 
 	timeLimit := determineTimeLimit(job.TimeLimitMs)
+	caseResults := make([]backend.JudgeCaseResult, 0, len(job.TestCases))
 	for index, tc := range job.TestCases {
 		result, err := e.runTestCase(ctx, tempDir, tc, index+1, timeLimit, memoryLimitMb)
 		if err != nil {
 			return ExecutionResult{}, err
 		}
-		if result.Verdict != "" {
+		caseResults = append(caseResults, result.CaseResults...)
+		if result.Verdict != "" && job.JobKind != "CODE_RUN" {
+			result.CaseResults = caseResults
 			return result, nil
 		}
 	}
 
-	return ExecutionResult{Verdict: VerdictAccepted}, nil
+	verdict, message := aggregateCaseResults(caseResults)
+	return ExecutionResult{Verdict: verdict, Message: message, CaseResults: caseResults}, nil
 }
 
 func determineTimeLimit(timeLimitMs int) time.Duration {
@@ -220,6 +226,9 @@ func (e *JavaExecutor) runTestCase(
 			return ExecutionResult{
 				Verdict: VerdictTimeLimitExceeded,
 				Message: fmt.Sprintf("time limit exceeded on test case %d", testCaseIndex),
+				CaseResults: []backend.JudgeCaseResult{
+					buildCaseResult(testCase, testCaseIndex, VerdictTimeLimitExceeded, "", fmt.Sprintf("time limit exceeded on test case %d", testCaseIndex)),
+				},
 			}, nil
 		}
 		return ExecutionResult{}, err
@@ -228,40 +237,96 @@ func (e *JavaExecutor) runTestCase(
 		return ExecutionResult{
 			Verdict: VerdictTimeLimitExceeded,
 			Message: fmt.Sprintf("time limit exceeded on test case %d", testCaseIndex),
+			CaseResults: []backend.JudgeCaseResult{
+				buildCaseResult(testCase, testCaseIndex, VerdictTimeLimitExceeded, "", fmt.Sprintf("time limit exceeded on test case %d", testCaseIndex)),
+			},
 		}, nil
 	}
 
 	if result.exitCode != 0 {
 		if isMemoryLimitExceeded(result.exitCode, result.stderr, result.stdout) {
+			message := fmt.Sprintf("memory limit exceeded on test case %d", testCaseIndex)
 			return ExecutionResult{
 				Verdict: VerdictMemoryLimitExceeded,
-				Message: fmt.Sprintf("memory limit exceeded on test case %d", testCaseIndex),
+				Message: message,
+				CaseResults: []backend.JudgeCaseResult{
+					buildCaseResult(testCase, testCaseIndex, VerdictMemoryLimitExceeded, result.stdout, message),
+				},
 			}, nil
 		}
 
 		runtimeErrorMessage := firstNonEmpty("", result.stderr, result.stdout)
 		if runtimeErrorMessage != "" {
+			message := fmt.Sprintf("runtime error on test case %d: %s", testCaseIndex, runtimeErrorMessage)
 			return ExecutionResult{
 				Verdict: VerdictRuntimeError,
-				Message: fmt.Sprintf("runtime error on test case %d: %s", testCaseIndex, runtimeErrorMessage),
+				Message: message,
+				CaseResults: []backend.JudgeCaseResult{
+					buildCaseResult(testCase, testCaseIndex, VerdictRuntimeError, result.stdout, message),
+				},
 			}, nil
 		}
 
+		message := fmt.Sprintf("runtime error on test case %d", testCaseIndex)
 		return ExecutionResult{
 			Verdict: VerdictRuntimeError,
-			Message: fmt.Sprintf("runtime error on test case %d", testCaseIndex),
+			Message: message,
+			CaseResults: []backend.JudgeCaseResult{
+				buildCaseResult(testCase, testCaseIndex, VerdictRuntimeError, result.stdout, message),
+			},
 		}, nil
 	}
 
 	if judge.EvaluateOutput(testCase.ExpectedOutput, result.stdout) != judge.VerdictAccepted {
 		normalizedExpected, normalizedActual := judge.NormalizeOutput(testCase.ExpectedOutput), judge.NormalizeOutput(result.stdout)
+		message := buildWrongAnswerMessage(testCaseIndex, normalizedExpected, normalizedActual)
 		return ExecutionResult{
 			Verdict: VerdictWrongAnswer,
-			Message: buildWrongAnswerMessage(testCaseIndex, normalizedExpected, normalizedActual),
+			Message: message,
+			CaseResults: []backend.JudgeCaseResult{
+				buildCaseResult(testCase, testCaseIndex, VerdictWrongAnswer, result.stdout, message),
+			},
 		}, nil
 	}
 
-	return ExecutionResult{}, nil
+	return ExecutionResult{
+		CaseResults: []backend.JudgeCaseResult{
+			buildCaseResult(testCase, testCaseIndex, VerdictAccepted, result.stdout, ""),
+		},
+	}, nil
+}
+
+func buildGlobalCaseResults(testCases []backend.JudgeTestCase, verdict string, message string) []backend.JudgeCaseResult {
+	results := make([]backend.JudgeCaseResult, 0, len(testCases))
+	for index, testCase := range testCases {
+		results = append(results, buildCaseResult(testCase, index+1, verdict, "", message))
+	}
+	return results
+}
+
+func buildCaseResult(
+	testCase backend.JudgeTestCase,
+	index int,
+	verdict string,
+	stdout string,
+	message string,
+) backend.JudgeCaseResult {
+	return backend.JudgeCaseResult{
+		Index:          index,
+		Verdict:        verdict,
+		Stdout:         stdout,
+		ExpectedOutput: testCase.ExpectedOutput,
+		Message:        message,
+	}
+}
+
+func aggregateCaseResults(results []backend.JudgeCaseResult) (string, string) {
+	for _, result := range results {
+		if result.Verdict != VerdictAccepted {
+			return result.Verdict, result.Message
+		}
+	}
+	return VerdictAccepted, ""
 }
 
 func memoryLimitArgument(memoryLimitMb int) string {

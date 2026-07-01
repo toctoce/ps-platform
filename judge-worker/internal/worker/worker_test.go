@@ -317,6 +317,7 @@ type fakeBackendClient struct {
 	lastJobID        int64
 	lastVerdict      string
 	lastJudgeMessage string
+	lastCaseResults  []backend.JudgeCaseResult
 	nextJobCalls     chan time.Time
 	requeueCalls     chan time.Time
 	calledNext       int
@@ -345,13 +346,20 @@ func (c *fakeBackendClient) NextJob(context.Context) (*backend.JudgeJobAssignmen
 	return &job, nil
 }
 
-func (c *fakeBackendClient) CompleteJob(_ context.Context, jobID int64, verdict string, judgeMessage string) error {
+func (c *fakeBackendClient) CompleteJob(
+	_ context.Context,
+	jobID int64,
+	verdict string,
+	judgeMessage string,
+	caseResults []backend.JudgeCaseResult,
+) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.completeCalls++
 	c.lastJobID = jobID
 	c.lastVerdict = verdict
 	c.lastJudgeMessage = judgeMessage
+	c.lastCaseResults = caseResults
 	if c.completeErr != nil {
 		return c.completeErr
 	}

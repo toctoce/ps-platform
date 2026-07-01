@@ -65,11 +65,18 @@ func (c *Client) NextJob(ctx context.Context) (*JudgeJobAssignment, error) {
 	return &job, nil
 }
 
-// CompleteJob은 실행 중인 채점 작업의 최종 verdict를 backend에 보고합니다.
-func (c *Client) CompleteJob(ctx context.Context, jobID int64, verdict string, judgeMessage string) error {
+// CompleteJob은 실행 중인 채점 작업의 최종 verdict와 케이스별 결과를 backend에 보고합니다.
+func (c *Client) CompleteJob(
+	ctx context.Context,
+	jobID int64,
+	verdict string,
+	judgeMessage string,
+	caseResults []JudgeCaseResult,
+) error {
 	body, err := json.Marshal(CompleteRequest{
 		Verdict:      verdict,
 		JudgeMessage: judgeMessage,
+		CaseResults:  caseResults,
 	})
 	if err != nil {
 		return err

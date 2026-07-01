@@ -21,7 +21,7 @@ type Worker struct {
 
 type backendClient interface {
 	NextJob(ctx context.Context) (*backend.JudgeJobAssignment, error)
-	CompleteJob(ctx context.Context, jobID int64, verdict string, judgeMessage string) error
+	CompleteJob(ctx context.Context, jobID int64, verdict string, judgeMessage string, caseResults []backend.JudgeCaseResult) error
 	RequeueStaleJobs(ctx context.Context, staleAfterSeconds int64) error
 }
 
@@ -100,13 +100,15 @@ func (w *Worker) processOnce(ctx context.Context) (bool, error) {
 	execution, err := w.executor.Execute(ctx, *job)
 	verdict := execution.Verdict
 	judgeMessage := execution.Message
+	caseResults := execution.CaseResults
 	if err != nil {
 		slog.Error("sandbox execution failed", "jobId", job.JobID, "error", err)
 		verdict = sandbox.VerdictRuntimeError
 		judgeMessage = fmt.Sprintf("execution failed: %v", err)
+		caseResults = nil
 	}
 
-	if err := w.client.CompleteJob(ctx, job.JobID, verdict, judgeMessage); err != nil {
+	if err := w.client.CompleteJob(ctx, job.JobID, verdict, judgeMessage, caseResults); err != nil {
 		return true, err
 	}
 
