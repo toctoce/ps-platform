@@ -23,6 +23,23 @@ function App() {
   const isAuthenticated = Boolean(auth?.accessToken);
   const isAdmin = auth?.user?.role === 'ADMIN';
 
+  function getLoginReturnTarget() {
+    const returnTo = new URLSearchParams(window.location.search).get('returnTo');
+    if (!returnTo || !returnTo.startsWith('/') || returnTo.startsWith('//')) {
+      return '/';
+    }
+    return returnTo;
+  }
+
+  function navigateToLogin(returnTo = `${window.location.pathname}${window.location.search}`) {
+    navigate(`/login?returnTo=${encodeURIComponent(returnTo)}`);
+  }
+
+  function getCurrentPath() {
+    const currentPath = `${window.location.pathname}${window.location.search}`;
+    return currentPath || '/';
+  }
+
   function applyAuth(nextAuth) {
     setAuth(nextAuth);
     saveStoredAuth(nextAuth);
@@ -46,7 +63,7 @@ function App() {
       user: authResponse.user,
     });
     setMessage('로그인에 성공했습니다.');
-    navigate('/');
+    navigate(getLoginReturnTarget());
   }
 
   async function checkCurrentUser() {
@@ -80,7 +97,7 @@ function App() {
     } finally {
       clearAuth();
       setUserMenuOpen(false);
-      navigate('/');
+      navigate(getCurrentPath());
     }
   }
 
@@ -113,7 +130,7 @@ function App() {
               type="button"
               onClick={() => {
                 if (!isAuthenticated) {
-                  navigate('/login');
+                  navigateToLogin();
                   return;
                 }
                 setUserMenuOpen((current) => !current);
@@ -158,7 +175,7 @@ function App() {
                 </>
               ) : (
                 <>
-                  <button type="button" onClick={() => navigate('/login')}>
+                  <button type="button" onClick={() => navigateToLogin()}>
                     <LogIn size={16} />
                     로그인
                   </button>
@@ -183,63 +200,64 @@ function App() {
           </div>
         </div>
       </header>
-
-      {route.name === 'login' ? (
-        <LoginPage
-          onLoginSuccess={handleLoginSuccess}
-          setMessage={setMessage}
-          isAuthenticated={isAuthenticated}
-          navigate={navigate}
-        />
-      ) : route.name === 'signup' ? (
-        <SignupPage
-          setMessage={setMessage}
-          navigate={navigate}
-        />
-      ) : route.name === 'category-list' ? (
-        <CategoryPage
-          navigate={navigate}
-          setMessage={setMessage}
-          category={null}
-        />
-      ) : route.name === 'category-detail' ? (
-        <CategoryPage
-          category={route.category}
-          navigate={navigate}
-          setMessage={setMessage}
-        />
-      ) : route.name === 'random' ? (
-        <RandomProblemPage
-          navigate={navigate}
-          setMessage={setMessage}
-        />
-      ) : route.name === 'my-page' ? (
-        <MyPage
-          auth={auth}
-          isAuthenticated={isAuthenticated}
-          setMessage={setMessage}
-          navigate={navigate}
-        />
-      ) : route.name === 'admin' ? (
-        <AdminPage
-          auth={auth}
-          setMessage={setMessage}
-          navigate={navigate}
-        />
-      ) : route.name === 'problem-detail' ? (
-        <ProblemDetailPage
-          problemId={route.problemId}
-          navigate={navigate}
-          setMessage={setMessage}
-          isAuthenticated={isAuthenticated}
-          auth={auth}
-        />
-      ) : (
-        <HomePage
-          navigate={navigate}
-          setMessage={setMessage}
-        />
-      )}
+      <section className="app-content">
+        {route.name === 'login' ? (
+          <LoginPage
+            onLoginSuccess={handleLoginSuccess}
+            setMessage={setMessage}
+            isAuthenticated={isAuthenticated}
+            navigate={navigate}
+          />
+        ) : route.name === 'signup' ? (
+          <SignupPage
+            setMessage={setMessage}
+            navigate={navigate}
+          />
+        ) : route.name === 'category-list' ? (
+          <CategoryPage
+            navigate={navigate}
+            setMessage={setMessage}
+            category={null}
+          />
+        ) : route.name === 'category-detail' ? (
+          <CategoryPage
+            category={route.category}
+            navigate={navigate}
+            setMessage={setMessage}
+          />
+        ) : route.name === 'random' ? (
+          <RandomProblemPage
+            navigate={navigate}
+            setMessage={setMessage}
+          />
+        ) : route.name === 'my-page' ? (
+          <MyPage
+            auth={auth}
+            isAuthenticated={isAuthenticated}
+            setMessage={setMessage}
+            navigate={navigate}
+          />
+        ) : route.name === 'admin' ? (
+          <AdminPage
+            auth={auth}
+            setMessage={setMessage}
+            navigate={navigate}
+          />
+        ) : route.name === 'problem-detail' ? (
+          <ProblemDetailPage
+            problemId={route.problemId}
+            navigate={navigate}
+            setMessage={setMessage}
+            isAuthenticated={isAuthenticated}
+            auth={auth}
+          />
+        ) : (
+          <HomePage
+            navigate={navigate}
+            setMessage={setMessage}
+          />
+        )}
+      </section>
     </main>
   );
 }

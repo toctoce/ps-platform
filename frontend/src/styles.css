@@ -30,6 +30,16 @@ body {
   margin: 0;
   background: var(--ivory);
   color: var(--text-main);
+  min-height: 100%;
+}
+
+html,
+body,
+#root,
+.app-shell,
+.app-content {
+  width: 100%;
+  height: 100%;
 }
 
 button,
@@ -49,8 +59,21 @@ button:disabled {
 }
 
 .app-shell {
+  min-height: 100dvh;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   padding: 0;
+  overflow: hidden;
+}
+
+.app-content {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .site-header {
@@ -250,7 +273,12 @@ button:disabled {
 }
 
 .detail-page {
-  height: calc(100vh - 57px);
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
   max-width: none;
   margin: 0;
   padding: 0;
@@ -617,7 +645,9 @@ button:disabled {
 .problem-panel-header {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  gap: 10px;
   min-height: 48px;
   padding: 0 12px;
   border-bottom: 1px solid var(--line);
@@ -629,6 +659,7 @@ button:disabled {
   align-items: stretch;
   gap: 4px;
   align-self: stretch;
+  min-width: 0;
 }
 
 .problem-tabs button {
@@ -650,6 +681,39 @@ button:disabled {
   border-bottom-color: var(--brand);
   color: var(--text-main);
   outline: none;
+}
+
+.problem-editor-open-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 12px;
+  font-weight: 850;
+  white-space: nowrap;
+  text-decoration: none;
+  color: #556052;
+  cursor: pointer;
+}
+
+.problem-editor-open-button:hover,
+.problem-editor-open-button:focus-visible {
+  color: var(--text-main);
+  text-decoration: underline;
+  outline: none;
+}
+
+.problem-editor-open-button.is-back {
+  border: 0;
+  background: transparent;
+  color: #556052;
+  font-size: 12px;
+  font-weight: 850;
+  text-decoration: none;
 }
 
 .compact-list .problem-row {
@@ -937,12 +1001,15 @@ textarea:focus {
 }
 
 .solve-layout {
+  min-width: 0;
   display: grid;
   grid-template-columns: var(--problem-panel-column, minmax(420px, 0.82fr)) 8px var(--ide-panel-column, minmax(560px, 1.18fr));
   gap: 0;
   align-items: stretch;
   height: 100%;
   min-height: 0;
+  width: 100%;
+  overflow: hidden;
 }
 
 .empty {
@@ -953,7 +1020,10 @@ textarea:focus {
 
 .problem-panel,
 .ide-panel {
+  min-width: 0;
   min-height: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
   border: 0;
   border-radius: 0;
   background: var(--surface-2);
@@ -961,9 +1031,8 @@ textarea:focus {
 }
 
 .problem-panel {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
   background: #f8f5ee;
+  height: 100%;
 }
 
 .panel-resizer {
@@ -1005,6 +1074,7 @@ textarea:focus {
 
 .problem-panel-body {
   min-height: 0;
+  min-width: 0;
   padding: 28px 32px 48px;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -1208,6 +1278,7 @@ textarea:focus {
   line-height: 1.75;
 }
 
+.markdown-content h1,
 .markdown-content h2,
 .markdown-content h3,
 .markdown-content h4 {
@@ -1218,6 +1289,10 @@ textarea:focus {
 
 .markdown-content h2 {
   font-size: 22px;
+}
+
+.markdown-content h1 {
+  font-size: 30px;
 }
 
 .markdown-content h3 {
@@ -1232,6 +1307,21 @@ textarea:focus {
 .markdown-content ul,
 .markdown-content blockquote {
   margin: 0;
+}
+
+.markdown-content a {
+  color: #2f5f3f;
+}
+
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.markdown-content th,
+.markdown-content td {
+  padding: 8px 10px;
+  border: 1px solid #d3cbb8;
 }
 
 .markdown-content ul {
@@ -1289,6 +1379,7 @@ textarea:focus {
   grid-template-rows: auto minmax(0, 1fr);
   background: var(--code-bg);
   color: var(--code-text);
+  height: 100%;
 }
 
 .ide-panel.is-light {
@@ -1420,7 +1511,16 @@ textarea:focus {
   outline: none;
 }
 
-.submission-form,
+.submission-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  flex: 1 1 auto;
+  padding: 0;
+  overflow: hidden;
+}
+
 .testcase-editor,
 .testcase-add-form,
 .testcase-list {
@@ -1428,18 +1528,12 @@ textarea:focus {
   gap: 12px;
 }
 
-.submission-form {
-  position: relative;
-  grid-template-rows: minmax(0, 1fr) auto;
-  min-height: 0;
-  padding: 0;
-  overflow: hidden;
-}
-
 .editor-shell {
   display: grid;
   grid-template-rows: minmax(0, 1fr);
+  flex: 1 1 auto;
   min-height: 0;
+  min-width: 0;
   background: var(--code-bg);
   overflow: hidden;
 }
@@ -1493,34 +1587,43 @@ textarea:focus {
 
 .monaco-editor-frame {
   min-height: 0;
+  height: 100%;
   background: var(--code-bg);
   overflow: hidden;
 }
 
 .ide-bottom-dock {
-  position: relative;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   z-index: 5;
 }
 
 .ide-testcase-panel {
-  position: absolute;
-  right: 0;
-  bottom: 48px;
-  left: 0;
   display: grid;
   gap: 10px;
-  max-height: min(420px, 55vh);
+  flex: 0 0 auto;
+  height: clamp(170px, 36vh, 320px);
+  min-height: 0;
+  max-height: min(55vh, 420px);
+  resize: vertical;
   padding: 12px;
   border-top: 1px solid #d9d1c2;
   box-shadow: 0 -12px 28px rgba(40, 43, 36, 0.12);
   background: #fffdf8;
   color: var(--text-main);
-  overflow-y: auto;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 
 .ide-actions {
   display: flex;
   align-items: center;
+  min-height: 48px;
+  padding: 8px 12px;
+  border-top: 1px solid #d9d1c2;
+  background: #ede9df;
+  z-index: 20;
 }
 
 .ide-testcase-tabs {
@@ -1952,8 +2055,7 @@ dt {
 
 @media (max-width: 1040px) {
   .detail-page {
-    height: auto;
-    overflow: visible;
+    min-height: 0;
   }
 
   .site-header {
@@ -1979,13 +2081,18 @@ dt {
   }
 
   .solve-layout {
-    height: auto;
-    min-height: auto;
+    height: 100%;
+    min-height: 0;
+  }
+
+  .solve-layout.is-problem-only .ide-panel,
+  .solve-layout.is-editor-only .problem-panel {
+    display: none;
   }
 
   .problem-panel,
   .ide-panel {
-    min-height: auto;
+    min-height: 0;
   }
 
   .panel-resizer {
@@ -2011,7 +2118,7 @@ dt {
   }
 
   .monaco-editor-frame {
-    min-height: 340px;
+    min-height: 0;
   }
 
   .site-actions {

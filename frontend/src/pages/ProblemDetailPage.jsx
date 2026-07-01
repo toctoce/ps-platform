@@ -44,6 +44,8 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
   const [testRunSubmissionId, setTestRunSubmissionId] = useState(null);
   const [testRunResults, setTestRunResults] = useState([]);
   const [problemPanelRatio, setProblemPanelRatio] = useState(44);
+  const [isNarrowLayout, setIsNarrowLayout] = useState(false);
+  const [editorOnlyMode, setEditorOnlyMode] = useState(false);
   const pollingRef = useRef({});
   const lastSubmissionStatus = useRef({});
   const editorRef = useRef(null);
@@ -84,6 +86,26 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
 
     document.addEventListener('mousedown', closeLanguageMenu);
     return () => document.removeEventListener('mousedown', closeLanguageMenu);
+  }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 1040px)');
+    const applyResponsiveMode = () => {
+      const isSmall = mediaQuery.matches;
+      setIsNarrowLayout(isSmall);
+      if (!isSmall) {
+        setEditorOnlyMode(false);
+      }
+    };
+
+    applyResponsiveMode();
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', applyResponsiveMode);
+      return () => mediaQuery.removeEventListener('change', applyResponsiveMode);
+    }
+    mediaQuery.addListener(applyResponsiveMode);
+    return () => mediaQuery.removeListener(applyResponsiveMode);
   }, []);
 
   function cleanupPolling() {
@@ -289,7 +311,10 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
     try {
       const created = await request(`/api/problems/${problemId}/submissions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders(),
+        },
         body: JSON.stringify(submissionForm),
       });
       const visibleSubmission = {
@@ -422,7 +447,10 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
     try {
       const created = await request(`/api/problems/${problemId}/submissions`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...authHeaders(),
+        },
         body: JSON.stringify(submissionForm),
       });
       const visibleSubmission = {
@@ -444,6 +472,7 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
 
   useEffect(() => {
     loadProblem();
+    setEditorOnlyMode(false);
     const draftKey = `${problemKey}:${submissionForm.language}`;
     const saved = localStorage.getItem(draftKey);
     if (saved !== null) {
@@ -472,7 +501,7 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
   return (
     <section className="detail-page">
       <div
-        className="solve-layout"
+        className={`solve-layout ${isNarrowLayout ? (editorOnlyMode ? 'is-editor-only' : 'is-problem-only') : ''}`}
         ref={solveLayoutRef}
         style={{
           '--problem-panel-column': `minmax(360px, ${problemPanelRatio}fr)`,
@@ -505,6 +534,15 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
                 제출
               </button>
             </div>
+            {isNarrowLayout && !editorOnlyMode ? (
+              <button
+                className="problem-editor-open-button"
+                type="button"
+                onClick={() => setEditorOnlyMode(true)}
+              >
+                {'<<'} 에디터 열기
+              </button>
+            ) : null}
           </div>
           <div className="problem-panel-body">
             {activeProblemTab === 'problem' && problem ? (
@@ -629,6 +667,15 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
 
         <section className={`ide-panel ${ideTheme === 'light' ? 'is-light' : ''}`}>
           <div className="ide-header">
+            {isNarrowLayout ? (
+              <button
+                className="problem-editor-open-button is-back"
+                type="button"
+                onClick={() => setEditorOnlyMode(false)}
+              >
+                에디터 닫기 {'>>'}
+              </button>
+            ) : null}
             <div className="ide-language-control" ref={languageMenuRef}>
               <Code2 size={18} />
               <button
@@ -829,8 +876,7 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
               </div>
             </div>
           </form>
-
-        </section>
+          </section>
       </div>
     </section>
   );
