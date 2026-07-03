@@ -13,6 +13,8 @@ type Config struct {
 	BackendBaseURL    string
 	PollInterval      time.Duration
 	JavaDockerImage   string
+	PythonDockerImage string
+	CppDockerImage    string
 	StaleAfterSeconds int64
 }
 
@@ -20,20 +22,30 @@ const (
 	backendBaseURLKey    = "BACKEND_BASE_URL"
 	pollIntervalMsKey    = "JUDGE_WORKER_POLL_INTERVAL_MS"
 	javaDockerImageKey   = "JAVA_DOCKER_IMAGE"
+	pythonDockerImageKey = "PYTHON_DOCKER_IMAGE"
+	cppDockerImageKey    = "CPP_DOCKER_IMAGE"
 	staleAfterSecondsKey = "JUDGE_WORKER_STALE_AFTER_SECONDS"
 )
 
 // Load는 운영에서 필요한 모든 값을 환경변수에서 로드합니다.
 func Load() (Config, error) {
 	cfg := Config{
-		BackendBaseURL:  strings.TrimSpace(os.Getenv(backendBaseURLKey)),
-		JavaDockerImage: strings.TrimSpace(os.Getenv(javaDockerImageKey)),
+		BackendBaseURL:    strings.TrimSpace(os.Getenv(backendBaseURLKey)),
+		JavaDockerImage:   strings.TrimSpace(os.Getenv(javaDockerImageKey)),
+		PythonDockerImage: strings.TrimSpace(os.Getenv(pythonDockerImageKey)),
+		CppDockerImage:    strings.TrimSpace(os.Getenv(cppDockerImageKey)),
 	}
 	if cfg.BackendBaseURL == "" {
 		return Config{}, missingEnvError(backendBaseURLKey)
 	}
 	if cfg.JavaDockerImage == "" {
 		return Config{}, missingEnvError(javaDockerImageKey)
+	}
+	if cfg.PythonDockerImage == "" {
+		return Config{}, missingEnvError(pythonDockerImageKey)
+	}
+	if cfg.CppDockerImage == "" {
+		return Config{}, missingEnvError(cppDockerImageKey)
 	}
 
 	pollIntervalMs, err := parsePositiveInt(pollIntervalMsKey, os.Getenv(pollIntervalMsKey))

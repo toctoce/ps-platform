@@ -26,7 +26,11 @@ func main() {
 
 	// backend client, sandbox executor, worker loop를 조립합니다.
 	client := backend.NewClient(cfg.BackendBaseURL)
-	executor := sandbox.NewJavaExecutor(cfg.JavaDockerImage)
+	executor := sandbox.NewLanguageExecutor(
+		cfg.JavaDockerImage,
+		cfg.PythonDockerImage,
+		cfg.CppDockerImage,
+	)
 	judgeWorker := worker.NewWorker(
 		client,
 		executor,
@@ -39,6 +43,8 @@ func main() {
 		"backendBaseURL", cfg.BackendBaseURL,
 		"pollInterval", cfg.PollInterval,
 		"javaDockerImage", cfg.JavaDockerImage,
+		"pythonDockerImage", cfg.PythonDockerImage,
+		"cppDockerImage", cfg.CppDockerImage,
 	)
 
 	if err := judgeWorker.Run(ctx); err != nil && err != context.Canceled {

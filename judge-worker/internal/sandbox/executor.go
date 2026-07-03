@@ -32,8 +32,7 @@ const (
 const (
 	defaultTimeLimitMs    = 1000
 	defaultMemoryLimitMb  = 128
-	javaCompileTimeout    = 10 * time.Second
-	javaSourceFile        = "Main.java"
+	defaultCompileTimeout = 10 * time.Second
 	containerWorkspaceDir = "/workspace"
 	judgeMessageMaxBytes  = 1024
 	executionSecondsKey   = "__JUDGE_EXECUTION_SECONDS__="
@@ -66,31 +65,158 @@ type commandRunner interface {
 	Run(ctx context.Context, command string, args []string, workDir string, stdin io.Reader) (commandResult, error)
 }
 
-// JavaExecutor는 Java 제출 코드를 sandbox에서 실행해 판정 결과를 계산합니다.
-type JavaExecutor struct {
-	runner commandRunner
-	image  string
+type languageSpec struct {
+	name           string
+	aliases        []string
+	image          string
+	sourceFile     string
+	tempDirPrefix  string
+	compileTimeout time.Duration
+	compileCommand []string
+	runCommand     string
 }
+
+// dockerLanguageExecutor는 언어별 spec에 따라 Docker 컨테이너에서 코드를 실행합니다.
+type dockerLanguageExecutor struct {
+	runner commandRunner
+	spec   languageSpec
+}
+
+type JavaExecutor = dockerLanguageExecutor
+type PythonExecutor = dockerLanguageExecutor
+type CppExecutor = dockerLanguageExecutor
 
 // NewJavaExecutor는 운영 환경에서 Java 실행기를 생성합니다.
 func NewJavaExecutor(javaImage string) *JavaExecutor {
-	image := strings.TrimSpace(javaImage)
-	return NewJavaExecutorWithRunner(&dockerCommandRunner{}, image)
+	return NewJavaExecutorWithRunner(&dockerCommandRunner{}, javaImage)
 }
 
 // NewJavaExecutorWithRunner는 테스트에서 fake runner를 주입하기 위한 생성자입니다.
 func NewJavaExecutorWithRunner(runner commandRunner, image string) *JavaExecutor {
-	image = strings.TrimSpace(image)
+	return newDockerLanguageExecutor(runner, javaSpec(image))
+}
 
-	return &JavaExecutor{
+// NewPythonExecutor는 운영 환경에서 Python 실행기를 생성합니다.
+func NewPythonExecutor(pythonImage string) *PythonExecutor {
+	return NewPythonExecutorWithRunner(&dockerCommandRunner{}, pythonImage)
+}
+
+// NewPythonExecutorWithRunner는 테스트에서 fake runner를 주입하기 위한 생성자입니다.
+func NewPythonExecutorWithRunner(runner commandRunner, image string) *PythonExecutor {
+	return newDockerLanguageExecutor(runner, pythonSpec(image))
+}
+
+// NewCppExecutor는 운영 환경에서 C++ 실행기를 생성합니다.
+func NewCppExecutor(cppImage string) *CppExecutor {
+	return NewCppExecutorWithRunner(&dockerCommandRunner{}, cppImage)
+}
+
+// NewCppExecutorWithRunner는 테스트에서 fake runner를 주입하기 위한 생성자입니다.
+func NewCppExecutorWithRunner(runner commandRunner, image string) *CppExecutor {
+	return newDockerLanguageExecutor(runner, cppSpec(image))
+}
+
+func newDockerLanguageExecutor(runner commandRunner, spec languageSpec) *dockerLanguageExecutor {
+	spec.image = strings.TrimSpace(spec.image)
+	if spec.compileTimeout <= 0 {
+		spec.compileTimeout = defaultCompileTimeout
+	}
+
+	return &dockerLanguageExecutor{
 		runner: runner,
-		image:  image,
+		spec:   spec,
 	}
 }
 
-// Execute는 소스코드를 Main.java로 저장해 javac, java 실행을 수행한 뒤 verdict를 반환합니다.
+func javaSpec(image string) languageSpec {
+	return languageSpec{
+		name:           "java",
+		image:          image,
+		sourceFile:     "Main.java",
+		tempDirPrefix:  "judge-worker-java-*",
+		compileTimeout: defaultCompileTimeout,
+		compileCommand: []string{"javac", "Main.java"},
+		runCommand:     "java Main",
+	}
+}
 
-func (e *JavaExecutor) Execute(ctx context.Context, job backend.JudgeJobAssignment) (ExecutionResult, error) {
+func pythonSpec(image string) languageSpec {
+	return languageSpec{
+		name:           "python",
+		aliases:        []string{"py", "python3"},
+		image:          image,
+		sourceFile:     "main.py",
+		tempDirPrefix:  "judge-worker-python-*",
+		compileTimeout: defaultCompileTimeout,
+		compileCommand: []string{"python3", "-m", "py_compile", "main.py"},
+		runCommand:     "python3 main.py",
+	}
+}
+
+func cppSpec(image string) languageSpec {
+	return languageSpec{
+		name:           "cpp",
+		aliases:        []string{"c++"},
+		image:          image,
+		sourceFile:     "main.cpp",
+		tempDirPrefix:  "judge-worker-cpp-*",
+		compileTimeout: defaultCompileTimeout,
+		compileCommand: []string{"g++", "-std=c++17", "-O2", "-pipe", "-o", "main", "main.cpp"},
+		runCommand:     "./main",
+	}
+}
+
+func (s languageSpec) supports(language string) bool {
+	normalized := strings.TrimSpace(language)
+	if strings.EqualFold(normalized, s.name) {
+		return true
+	}
+	for _, alias := range s.aliases {
+		if strings.EqualFold(normalized, alias) {
+			return true
+		}
+	}
+	return false
+}
+
+// LanguageExecutor는 job.Language에 맞는 언어별 executor로 작업을 라우팅합니다.
+type LanguageExecutor struct {
+	executors map[string]*dockerLanguageExecutor
+}
+
+// NewLanguageExecutor는 운영 환경에서 지원 언어 전체를 처리하는 실행기를 생성합니다.
+func NewLanguageExecutor(javaImage string, pythonImage string, cppImage string) *LanguageExecutor {
+	return NewLanguageExecutorWithRunner(&dockerCommandRunner{}, javaImage, pythonImage, cppImage)
+}
+
+// NewLanguageExecutorWithRunner는 테스트에서 fake runner를 주입하기 위한 생성자입니다.
+func NewLanguageExecutorWithRunner(runner commandRunner, javaImage string, pythonImage string, cppImage string) *LanguageExecutor {
+	executor := &LanguageExecutor{executors: map[string]*dockerLanguageExecutor{}}
+	executor.register(NewJavaExecutorWithRunner(runner, javaImage))
+	executor.register(NewPythonExecutorWithRunner(runner, pythonImage))
+	executor.register(NewCppExecutorWithRunner(runner, cppImage))
+	return executor
+}
+
+func (e *LanguageExecutor) register(executor *dockerLanguageExecutor) {
+	e.executors[strings.ToLower(executor.spec.name)] = executor
+	for _, alias := range executor.spec.aliases {
+		e.executors[strings.ToLower(alias)] = executor
+	}
+}
+
+// Execute는 job.Language에 맞는 언어 executor를 찾아 채점을 위임합니다.
+func (e *LanguageExecutor) Execute(ctx context.Context, job backend.JudgeJobAssignment) (ExecutionResult, error) {
+	normalized := strings.ToLower(strings.TrimSpace(job.Language))
+	executor, ok := e.executors[normalized]
+	if !ok {
+		return ExecutionResult{}, fmt.Errorf("unsupported language: %s", job.Language)
+	}
+	return executor.Execute(ctx, job)
+}
+
+// Execute는 소스코드를 언어별 파일로 저장하고 컴파일/실행을 수행한 뒤 verdict를 반환합니다.
+func (e *dockerLanguageExecutor) Execute(ctx context.Context, job backend.JudgeJobAssignment) (ExecutionResult, error) {
 	if strings.TrimSpace(job.SourceCode) == "" {
 		return ExecutionResult{
 			Verdict: VerdictCompileError,
@@ -98,17 +224,17 @@ func (e *JavaExecutor) Execute(ctx context.Context, job backend.JudgeJobAssignme
 		}, nil
 	}
 
-	if !strings.EqualFold(job.Language, "java") {
+	if !e.spec.supports(job.Language) {
 		return ExecutionResult{}, fmt.Errorf("unsupported language: %s", job.Language)
 	}
 
-	tempDir, err := os.MkdirTemp("", "judge-worker-java-*")
+	tempDir, err := os.MkdirTemp("", e.spec.tempDirPrefix)
 	if err != nil {
 		return ExecutionResult{}, err
 	}
 	defer os.RemoveAll(tempDir) //nolint:all // 실행 종료 후 정리해야 해서 항상 제거.
 
-	if err := os.WriteFile(filepath.Join(tempDir, javaSourceFile), []byte(job.SourceCode), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(tempDir, e.spec.sourceFile), []byte(job.SourceCode), 0o600); err != nil {
 		return ExecutionResult{}, err
 	}
 
@@ -158,12 +284,16 @@ func determineMemoryLimitMb(memoryLimitMb int) int {
 	return memoryLimitMb
 }
 
-func (e *JavaExecutor) compile(ctx context.Context, tempDir string, memoryLimitMb int) (ExecutionResult, error) {
-	compileCtx, cancel := context.WithTimeout(ctx, javaCompileTimeout)
+func (e *dockerLanguageExecutor) compile(ctx context.Context, tempDir string, memoryLimitMb int) (ExecutionResult, error) {
+	if len(e.spec.compileCommand) == 0 {
+		return ExecutionResult{}, nil
+	}
+
+	compileCtx, cancel := context.WithTimeout(ctx, e.spec.compileTimeout)
 	defer cancel()
 
 	memoryLimit := memoryLimitArgument(memoryLimitMb)
-	containerName := dockerContainerName("compile")
+	containerName := dockerContainerName(e.spec.name + "-compile")
 	args := []string{
 		"run", "--rm", "-i",
 		"--name", containerName,
@@ -172,9 +302,9 @@ func (e *JavaExecutor) compile(ctx context.Context, tempDir string, memoryLimitM
 		"--memory-swap", memoryLimit,
 		"-v", tempDir + ":" + containerWorkspaceDir,
 		"-w", containerWorkspaceDir,
-		e.image,
-		"javac", javaSourceFile,
+		e.spec.image,
 	}
+	args = append(args, e.spec.compileCommand...)
 
 	result, err := e.runner.Run(compileCtx, "docker", args, "", nil)
 	if err != nil {
@@ -210,7 +340,7 @@ func (e *JavaExecutor) compile(ctx context.Context, tempDir string, memoryLimitM
 	return ExecutionResult{}, nil
 }
 
-func (e *JavaExecutor) runTestCase(
+func (e *dockerLanguageExecutor) runTestCase(
 	ctx context.Context,
 	tempDir string,
 	testCase backend.JudgeTestCase,
@@ -222,7 +352,7 @@ func (e *JavaExecutor) runTestCase(
 	defer cancel()
 
 	memoryLimit := memoryLimitArgument(memoryLimitMb)
-	containerName := dockerContainerName(fmt.Sprintf("case-%d", testCaseIndex))
+	containerName := dockerContainerName(fmt.Sprintf("%s-case-%d", e.spec.name, testCaseIndex))
 	args := []string{
 		"run", "--rm", "-i",
 		"--name", containerName,
@@ -231,8 +361,8 @@ func (e *JavaExecutor) runTestCase(
 		"--memory-swap", memoryLimit,
 		"-v", tempDir + ":" + containerWorkspaceDir,
 		"-w", containerWorkspaceDir,
-		e.image,
-		"sh", "-c", javaRunCommand(),
+		e.spec.image,
+		"sh", "-c", metricWrappedCommand(e.spec.runCommand),
 	}
 
 	result, err := e.runner.Run(runCtx, "docker", args, "", bytes.NewBufferString(testCase.Input))
@@ -357,15 +487,15 @@ func dockerContainerName(label string) string {
 	return fmt.Sprintf("judge-worker-%d-%s", time.Now().UnixNano(), sanitized)
 }
 
-func javaRunCommand() string {
+func metricWrappedCommand(command string) string {
 	return strings.Join([]string{
 		"if [ -x /usr/bin/time ]; then",
-		"/usr/bin/time -f '" + executionSecondsKey + "%e\\n" + memoryKbKey + "%M' -o /tmp/judge-metrics java Main;",
+		"/usr/bin/time -f '" + executionSecondsKey + "%e\\n" + memoryKbKey + "%M' -o /tmp/judge-metrics " + command + ";",
 		"status=$?;",
 		"cat /tmp/judge-metrics >&2 2>/dev/null;",
 		"exit $status;",
 		"fi;",
-		"java Main",
+		command,
 	}, " ")
 }
 

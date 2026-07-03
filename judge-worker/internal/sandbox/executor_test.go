@@ -11,6 +11,8 @@ import (
 )
 
 const testJavaDockerImage = "eclipse-temurin:17-jdk"
+const testPythonDockerImage = "python:3.12-slim"
+const testCppDockerImage = "gcc:14-bookworm"
 
 func TestJavaExecutorAcceptsWhenAllTestCasesPass(t *testing.T) {
 	executor := NewJavaExecutorWithRunner(&fakeCommandRunner{
@@ -89,6 +91,105 @@ func TestJavaExecutorReturnsCompileErrorOnCompileFailure(t *testing.T) {
 	}
 	if result.Message != "Compilation failed" {
 		t.Fatalf("judge message = %q, want %q", result.Message, "Compilation failed")
+	}
+}
+
+func TestPythonExecutorAcceptsWhenAllTestCasesPass(t *testing.T) {
+	executor := NewPythonExecutorWithRunner(&fakeCommandRunner{
+		responses: []commandResponse{
+			{result: commandResult{exitCode: 0}},
+			{result: commandResult{exitCode: 0, stdout: "3\n", executionTimeMs: 8, memoryMb: 12}},
+		},
+	}, testPythonDockerImage)
+
+	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
+		Language:   "python",
+		SourceCode: "a, b = map(int, input().split())\nprint(a + b)\n",
+		TestCases: []backend.JudgeTestCase{
+			{Input: "1 2\n", ExpectedOutput: "3\n"},
+		},
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Verdict != VerdictAccepted {
+		t.Fatalf("verdict = %s, want %s", result.Verdict, VerdictAccepted)
+	}
+	if result.CaseResults[0].ExecutionTimeMs != 8 || result.CaseResults[0].MemoryMb != 12 {
+		t.Fatalf("case metrics = %+v, want executionTimeMs=8 memoryMb=12", result.CaseResults[0])
+	}
+
+	calls := executor.runner.(*fakeCommandRunner).calls
+	if !containsSequence(calls[0].args, "python3", "-m", "py_compile", "main.py") {
+		t.Fatalf("compile command should run python py_compile, got args: %v", calls[0].args)
+	}
+	if !containsArg(calls[0].args, "--memory", "128m") {
+		t.Fatalf("compile command should apply default memory limit, got args: %v", calls[0].args)
+	}
+	if !strings.Contains(strings.Join(calls[1].args, " "), "python3 main.py") {
+		t.Fatalf("run command should execute python3 main.py, got args: %v", calls[1].args)
+	}
+}
+
+func TestCppExecutorAcceptsWhenAllTestCasesPass(t *testing.T) {
+	executor := NewCppExecutorWithRunner(&fakeCommandRunner{
+		responses: []commandResponse{
+			{result: commandResult{exitCode: 0}},
+			{result: commandResult{exitCode: 0, stdout: "3\n"}},
+		},
+	}, testCppDockerImage)
+
+	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
+		Language: "cpp",
+		SourceCode: "#include <iostream>\n" +
+			"int main() { int a, b; std::cin >> a >> b; std::cout << a + b << '\\n'; }\n",
+		MemoryLimitMb: 64,
+		TestCases: []backend.JudgeTestCase{
+			{Input: "1 2\n", ExpectedOutput: "3\n"},
+		},
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Verdict != VerdictAccepted {
+		t.Fatalf("verdict = %s, want %s", result.Verdict, VerdictAccepted)
+	}
+
+	calls := executor.runner.(*fakeCommandRunner).calls
+	if !containsSequence(calls[0].args, "g++", "-std=c++17", "-O2", "-pipe", "-o", "main", "main.cpp") {
+		t.Fatalf("compile command should run g++, got args: %v", calls[0].args)
+	}
+	if !containsArg(calls[0].args, "--memory", "64m") {
+		t.Fatalf("compile command should use configured memory limit, got args: %v", calls[0].args)
+	}
+	if !strings.Contains(strings.Join(calls[1].args, " "), "./main") {
+		t.Fatalf("run command should execute compiled binary, got args: %v", calls[1].args)
+	}
+}
+
+func TestLanguageExecutorRoutesByLanguage(t *testing.T) {
+	executor := NewLanguageExecutorWithRunner(&fakeCommandRunner{
+		responses: []commandResponse{
+			{result: commandResult{exitCode: 0}},
+			{result: commandResult{exitCode: 0, stdout: "ok\n"}},
+		},
+	}, testJavaDockerImage, testPythonDockerImage, testCppDockerImage)
+
+	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
+		Language:   "python3",
+		SourceCode: "print('ok')\n",
+		TestCases: []backend.JudgeTestCase{
+			{Input: "", ExpectedOutput: "ok\n"},
+		},
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Verdict != VerdictAccepted {
+		t.Fatalf("verdict = %s, want %s", result.Verdict, VerdictAccepted)
 	}
 }
 
@@ -575,6 +676,25 @@ func containsArg(args []string, key string, expected string) bool {
 			return false
 		}
 		return args[i+1] == expected
+	}
+	return false
+}
+
+func containsSequence(args []string, expected ...string) bool {
+	if len(expected) == 0 {
+		return true
+	}
+	for start := 0; start <= len(args)-len(expected); start++ {
+		matched := true
+		for offset, value := range expected {
+			if args[start+offset] != value {
+				matched = false
+				break
+			}
+		}
+		if matched {
+			return true
+		}
 	}
 	return false
 }
