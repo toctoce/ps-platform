@@ -367,10 +367,6 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
   }
 
   async function runCode() {
-    if (!isAuthenticated) {
-      setMessage('로그인 후 실행할 수 있습니다.');
-      return;
-    }
     if (!problem) {
       setMessage('문제를 불러온 뒤 실행할 수 있습니다.');
       return;
