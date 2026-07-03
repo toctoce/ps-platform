@@ -277,6 +277,10 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
     setMessage('템플릿으로 되돌렸습니다.');
   }
 
+  function toggleIdeTheme() {
+    setIdeTheme((current) => (current === 'light' ? 'dark' : 'light'));
+  }
+
   function authHeaders() {
     return auth?.accessToken
       ? { Authorization: `Bearer ${auth.accessToken}` }
@@ -810,26 +814,20 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
               ) : null}
             </div>
             <div className="ide-file-actions">
-              <div className="ide-theme-toggle" aria-label="IDE 테마">
-                <button
-                  className={ideTheme === 'light' ? 'is-active' : ''}
-                  type="button"
-                  onClick={() => setIdeTheme('light')}
-                  title="라이트 모드"
-                  aria-label="라이트 모드"
-                >
+              <button
+                className="ide-theme-toggle"
+                type="button"
+                onClick={toggleIdeTheme}
+                title="테마 변경"
+                aria-label="테마 변경"
+              >
+                <span className={ideTheme === 'light' ? 'is-active' : ''}>
                   <Sun size={15} />
-                </button>
-                <button
-                  className={ideTheme === 'dark' ? 'is-active' : ''}
-                  type="button"
-                  onClick={() => setIdeTheme('dark')}
-                  title="다크 모드"
-                  aria-label="다크 모드"
-                >
+                </span>
+                <span className={ideTheme === 'dark' ? 'is-active' : ''}>
                   <Moon size={15} />
-                </button>
-              </div>
+                </span>
+              </button>
               <span className="editor-file-name">{editorFileName(submissionForm.language)}</span>
               <button
                 className="editor-reset-button"

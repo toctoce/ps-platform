@@ -1487,7 +1487,7 @@ textarea:focus {
   background: #f8f5ee;
 }
 
-.ide-theme-toggle button {
+.ide-theme-toggle span {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1500,12 +1500,15 @@ textarea:focus {
   color: var(--text-sub);
 }
 
-.ide-theme-toggle button:hover,
-.ide-theme-toggle button:focus-visible,
-.ide-theme-toggle button.is-active {
+.ide-theme-toggle:hover,
+.ide-theme-toggle:focus-visible {
+  border-color: var(--brand);
+  outline: none;
+}
+
+.ide-theme-toggle span.is-active {
   background: #6e7b5b;
   color: #ffffff;
-  outline: none;
 }
 
 .language-menu-button {
