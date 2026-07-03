@@ -2,7 +2,7 @@ import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Code2, LogIn, LogOut, Settings, ShieldCheck, UserPlus, UserRound } from 'lucide-react';
 import './styles.css';
-import { request } from './api/client.js';
+import { configureAuthSession, request } from './api/client.js';
 import { clearStoredAuth, getStoredAuth, saveStoredAuth } from './auth/storage.js';
 import { AdminPage } from './pages/AdminPage.jsx';
 import { CategoryPage } from './pages/CategoryPage.jsx';
@@ -77,7 +77,7 @@ function App() {
       const user = await request('/api/auth/me', {
         headers: { Authorization: `Bearer ${auth.accessToken}` },
       });
-      applyAuth({ ...auth, user });
+      applyAuth({ ...(getStoredAuth() ?? auth), user });
     } catch (error) {
       clearAuth();
       setMessage(`자동 로그인 세션이 만료되어 로그아웃됩니다. (${error.message})`);
@@ -118,6 +118,17 @@ function App() {
     setMessage('회원 탈퇴가 완료되었습니다.');
     navigate('/');
   }
+
+  useEffect(() => {
+    configureAuthSession({
+      getAuth: () => getStoredAuth(),
+      onRefresh: applyAuth,
+      onRefreshFailure: () => {
+        clearAuth();
+        setMessage('로그인 세션이 만료되었습니다. 다시 로그인해 주세요.');
+      },
+    });
+  }, [auth]);
 
   useEffect(() => {
     checkCurrentUser();
