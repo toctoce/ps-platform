@@ -62,6 +62,28 @@ export function buildInitialTestRunResults(testCases, status = '대기') {
   }));
 }
 
+const STATUS_LABELS = {
+  PENDING: '대기 중',
+  QUEUED: '대기 중',
+  RUNNING: '채점 중',
+  JUDGED: '채점 완료',
+  FAILED: '실패',
+  DONE: '완료',
+};
+
+const VERDICT_LABELS = {
+  ACCEPTED: '정답',
+  WRONG_ANSWER: '오답',
+  COMPILE_ERROR: '컴파일 에러',
+  RUNTIME_ERROR: '런타임 에러',
+  TIME_LIMIT_EXCEEDED: '시간 초과',
+  MEMORY_LIMIT_EXCEEDED: '메모리 초과',
+};
+
+export function verdictToLabel(verdict) {
+  return VERDICT_LABELS[verdict] ?? verdict ?? '알 수 없음';
+}
+
 export function inferTestRunResults(submission, testCases) {
   if (testCases.length === 0) {
     return [];
@@ -145,7 +167,7 @@ export function mapCodeRunResults(codeRun, testCases) {
         id: testCase.id ?? index,
         index: index + 1,
         status: result.verdict === 'ACCEPTED' ? '성공' : '실패',
-        message: result.message || result.verdict,
+        message: result.message || verdictToLabel(result.verdict),
       };
     });
   }
@@ -162,9 +184,9 @@ export function mapCodeRunResults(codeRun, testCases) {
 
 export function statusToLabel(status, verdict) {
   if (status === 'JUDGED') {
-    return verdict ?? 'JUDGED';
+    return verdictToLabel(verdict);
   }
-  return status ?? 'UNKNOWN';
+  return STATUS_LABELS[status] ?? status ?? '알 수 없음';
 }
 
 export function submissionBadgeClass(status) {
