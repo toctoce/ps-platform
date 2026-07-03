@@ -218,6 +218,14 @@ function App() {
           </div>
         </div>
       </header>
+      {message ? (
+        <div className="app-toast" role="status" aria-live="polite">
+          <span>{message}</span>
+          <button type="button" onClick={() => setMessage('')} aria-label="알림 닫기">
+            ×
+          </button>
+        </div>
+      ) : null}
       <section className="app-content">
         {route.name === 'login' ? (
           <LoginPage

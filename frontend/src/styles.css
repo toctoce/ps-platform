@@ -260,6 +260,50 @@ button:disabled {
   font-size: 14px;
 }
 
+.app-toast {
+  position: fixed;
+  top: 72px;
+  left: 50%;
+  z-index: 9000;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  max-width: min(520px, calc(100vw - 32px));
+  padding: 10px 12px;
+  border: 1px solid #cdd8c5;
+  border-radius: 8px;
+  background: #fffdf8;
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
+  box-shadow: 0 10px 26px rgba(40, 43, 36, 0.16);
+  transform: translateX(-50%);
+}
+
+.app-toast span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.app-toast button {
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-sub);
+  font-size: 18px;
+  line-height: 1;
+}
+
+.app-toast button:hover,
+.app-toast button:focus-visible {
+  color: var(--text-main);
+  outline: none;
+}
+
 .workspace {
   display: grid;
   grid-template-columns: minmax(340px, 0.95fr) minmax(320px, 1fr);
