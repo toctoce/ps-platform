@@ -9,8 +9,10 @@ import {
   editorLanguageLabel,
   editorStorageKeyPrefix,
   initialSubmissionForm,
+  isTemplateSource,
   LANGUAGE_OPTIONS,
   LANGUAGE_TEMPLATES,
+  normalizeTemplateSource,
 } from '../editor/config.js';
 import { difficultyLabel, problemCategoryNames, problemInputRange } from '../problem/problemUtils.js';
 import {
@@ -257,7 +259,7 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
 
   function changeSubmissionLanguage(nextLanguage) {
     setSubmissionForm((current) => {
-      const isFromTemplate = current.sourceCode.trim() === (LANGUAGE_TEMPLATES[current.language] ?? '').trim();
+      const isFromTemplate = isTemplateSource(current.language, current.sourceCode);
       return {
         ...current,
         language: nextLanguage,
@@ -279,6 +281,20 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
     return auth?.accessToken
       ? { Authorization: `Bearer ${auth.accessToken}` }
       : {};
+  }
+
+  function loadSavedSourceCode(language) {
+    const draftKey = `${problemKey}:${language}`;
+    const saved = localStorage.getItem(draftKey);
+    if (saved === null) {
+      return null;
+    }
+
+    const normalized = normalizeTemplateSource(language, saved);
+    if (normalized !== saved) {
+      localStorage.setItem(draftKey, normalized);
+    }
+    return normalized;
   }
 
   function addTestCaseFromIde(event) {
@@ -565,8 +581,7 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
   useEffect(() => {
     loadProblem();
     setEditorOnlyMode(false);
-    const draftKey = `${problemKey}:${submissionForm.language}`;
-    const saved = localStorage.getItem(draftKey);
+    const saved = loadSavedSourceCode(submissionForm.language);
     if (saved !== null) {
       setSubmissionForm((current) => ({ ...current, sourceCode: saved }));
     }
@@ -575,8 +590,7 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
   }, [problemId]);
 
   useEffect(() => {
-    const draftKey = `${problemKey}:${submissionForm.language}`;
-    const saved = localStorage.getItem(draftKey);
+    const saved = loadSavedSourceCode(submissionForm.language);
     if (saved !== null) {
       setSubmissionForm((current) => ({ ...current, sourceCode: saved }));
     }

@@ -1,7 +1,20 @@
 export const editorStorageKeyPrefix = 'ps-platform-editor';
 
 export const LANGUAGE_TEMPLATES = {
-  java: `import java.io.*;
+  java: `public class Main {
+    public static void main(String[] args) throws Exception {
+
+    }
+}`,
+  python: '',
+  cpp: `int main() {
+    return 0;
+}`,
+};
+
+const LEGACY_LANGUAGE_TEMPLATES = {
+  java: [
+    `import java.io.*;
 import java.util.*;
 
 public class Main {
@@ -13,7 +26,9 @@ public class Main {
         System.out.println(a + b);
     }
 }`,
-  python: `import sys
+  ],
+  python: [
+    `import sys
 
 def main():
     input_data = sys.stdin.readline().rstrip()
@@ -26,7 +41,19 @@ def main():
 if __name__ == "__main__":
     main()
 `,
-  cpp: `#include <bits/stdc++.h>
+    `def main():
+    pass
+
+
+if __name__ == "__main__":
+    main()
+`,
+    `def main():
+    pass
+`,
+  ],
+  cpp: [
+    `#include <bits/stdc++.h>
 using namespace std;
 
 int main() {
@@ -40,6 +67,20 @@ int main() {
     cout << (a + b) << "\\n";
     return 0;
 }`,
+    `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+
+    return 0;
+}`,
+    `int main() {
+
+    return 0;
+}`,
+  ],
 };
 
 export const initialSubmissionForm = {
@@ -75,4 +116,19 @@ export function editorLanguage(language) {
     return 'python';
   }
   return 'java';
+}
+
+export function isTemplateSource(language, sourceCode) {
+  const normalized = (sourceCode ?? '').trim();
+  const candidates = [
+    LANGUAGE_TEMPLATES[language],
+    ...(LEGACY_LANGUAGE_TEMPLATES[language] ?? []),
+  ];
+  return candidates.some((template) => (template ?? '').trim() === normalized);
+}
+
+export function normalizeTemplateSource(language, sourceCode) {
+  return isTemplateSource(language, sourceCode)
+    ? LANGUAGE_TEMPLATES[language] ?? sourceCode
+    : sourceCode;
 }
