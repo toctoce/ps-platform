@@ -782,6 +782,32 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 
+.account-danger-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 14px;
+}
+
+.danger-link-button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #a04a3d;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.danger-link-button:hover,
+.danger-link-button:focus-visible {
+  color: #7f352b;
+  text-decoration: underline;
+  outline: none;
+}
+
+.danger-link-button:disabled {
+  opacity: 0.55;
+}
+
 .split {
   justify-content: space-between;
 }
@@ -2038,9 +2064,10 @@ dt {
 .auth-page {
   display: grid;
   align-content: center;
+  justify-items: center;
   gap: 20px;
+  width: min(100%, 420px);
   min-height: calc(100vh - 120px);
-  max-width: 360px;
   margin: 0 auto;
 }
 
@@ -2066,6 +2093,7 @@ dt {
 .auth-form {
   display: grid;
   gap: 12px;
+  width: 100%;
 }
 
 .auth-form input {

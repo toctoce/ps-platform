@@ -1,6 +1,23 @@
+import { useState } from 'react';
 import { Code2 } from 'lucide-react';
 
-export function MyPage({ auth, isAuthenticated, setMessage, navigate }) {
+export function MyPage({ auth, isAuthenticated, setMessage, navigate, onDeleteAccount }) {
+  const [deleteBusy, setDeleteBusy] = useState(false);
+
+  async function deleteAccount() {
+    if (!window.confirm('회원 탈퇴 후에는 계정을 다시 사용할 수 없습니다. 계속할까요?')) {
+      return;
+    }
+
+    setDeleteBusy(true);
+    try {
+      await onDeleteAccount();
+    } catch (error) {
+      setMessage(error.message);
+      setDeleteBusy(false);
+    }
+  }
+
   if (!isAuthenticated) {
     return (
       <section className="home-page">
@@ -43,6 +60,16 @@ export function MyPage({ auth, isAuthenticated, setMessage, navigate }) {
             <span>가입일</span>
             <strong>{auth.user?.createdAt ?? '확인 불가'}</strong>
           </div>
+        </div>
+        <div className="account-danger-actions">
+          <button
+            className="danger-link-button"
+            type="button"
+            onClick={deleteAccount}
+            disabled={deleteBusy}
+          >
+            회원탈퇴
+          </button>
         </div>
       </section>
     </section>

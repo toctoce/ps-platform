@@ -36,6 +36,10 @@ export function LoginPage({ onLoginSuccess, setMessage, isAuthenticated, navigat
       }
       onLoginSuccess(auth);
     } catch (error) {
+      if (error.message.includes('401') || error.message.includes('Invalid email or password')) {
+        setMessage('아이디 또는 비밀번호가 올바르지 않습니다.');
+        return;
+      }
       setMessage(error.message);
     } finally {
       setBusy(false);

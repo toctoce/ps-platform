@@ -25,7 +25,8 @@ function App() {
   const isAdmin = auth?.user?.role === 'ADMIN';
 
   function getLoginReturnTarget() {
-    const returnTo = new URLSearchParams(window.location.search).get('returnTo');
+    const params = new URLSearchParams(window.location.search);
+    const returnTo = params.get('returnTo') ?? params.get('url');
     if (!returnTo || !returnTo.startsWith('/') || returnTo.startsWith('//')) {
       return '/';
     }
@@ -100,6 +101,22 @@ function App() {
       setUserMenuOpen(false);
       navigate(getCurrentPath());
     }
+  }
+
+  async function deleteCurrentAccount() {
+    if (!auth?.accessToken) {
+      setMessage('로그인 후 회원 탈퇴를 진행할 수 있습니다.');
+      return;
+    }
+
+    await request('/api/auth/me', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${auth.accessToken}` },
+    });
+    clearAuth();
+    setUserMenuOpen(false);
+    setMessage('회원 탈퇴가 완료되었습니다.');
+    navigate('/');
   }
 
   useEffect(() => {
@@ -237,6 +254,7 @@ function App() {
             isAuthenticated={isAuthenticated}
             setMessage={setMessage}
             navigate={navigate}
+            onDeleteAccount={deleteCurrentAccount}
           />
         ) : route.name === 'admin' ? (
           <AdminPage
