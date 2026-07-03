@@ -13,7 +13,6 @@ export function RandomProblemPage({ navigate, setMessage }) {
     try {
       const data = await request('/api/problems/random?count=5');
       setProblems(data);
-      setMessage(`랜덤으로 ${data.length}문제를 조회했습니다.`);
     } catch (error) {
       setMessage(error.message);
     } finally {

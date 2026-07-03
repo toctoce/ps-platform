@@ -131,6 +131,15 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  useEffect(() => {
+    if (!message) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => setMessage(''), 3000);
+    return () => window.clearTimeout(timer);
+  }, [message]);
+
   return (
     <main className="app-shell">
       <header className="site-header">
@@ -221,9 +230,6 @@ function App() {
       {message ? (
         <div className="app-toast" role="status" aria-live="polite">
           <span>{message}</span>
-          <button type="button" onClick={() => setMessage('')} aria-label="알림 닫기">
-            ×
-          </button>
         </div>
       ) : null}
       <section className="app-content">

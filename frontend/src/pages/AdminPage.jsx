@@ -27,7 +27,6 @@ export function AdminPage({ auth, setMessage, navigate }) {
     try {
       const data = await request('/api/problems');
       setProblems(data);
-      setMessage(`문제 ${data.length}개를 조회했습니다.`);
       if (problemId && !data.some((problem) => String(problem.id) === String(problemId))) {
         setProblemId('');
       }

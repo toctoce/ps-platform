@@ -31,11 +31,6 @@ export function CategoryPage({ category, navigate, setMessage }) {
         : '/api/problems';
       const data = await request(endpoint);
       setProblems(data);
-      if (!category) {
-        setMessage(`카테고리 목록을 불러왔습니다.`);
-      } else {
-        setMessage(`${category} 카테고리 문제 ${data.length}개`);
-      }
     } catch (error) {
       setMessage(error.message);
     } finally {

@@ -527,7 +527,6 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
         acc[submission.id] = submission.status;
         return acc;
       }, {});
-      setMessage(`문제 #${problemId} 상세를 조회했습니다.`);
       cleanupPolling();
       fetchedSubmissions
         .filter((submission) => isPendingStatus(submission.status))
