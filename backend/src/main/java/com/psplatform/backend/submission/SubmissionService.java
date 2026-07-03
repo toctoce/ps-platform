@@ -1,6 +1,7 @@
 package com.psplatform.backend.submission;
 
 import java.time.Duration;
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -62,5 +63,9 @@ public class SubmissionService {
 		}
 
 		return submissionRepository.findByProblemId(problemId);
+	}
+
+	public SubmissionStatsResponse todayStats() {
+		return new SubmissionStatsResponse(submissionRepository.countCreatedOn(LocalDate.now()));
 	}
 }

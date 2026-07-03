@@ -4,6 +4,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -116,6 +117,22 @@ public class H2SubmissionRepository implements SubmissionRepository {
 			rowMapper,
 			problemId
 		);
+	}
+
+	@Override
+	public long countCreatedOn(LocalDate date) {
+		Long count = jdbcTemplate.queryForObject(
+			"""
+			SELECT COUNT(*)
+			FROM submissions
+			WHERE created_at >= ?
+			  AND created_at < ?
+			""",
+			Long.class,
+			Timestamp.valueOf(date.atStartOfDay()),
+			Timestamp.valueOf(date.plusDays(1).atStartOfDay())
+		);
+		return count == null ? 0 : count;
 	}
 
 	private Long getLongOrNull(ResultSet rs, String column) throws SQLException {

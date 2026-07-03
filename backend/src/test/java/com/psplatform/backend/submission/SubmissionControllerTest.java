@@ -196,6 +196,17 @@ class SubmissionControllerTest {
 	}
 
 	@Test
+	void todayStatsReturnsTodaySubmissionCount() throws Exception {
+		Problem problem = createProblem();
+		submissionRepository.save(problem.getId(), new SubmissionCreateRequest("java", "public class Main {}"));
+		submissionRepository.save(problem.getId(), new SubmissionCreateRequest("python", "print(1)"));
+
+		mockMvc.perform(get("/api/submissions/stats/today"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.todaySubmissionCount").value(2));
+	}
+
+	@Test
 	void submissionVerdictsAreDefined() {
 		org.assertj.core.api.Assertions.assertThat(SubmissionVerdict.values())
 			.containsExactly(

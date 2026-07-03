@@ -52,4 +52,9 @@ public class SubmissionController {
 	public SubmissionResponse findById(@PathVariable long id) {
 		return SubmissionResponse.from(submissionService.findById(id));
 	}
+
+	@GetMapping("/api/submissions/stats/today")
+	public SubmissionStatsResponse todayStats() {
+		return submissionService.todayStats();
+	}
 }
