@@ -14,12 +14,22 @@ export function submissionNickname(submission) {
     ?? '-';
 }
 
+function shouldShowJudgeMetrics(submission) {
+  return submission.status === 'JUDGED' && submission.verdict === 'ACCEPTED';
+}
+
 export function submissionTime(submission) {
+  if (!shouldShowJudgeMetrics(submission)) {
+    return '-';
+  }
   const value = submission.executionTimeMs ?? submission.timeMs ?? submission.runtimeMs ?? submission.elapsedMs;
   return value === undefined || value === null ? '-' : `${value}ms`;
 }
 
 export function submissionMemory(submission) {
+  if (!shouldShowJudgeMetrics(submission)) {
+    return '-';
+  }
   const mb = submission.memoryMb ?? submission.memoryUsageMb ?? submission.peakMemoryMb;
   if (mb !== undefined && mb !== null) {
     return `${mb}MB`;
