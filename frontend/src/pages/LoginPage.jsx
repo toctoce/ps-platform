@@ -5,14 +5,18 @@ import { request } from '../api/client.js';
 export function LoginPage({ onLoginSuccess, setMessage, isAuthenticated, navigate }) {
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ email: '', password: '' });
+  const [loginError, setLoginError] = useState('');
 
   async function login(event) {
     event.preventDefault();
     if (!form.email.trim() || !form.password.trim()) {
-      setMessage('이메일/비밀번호를 입력해 주세요.');
+      const message = '이메일/비밀번호를 입력해 주세요.';
+      setLoginError(message);
+      setMessage(message);
       return;
     }
 
+    setLoginError('');
     setBusy(true);
     try {
       const auth = await request('/api/auth/login', {
@@ -37,9 +41,12 @@ export function LoginPage({ onLoginSuccess, setMessage, isAuthenticated, navigat
       onLoginSuccess(auth);
     } catch (error) {
       if (error.message.includes('401') || error.message.includes('Invalid email or password')) {
-        setMessage('아이디 또는 비밀번호가 올바르지 않습니다.');
+        const message = '아이디 또는 비밀번호가 올바르지 않습니다.';
+        setLoginError(message);
+        setMessage(message);
         return;
       }
+      setLoginError('로그인 중 오류가 발생했습니다.');
       setMessage(error.message);
     } finally {
       setBusy(false);
@@ -47,6 +54,7 @@ export function LoginPage({ onLoginSuccess, setMessage, isAuthenticated, navigat
   }
 
   function update(field, value) {
+    setLoginError('');
     setForm((current) => ({ ...current, [field]: value }));
   }
 
@@ -68,6 +76,11 @@ export function LoginPage({ onLoginSuccess, setMessage, isAuthenticated, navigat
           <p className="empty">이미 로그인되어 있습니다.</p>
         ) : (
           <>
+            {loginError ? (
+              <div className="auth-alert" role="alert">
+                {loginError}
+              </div>
+            ) : null}
             <label>
               이메일
               <input

@@ -2095,6 +2095,17 @@ dt {
   background: #f8f5ee;
 }
 
+.auth-alert {
+  padding: 10px 11px;
+  border: 1px solid #e2b8ae;
+  border-radius: 7px;
+  background: #fff4f1;
+  color: #8a2d1d;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
 .auth-form input:-webkit-autofill,
 .auth-form input:-webkit-autofill:hover,
 .auth-form input:-webkit-autofill:focus {
