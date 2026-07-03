@@ -1895,10 +1895,13 @@ textarea:focus {
 }
 
 .has-tooltip::after {
-  position: absolute;
-  right: 0;
-  bottom: calc(100% + 8px);
-  z-index: 200;
+  display: none;
+  content: none;
+}
+
+.global-tooltip {
+  position: fixed;
+  z-index: 10000;
   width: max-content;
   max-width: 220px;
   padding: 6px 8px;
@@ -1911,17 +1914,8 @@ textarea:focus {
   font-weight: 700;
   line-height: 1.35;
   box-shadow: 0 8px 18px rgba(40, 43, 36, 0.18);
-  content: attr(data-tooltip);
-  opacity: 0;
   pointer-events: none;
-  transform: translateY(4px);
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-.has-tooltip:hover::after,
-.has-tooltip:focus-visible::after {
-  opacity: 1;
-  transform: translateY(0);
+  transform: translate(-50%, -100%);
 }
 
 .compact-header {

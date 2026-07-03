@@ -47,6 +47,7 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
   const [isNarrowLayout, setIsNarrowLayout] = useState(false);
   const [editorOnlyMode, setEditorOnlyMode] = useState(false);
   const [testCaseInputHeight, setTestCaseInputHeight] = useState(58);
+  const [activeTooltip, setActiveTooltip] = useState(null);
   const pollingRef = useRef({});
   const lastSubmissionStatus = useRef({});
   const editorRef = useRef(null);
@@ -61,6 +62,17 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
 
   const problemKey = `${editorStorageKeyPrefix}:${problemId}`;
   const currentUsername = auth?.user?.username;
+
+  function showTooltip(event, text) {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = Math.min(Math.max(rect.left + rect.width / 2, 16), window.innerWidth - 16);
+    const y = rect.top - 8;
+    setActiveTooltip({ text, x, y });
+  }
+
+  function hideTooltip() {
+    setActiveTooltip(null);
+  }
 
   useEffect(() => {
     submissionFormRef.current = submissionForm;
@@ -899,6 +911,10 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
                         onClick={runCode}
                         disabled={testRunBusy || submissionBusy || !problem}
                         data-tooltip="⌘ / Ctrl + '"
+                        onMouseEnter={(event) => showTooltip(event, "⌘ / Ctrl + '")}
+                        onFocus={(event) => showTooltip(event, "⌘ / Ctrl + '")}
+                        onMouseLeave={hideTooltip}
+                        onBlur={hideTooltip}
                       >
                         <Play size={14} />
                         실행
@@ -963,6 +979,10 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
                   type="button"
                   onClick={() => setTestCasePanelOpen((current) => !current)}
                   data-tooltip="⌘ / Ctrl + J"
+                  onMouseEnter={(event) => showTooltip(event, '⌘ / Ctrl + J')}
+                  onFocus={(event) => showTooltip(event, '⌘ / Ctrl + J')}
+                  onMouseLeave={hideTooltip}
+                  onBlur={hideTooltip}
                 >
                   {testCasePanelOpen ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
                   테스트케이스
@@ -972,6 +992,10 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
                   type="submit"
                   disabled={submissionBusy || !problem}
                   data-tooltip="⌘ / Ctrl + Enter"
+                  onMouseEnter={(event) => showTooltip(event, '⌘ / Ctrl + Enter')}
+                  onFocus={(event) => showTooltip(event, '⌘ / Ctrl + Enter')}
+                  onMouseLeave={hideTooltip}
+                  onBlur={hideTooltip}
                 >
                   <Send size={14} />
                   제출
@@ -981,6 +1005,15 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
           </form>
           </section>
       </div>
+      {activeTooltip ? (
+        <div
+          className="global-tooltip"
+          style={{ left: `${activeTooltip.x}px`, top: `${activeTooltip.y}px` }}
+          role="tooltip"
+        >
+          {activeTooltip.text}
+        </div>
+      ) : null}
     </section>
   );
 }
