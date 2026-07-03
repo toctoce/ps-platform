@@ -813,32 +813,30 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
                 </div>
               ) : null}
             </div>
-            <div className="ide-file-actions">
-              <button
-                className="ide-theme-toggle"
-                type="button"
-                onClick={toggleIdeTheme}
-                title="테마 변경"
-                aria-label="테마 변경"
-              >
-                <span className={ideTheme === 'light' ? 'is-active' : ''}>
-                  <Sun size={15} />
-                </span>
-                <span className={ideTheme === 'dark' ? 'is-active' : ''}>
-                  <Moon size={15} />
-                </span>
-              </button>
-              <span className="editor-file-name">{editorFileName(submissionForm.language)}</span>
-              <button
-                className="editor-reset-button"
-                type="button"
-                onClick={resetEditorCode}
-                title="초기화"
-                aria-label="초기화"
-              >
-                <RefreshCw size={14} />
-              </button>
-            </div>
+            <button
+              className="ide-theme-toggle"
+              type="button"
+              onClick={toggleIdeTheme}
+              title="테마 변경"
+              aria-label="테마 변경"
+            >
+              <span className={ideTheme === 'light' ? 'is-active' : ''}>
+                <Sun size={15} />
+              </span>
+              <span className={ideTheme === 'dark' ? 'is-active' : ''}>
+                <Moon size={15} />
+              </span>
+            </button>
+            <span className="editor-file-name">{editorFileName(submissionForm.language)}</span>
+            <button
+              className="editor-reset-button"
+              type="button"
+              onClick={resetEditorCode}
+              title="초기화"
+              aria-label="초기화"
+            >
+              <RefreshCw size={14} />
+            </button>
           </div>
           <form className="submission-form" onSubmit={submitCode} ref={formRef}>
             <div className="editor-shell">

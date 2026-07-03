@@ -1447,8 +1447,10 @@ textarea:focus {
 .ide-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
+  justify-content: flex-start;
+  gap: 10px;
+  flex-wrap: nowrap;
+  min-width: max-content;
   min-height: 48px;
   padding: 8px 12px;
   border-bottom: 1px solid #d9d1c2;
@@ -1469,17 +1471,12 @@ textarea:focus {
   color: var(--text-sub);
 }
 
-.ide-file-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
 .ide-theme-toggle {
   display: inline-flex;
   align-items: center;
   gap: 2px;
+  flex: 0 0 auto;
+  margin-left: auto;
   height: 30px;
   padding: 2px;
   border: 1px solid #d3cbb8;
@@ -1608,7 +1605,8 @@ textarea:focus {
 .editor-file-name {
   display: inline-flex;
   align-items: center;
-  min-width: 0;
+  flex: 0 0 auto;
+  min-width: max-content;
   color: var(--text-sub);
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 13px;
@@ -1631,6 +1629,7 @@ textarea:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: 0 0 auto;
   width: 30px;
   height: 30px;
   padding: 0;
@@ -2317,20 +2316,15 @@ dt {
   }
 
   .ide-header {
-    align-items: stretch;
-    flex-direction: column;
-    height: auto;
-    padding: 10px;
+    align-items: center;
+    flex-direction: row;
+    height: 48px;
+    min-width: max-content;
+    padding: 8px 10px;
   }
 
-  .ide-language-control,
-  .language-menu-button,
-  .ide-file-actions {
-    width: 100%;
-  }
-
-  .ide-file-actions {
-    justify-content: space-between;
+  .language-menu-button {
+    width: auto;
   }
 
   .ide-testcase-editor {
