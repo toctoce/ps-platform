@@ -85,6 +85,12 @@ CREATE TABLE IF NOT EXISTS submissions (
 ALTER TABLE submissions
     ADD COLUMN IF NOT EXISTS user_id BIGINT;
 
+ALTER TABLE submissions
+    ADD COLUMN IF NOT EXISTS execution_time_ms INTEGER;
+
+ALTER TABLE submissions
+    ADD COLUMN IF NOT EXISTS memory_mb INTEGER;
+
 CREATE INDEX IF NOT EXISTS idx_submissions_user_id ON submissions (user_id);
 
 CREATE TABLE IF NOT EXISTS judge_jobs (

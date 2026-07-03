@@ -16,8 +16,8 @@ func TestJavaExecutorAcceptsWhenAllTestCasesPass(t *testing.T) {
 	executor := NewJavaExecutorWithRunner(&fakeCommandRunner{
 		responses: []commandResponse{
 			{result: commandResult{exitCode: 0}},
-			{result: commandResult{exitCode: 0, stdout: "3\n"}},
-			{result: commandResult{exitCode: 0, stdout: "11\n"}},
+			{result: commandResult{exitCode: 0, stdout: "3\n", executionTimeMs: 12, memoryMb: 31}},
+			{result: commandResult{exitCode: 0, stdout: "11\n", executionTimeMs: 18, memoryMb: 35}},
 		},
 	}, testJavaDockerImage)
 
@@ -46,6 +46,12 @@ func TestJavaExecutorAcceptsWhenAllTestCasesPass(t *testing.T) {
 	}
 	if result.Message != "" {
 		t.Fatalf("judge message should be empty, got %q", result.Message)
+	}
+	if result.CaseResults[0].ExecutionTimeMs != 12 || result.CaseResults[0].MemoryMb != 31 {
+		t.Fatalf("first case metrics = %+v, want executionTimeMs=12 memoryMb=31", result.CaseResults[0])
+	}
+	if result.CaseResults[1].ExecutionTimeMs != 18 || result.CaseResults[1].MemoryMb != 35 {
+		t.Fatalf("second case metrics = %+v, want executionTimeMs=18 memoryMb=35", result.CaseResults[1])
 	}
 
 	if len(executor.runner.(*fakeCommandRunner).calls) != 3 {
@@ -83,6 +89,23 @@ func TestJavaExecutorReturnsCompileErrorOnCompileFailure(t *testing.T) {
 	}
 	if result.Message != "Compilation failed" {
 		t.Fatalf("judge message = %q, want %q", result.Message, "Compilation failed")
+	}
+}
+
+func TestParseDockerMemoryMb(t *testing.T) {
+	tests := []struct {
+		value string
+		want  int
+	}{
+		{value: "512KiB / 128MiB", want: 1},
+		{value: "31.4MiB / 128MiB", want: 31},
+		{value: "1.5GiB / 2GiB", want: 1536},
+	}
+
+	for _, tt := range tests {
+		if got := parseDockerMemoryMb(tt.value); got != tt.want {
+			t.Fatalf("parseDockerMemoryMb(%q) = %d, want %d", tt.value, got, tt.want)
+		}
 	}
 }
 

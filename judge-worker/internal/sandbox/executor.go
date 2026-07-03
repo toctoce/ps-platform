@@ -9,7 +9,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"ps-platform/judge-worker/internal/backend"
@@ -49,9 +52,11 @@ type Executor interface {
 
 // commandResult는 sandbox 내부 명령 실행 결과를 담는 값입니다.
 type commandResult struct {
-	stdout   string
-	stderr   string
-	exitCode int
+	stdout          string
+	stderr          string
+	exitCode        int
+	executionTimeMs int
+	memoryMb        int
 }
 
 // commandRunner는 외부 실행기를 추상화해 sandbox 실행을 테스트에서 분리합니다.
@@ -156,8 +161,10 @@ func (e *JavaExecutor) compile(ctx context.Context, tempDir string, memoryLimitM
 	defer cancel()
 
 	memoryLimit := memoryLimitArgument(memoryLimitMb)
+	containerName := dockerContainerName("compile")
 	args := []string{
 		"run", "--rm", "-i",
+		"--name", containerName,
 		"--network=none",
 		"--memory", memoryLimit,
 		"--memory-swap", memoryLimit,
@@ -213,8 +220,10 @@ func (e *JavaExecutor) runTestCase(
 	defer cancel()
 
 	memoryLimit := memoryLimitArgument(memoryLimitMb)
+	containerName := dockerContainerName(fmt.Sprintf("case-%d", testCaseIndex))
 	args := []string{
 		"run", "--rm", "-i",
+		"--name", containerName,
 		"--network=none",
 		"--memory", memoryLimit,
 		"--memory-swap", memoryLimit,
@@ -231,7 +240,7 @@ func (e *JavaExecutor) runTestCase(
 				Verdict: VerdictTimeLimitExceeded,
 				Message: fmt.Sprintf("time limit exceeded on test case %d", testCaseIndex),
 				CaseResults: []backend.JudgeCaseResult{
-					buildCaseResult(testCase, testCaseIndex, VerdictTimeLimitExceeded, "", fmt.Sprintf("time limit exceeded on test case %d", testCaseIndex)),
+					buildCaseResult(testCase, testCaseIndex, VerdictTimeLimitExceeded, "", fmt.Sprintf("time limit exceeded on test case %d", testCaseIndex), result.executionTimeMs, result.memoryMb),
 				},
 			}, nil
 		}
@@ -242,7 +251,7 @@ func (e *JavaExecutor) runTestCase(
 			Verdict: VerdictTimeLimitExceeded,
 			Message: fmt.Sprintf("time limit exceeded on test case %d", testCaseIndex),
 			CaseResults: []backend.JudgeCaseResult{
-				buildCaseResult(testCase, testCaseIndex, VerdictTimeLimitExceeded, "", fmt.Sprintf("time limit exceeded on test case %d", testCaseIndex)),
+				buildCaseResult(testCase, testCaseIndex, VerdictTimeLimitExceeded, "", fmt.Sprintf("time limit exceeded on test case %d", testCaseIndex), result.executionTimeMs, result.memoryMb),
 			},
 		}, nil
 	}
@@ -254,7 +263,7 @@ func (e *JavaExecutor) runTestCase(
 				Verdict: VerdictMemoryLimitExceeded,
 				Message: message,
 				CaseResults: []backend.JudgeCaseResult{
-					buildCaseResult(testCase, testCaseIndex, VerdictMemoryLimitExceeded, result.stdout, message),
+					buildCaseResult(testCase, testCaseIndex, VerdictMemoryLimitExceeded, result.stdout, message, result.executionTimeMs, result.memoryMb),
 				},
 			}, nil
 		}
@@ -266,7 +275,7 @@ func (e *JavaExecutor) runTestCase(
 				Verdict: VerdictRuntimeError,
 				Message: message,
 				CaseResults: []backend.JudgeCaseResult{
-					buildCaseResult(testCase, testCaseIndex, VerdictRuntimeError, result.stdout, message),
+					buildCaseResult(testCase, testCaseIndex, VerdictRuntimeError, result.stdout, message, result.executionTimeMs, result.memoryMb),
 				},
 			}, nil
 		}
@@ -276,7 +285,7 @@ func (e *JavaExecutor) runTestCase(
 			Verdict: VerdictRuntimeError,
 			Message: message,
 			CaseResults: []backend.JudgeCaseResult{
-				buildCaseResult(testCase, testCaseIndex, VerdictRuntimeError, result.stdout, message),
+				buildCaseResult(testCase, testCaseIndex, VerdictRuntimeError, result.stdout, message, result.executionTimeMs, result.memoryMb),
 			},
 		}, nil
 	}
@@ -288,14 +297,14 @@ func (e *JavaExecutor) runTestCase(
 			Verdict: VerdictWrongAnswer,
 			Message: message,
 			CaseResults: []backend.JudgeCaseResult{
-				buildCaseResult(testCase, testCaseIndex, VerdictWrongAnswer, result.stdout, message),
+				buildCaseResult(testCase, testCaseIndex, VerdictWrongAnswer, result.stdout, message, result.executionTimeMs, result.memoryMb),
 			},
 		}, nil
 	}
 
 	return ExecutionResult{
 		CaseResults: []backend.JudgeCaseResult{
-			buildCaseResult(testCase, testCaseIndex, VerdictAccepted, result.stdout, ""),
+			buildCaseResult(testCase, testCaseIndex, VerdictAccepted, result.stdout, "", result.executionTimeMs, result.memoryMb),
 		},
 	}, nil
 }
@@ -303,7 +312,7 @@ func (e *JavaExecutor) runTestCase(
 func buildGlobalCaseResults(testCases []backend.JudgeTestCase, verdict string, message string) []backend.JudgeCaseResult {
 	results := make([]backend.JudgeCaseResult, 0, len(testCases))
 	for index, testCase := range testCases {
-		results = append(results, buildCaseResult(testCase, index+1, verdict, "", message))
+		results = append(results, buildCaseResult(testCase, index+1, verdict, "", message, 0, 0))
 	}
 	return results
 }
@@ -314,13 +323,17 @@ func buildCaseResult(
 	verdict string,
 	stdout string,
 	message string,
+	executionTimeMs int,
+	memoryMb int,
 ) backend.JudgeCaseResult {
 	return backend.JudgeCaseResult{
-		Index:          index,
-		Verdict:        verdict,
-		Stdout:         stdout,
-		ExpectedOutput: testCase.ExpectedOutput,
-		Message:        message,
+		Index:           index,
+		Verdict:         verdict,
+		Stdout:          stdout,
+		ExpectedOutput:  testCase.ExpectedOutput,
+		Message:         message,
+		ExecutionTimeMs: executionTimeMs,
+		MemoryMb:        memoryMb,
 	}
 }
 
@@ -335,6 +348,11 @@ func aggregateCaseResults(results []backend.JudgeCaseResult) (string, string) {
 
 func memoryLimitArgument(memoryLimitMb int) string {
 	return fmt.Sprintf("%dm", memoryLimitMb)
+}
+
+func dockerContainerName(label string) string {
+	sanitized := strings.NewReplacer("/", "-", "_", "-", " ", "-").Replace(label)
+	return fmt.Sprintf("judge-worker-%d-%s", time.Now().UnixNano(), sanitized)
 }
 
 func firstNonEmpty(fallback string, values ...string) string {
@@ -414,10 +432,26 @@ func (r *dockerCommandRunner) Run(ctx context.Context, command string, args []st
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 
-	err := cmd.Run()
+	containerName := dockerRunContainerName(command, args)
+	stats := newContainerStats()
+	statsCtx, cancelStats := context.WithCancel(ctx)
+	defer cancelStats()
+
+	startedAt := time.Now()
+	if err := cmd.Start(); err != nil {
+		return commandResult{}, err
+	}
+	if containerName != "" {
+		go pollDockerMemory(statsCtx, containerName, stats)
+	}
+
+	err := cmd.Wait()
+	cancelStats()
 	result := commandResult{
-		stdout: stdout.String(),
-		stderr: stderr.String(),
+		stdout:          stdout.String(),
+		stderr:          stderr.String(),
+		executionTimeMs: durationMillis(time.Since(startedAt)),
+		memoryMb:        stats.memoryMb(),
 	}
 
 	var exitErr *exec.ExitError
@@ -430,4 +464,116 @@ func (r *dockerCommandRunner) Run(ctx context.Context, command string, args []st
 	}
 
 	return result, nil
+}
+
+func dockerRunContainerName(command string, args []string) string {
+	if command != "docker" || len(args) == 0 || args[0] != "run" {
+		return ""
+	}
+	for index := 1; index < len(args)-1; index++ {
+		if args[index] == "--name" {
+			return args[index+1]
+		}
+	}
+	return ""
+}
+
+type containerStats struct {
+	mu           sync.Mutex
+	peakMemoryMb int
+}
+
+func newContainerStats() *containerStats {
+	return &containerStats{}
+}
+
+func (s *containerStats) observeMemoryMb(value int) {
+	if value <= 0 {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if value > s.peakMemoryMb {
+		s.peakMemoryMb = value
+	}
+}
+
+func (s *containerStats) memoryMb() int {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.peakMemoryMb
+}
+
+func pollDockerMemory(ctx context.Context, containerName string, stats *containerStats) {
+	ticker := time.NewTicker(20 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		stats.observeMemoryMb(readDockerMemoryMb(ctx, containerName))
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+	}
+}
+
+func readDockerMemoryMb(ctx context.Context, containerName string) int {
+	statsCtx, cancel := context.WithTimeout(ctx, 100*time.Millisecond)
+	defer cancel()
+
+	output, err := exec.CommandContext(
+		statsCtx,
+		"docker",
+		"stats",
+		"--no-stream",
+		"--format",
+		"{{.MemUsage}}",
+		containerName,
+	).Output()
+	if err != nil {
+		return 0
+	}
+	return parseDockerMemoryMb(string(output))
+}
+
+var dockerMemoryUsagePattern = regexp.MustCompile(`(?i)([0-9]+(?:\.[0-9]+)?)\s*([kmgt]?i?b)`)
+
+func parseDockerMemoryMb(value string) int {
+	matches := dockerMemoryUsagePattern.FindStringSubmatch(value)
+	if len(matches) != 3 {
+		return 0
+	}
+
+	amount, err := strconv.ParseFloat(matches[1], 64)
+	if err != nil {
+		return 0
+	}
+
+	switch strings.ToLower(matches[2]) {
+	case "b":
+		amount = amount / 1024 / 1024
+	case "kb", "kib":
+		amount = amount / 1024
+	case "mb", "mib":
+	case "gb", "gib":
+		amount = amount * 1024
+	case "tb", "tib":
+		amount = amount * 1024 * 1024
+	default:
+		return 0
+	}
+
+	if amount > 0 && amount < 1 {
+		return 1
+	}
+	return int(amount + 0.5)
+}
+
+func durationMillis(duration time.Duration) int {
+	millis := duration.Milliseconds()
+	if millis <= 0 {
+		return 1
+	}
+	return int(millis)
 }

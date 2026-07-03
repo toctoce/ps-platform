@@ -136,7 +136,7 @@ func TestCompleteJobPostsVerdictToCorrectEndpoint(t *testing.T) {
 	})
 
 	caseResults := []JudgeCaseResult{
-		{Index: 1, Verdict: "RUNTIME_ERROR", Stdout: "", ExpectedOutput: "3\n", Message: "runtime failed"},
+		{Index: 1, Verdict: "RUNTIME_ERROR", Stdout: "", ExpectedOutput: "3\n", Message: "runtime failed", ExecutionTimeMs: 15, MemoryMb: 44},
 	}
 	if err := client.CompleteJob(context.Background(), 7, "RUNTIME_ERROR", "runtime failed", caseResults); err != nil {
 		t.Fatalf("CompleteJob error: %v", err)
@@ -149,6 +149,9 @@ func TestCompleteJobPostsVerdictToCorrectEndpoint(t *testing.T) {
 	}
 	if len(received.caseResults) != 1 || received.caseResults[0].Index != 1 {
 		t.Fatalf("caseResults = %+v", received.caseResults)
+	}
+	if received.caseResults[0].ExecutionTimeMs != 15 || received.caseResults[0].MemoryMb != 44 {
+		t.Fatalf("case result metrics = %+v", received.caseResults[0])
 	}
 }
 

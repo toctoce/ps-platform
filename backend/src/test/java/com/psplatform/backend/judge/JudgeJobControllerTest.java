@@ -99,18 +99,33 @@ class JudgeJobControllerTest {
 			.content("""
 				{
 				  "verdict": "WRONG_ANSWER",
-				  "judgeMessage": "wrong answer on test case 1: expected=3, actual=4"
+				  "judgeMessage": "wrong answer on test case 1: expected=3, actual=4",
+				  "caseResults": [
+				    {
+				      "index": 1,
+				      "verdict": "WRONG_ANSWER",
+				      "stdout": "4\\n",
+				      "expectedOutput": "3\\n",
+				      "message": "wrong answer on test case 1",
+				      "executionTimeMs": 17,
+				      "memoryMb": 42
+				    }
+				  ]
 				}
 				"""))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.id").value(submission.getId()))
 			.andExpect(jsonPath("$.status").value("JUDGED"))
-			.andExpect(jsonPath("$.verdict").value("WRONG_ANSWER"));
+			.andExpect(jsonPath("$.verdict").value("WRONG_ANSWER"))
+			.andExpect(jsonPath("$.executionTimeMs").value(17))
+			.andExpect(jsonPath("$.memoryMb").value(42));
 
 		Submission judgedSubmission = submissionRepository.findById(submission.getId()).orElseThrow();
 		assertThat(judgedSubmission.getStatus()).isEqualTo(SubmissionStatus.JUDGED);
 		assertThat(judgedSubmission.getVerdict()).isEqualTo(SubmissionVerdict.WRONG_ANSWER);
 		assertThat(judgedSubmission.getJudgeMessage()).contains("wrong answer on test case 1");
+		assertThat(judgedSubmission.getExecutionTimeMs()).isEqualTo(17);
+		assertThat(judgedSubmission.getMemoryMb()).isEqualTo(42);
 		assertThat(judgedSubmission.getJudgedAt()).isNotNull();
 	}
 
@@ -230,7 +245,9 @@ class JudgeJobControllerTest {
 					      "verdict": "ACCEPTED",
 					      "stdout": "3\\n",
 					      "expectedOutput": "3\\n",
-					      "message": ""
+					      "message": "",
+					      "executionTimeMs": 12,
+					      "memoryMb": 33
 					    }
 					  ]
 					}
@@ -239,7 +256,9 @@ class JudgeJobControllerTest {
 			.andExpect(jsonPath("$.jobId").value(created.jobId()))
 			.andExpect(jsonPath("$.status").value("DONE"))
 			.andExpect(jsonPath("$.verdict").value("ACCEPTED"))
-			.andExpect(jsonPath("$.caseResults[0].verdict").value("ACCEPTED"));
+			.andExpect(jsonPath("$.caseResults[0].verdict").value("ACCEPTED"))
+			.andExpect(jsonPath("$.caseResults[0].executionTimeMs").value(12))
+			.andExpect(jsonPath("$.caseResults[0].memoryMb").value(33));
 
 		mockMvc.perform(get("/api/runs/{jobId}", created.jobId()))
 			.andExpect(status().isOk())

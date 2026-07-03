@@ -21,11 +21,13 @@ type JudgeTestCase struct {
 
 // JudgeCaseResult는 테스트케이스 하나의 실행 결과입니다.
 type JudgeCaseResult struct {
-	Index          int    `json:"index"`
-	Verdict        string `json:"verdict"`
-	Stdout         string `json:"stdout"`
-	ExpectedOutput string `json:"expectedOutput"`
-	Message        string `json:"message"`
+	Index           int    `json:"index"`
+	Verdict         string `json:"verdict"`
+	Stdout          string `json:"stdout"`
+	ExpectedOutput  string `json:"expectedOutput"`
+	Message         string `json:"message"`
+	ExecutionTimeMs int    `json:"executionTimeMs,omitempty"`
+	MemoryMb        int    `json:"memoryMb,omitempty"`
 }
 
 // CompleteRequest는 worker가 채점 완료 후 backend에 보내는 요청 본문입니다.

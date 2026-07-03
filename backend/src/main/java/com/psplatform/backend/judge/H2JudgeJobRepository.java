@@ -44,6 +44,8 @@ public class H2JudgeJobRepository implements JudgeJobRepository {
 			SubmissionStatus.valueOf(rs.getString("status")),
 			verdict == null ? null : SubmissionVerdict.valueOf(verdict),
 			rs.getString("judge_message"),
+			getIntegerOrNull(rs, "execution_time_ms"),
+			getIntegerOrNull(rs, "memory_mb"),
 			rs.getTimestamp("created_at").toLocalDateTime(),
 			judgedAt == null ? null : judgedAt.toLocalDateTime()
 		);
@@ -190,11 +192,14 @@ public class H2JudgeJobRepository implements JudgeJobRepository {
 			);
 		}
 
+		JudgeMetrics metrics = JudgeMetrics.from(caseResults);
 		jdbcTemplate.update(connection -> {
 			PreparedStatement ps = connection.prepareStatement(
 				"""
 				UPDATE submissions
-				SET status = ?, verdict = ?, judge_message = ?, judged_at = CURRENT_TIMESTAMP
+				SET status = ?, verdict = ?, judge_message = ?,
+				    execution_time_ms = ?, memory_mb = ?,
+				    judged_at = CURRENT_TIMESTAMP
 				WHERE id = (
 					SELECT submission_id
 					FROM judge_jobs
@@ -205,7 +210,9 @@ public class H2JudgeJobRepository implements JudgeJobRepository {
 			ps.setString(1, SubmissionStatus.JUDGED.name());
 			ps.setString(2, verdict.name());
 			ps.setString(3, judgeMessage);
-			ps.setLong(4, jobId);
+			setIntegerOrNull(ps, 4, metrics.executionTimeMs());
+			setIntegerOrNull(ps, 5, metrics.memoryMb());
+			ps.setLong(6, jobId);
 			return ps;
 		});
 
@@ -333,7 +340,8 @@ public class H2JudgeJobRepository implements JudgeJobRepository {
 			SELECT s.id, s.problem_id, s.user_id,
 			       CASE WHEN u.deleted_at IS NOT NULL THEN '탈퇴한 사용자' ELSE u.username END AS username,
 			       s.language, s.source_code, s.status,
-			       s.verdict, s.judge_message, s.created_at, s.judged_at
+			       s.verdict, s.judge_message, s.execution_time_ms, s.memory_mb,
+			       s.created_at, s.judged_at
 			FROM submissions s
 			LEFT JOIN users u ON u.id = s.user_id
 			JOIN judge_jobs jj ON jj.submission_id = s.id
@@ -412,5 +420,40 @@ public class H2JudgeJobRepository implements JudgeJobRepository {
 	private Long getLongOrNull(ResultSet rs, String column) throws SQLException {
 		long value = rs.getLong(column);
 		return rs.wasNull() ? null : value;
+	}
+
+	private Integer getIntegerOrNull(ResultSet rs, String column) throws SQLException {
+		int value = rs.getInt(column);
+		return rs.wasNull() ? null : value;
+	}
+
+	private void setIntegerOrNull(PreparedStatement ps, int index, Integer value) throws SQLException {
+		if (value == null) {
+			ps.setNull(index, java.sql.Types.INTEGER);
+			return;
+		}
+		ps.setInt(index, value);
+	}
+
+	private record JudgeMetrics(Integer executionTimeMs, Integer memoryMb) {
+
+		private static JudgeMetrics from(List<JudgeCaseResult> caseResults) {
+			Integer maxExecutionTimeMs = null;
+			Integer maxMemoryMb = null;
+			if (caseResults != null) {
+				for (JudgeCaseResult result : caseResults) {
+					maxExecutionTimeMs = max(maxExecutionTimeMs, result.executionTimeMs());
+					maxMemoryMb = max(maxMemoryMb, result.memoryMb());
+				}
+			}
+			return new JudgeMetrics(maxExecutionTimeMs, maxMemoryMb);
+		}
+
+		private static Integer max(Integer current, Integer candidate) {
+			if (candidate == null || candidate <= 0) {
+				return current;
+			}
+			return current == null ? candidate : Math.max(current, candidate);
+		}
 	}
 }

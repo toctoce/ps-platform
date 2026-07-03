@@ -32,6 +32,8 @@ public class H2SubmissionRepository implements SubmissionRepository {
 			SubmissionStatus.valueOf(rs.getString("status")),
 			verdict == null ? null : SubmissionVerdict.valueOf(verdict),
 			rs.getString("judge_message"),
+			getIntegerOrNull(rs, "execution_time_ms"),
+			getIntegerOrNull(rs, "memory_mb"),
 			rs.getTimestamp("created_at").toLocalDateTime(),
 			judgedAt == null ? null : judgedAt.toLocalDateTime()
 		);
@@ -85,7 +87,8 @@ public class H2SubmissionRepository implements SubmissionRepository {
 			SELECT s.id, s.problem_id, s.user_id,
 			       CASE WHEN u.deleted_at IS NOT NULL THEN '탈퇴한 사용자' ELSE u.username END AS username,
 			       s.language, s.source_code, s.status,
-			       s.verdict, s.judge_message, s.created_at, s.judged_at
+			       s.verdict, s.judge_message, s.execution_time_ms, s.memory_mb,
+			       s.created_at, s.judged_at
 			FROM submissions s
 			LEFT JOIN users u ON u.id = s.user_id
 			WHERE s.id = ?
@@ -103,7 +106,8 @@ public class H2SubmissionRepository implements SubmissionRepository {
 			SELECT s.id, s.problem_id, s.user_id,
 			       CASE WHEN u.deleted_at IS NOT NULL THEN '탈퇴한 사용자' ELSE u.username END AS username,
 			       s.language, s.source_code, s.status,
-			       s.verdict, s.judge_message, s.created_at, s.judged_at
+			       s.verdict, s.judge_message, s.execution_time_ms, s.memory_mb,
+			       s.created_at, s.judged_at
 			FROM submissions s
 			LEFT JOIN users u ON u.id = s.user_id
 			WHERE s.problem_id = ?
@@ -116,6 +120,11 @@ public class H2SubmissionRepository implements SubmissionRepository {
 
 	private Long getLongOrNull(ResultSet rs, String column) throws SQLException {
 		long value = rs.getLong(column);
+		return rs.wasNull() ? null : value;
+	}
+
+	private Integer getIntegerOrNull(ResultSet rs, String column) throws SQLException {
+		int value = rs.getInt(column);
 		return rs.wasNull() ? null : value;
 	}
 

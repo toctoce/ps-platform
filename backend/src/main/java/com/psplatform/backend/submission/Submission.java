@@ -13,6 +13,8 @@ public class Submission {
 	private final SubmissionStatus status;
 	private final SubmissionVerdict verdict;
 	private final String judgeMessage;
+	private final Integer executionTimeMs;
+	private final Integer memoryMb;
 	private final LocalDateTime createdAt;
 	private final LocalDateTime judgedAt;
 
@@ -26,6 +28,8 @@ public class Submission {
 		SubmissionStatus status,
 		SubmissionVerdict verdict,
 		String judgeMessage,
+		Integer executionTimeMs,
+		Integer memoryMb,
 		LocalDateTime createdAt,
 		LocalDateTime judgedAt
 	) {
@@ -38,6 +42,8 @@ public class Submission {
 		this.status = status;
 		this.verdict = verdict;
 		this.judgeMessage = judgeMessage;
+		this.executionTimeMs = executionTimeMs;
+		this.memoryMb = memoryMb;
 		this.createdAt = createdAt;
 		this.judgedAt = judgedAt;
 	}
@@ -53,7 +59,7 @@ public class Submission {
 		LocalDateTime createdAt,
 		LocalDateTime judgedAt
 	) {
-		this(id, problemId, null, null, language, sourceCode, status, verdict, judgeMessage, createdAt, judgedAt);
+		this(id, problemId, null, null, language, sourceCode, status, verdict, judgeMessage, null, null, createdAt, judgedAt);
 	}
 
 	public Long getId() {
@@ -90,6 +96,14 @@ public class Submission {
 
 	public String getJudgeMessage() {
 		return judgeMessage;
+	}
+
+	public Integer getExecutionTimeMs() {
+		return executionTimeMs;
+	}
+
+	public Integer getMemoryMb() {
+		return memoryMb;
 	}
 
 	public LocalDateTime getCreatedAt() {

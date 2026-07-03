@@ -20,7 +20,7 @@ export function submissionTime(submission) {
 }
 
 export function submissionMemory(submission) {
-  const mb = submission.memoryMb ?? submission.memoryUsageMb;
+  const mb = submission.memoryMb ?? submission.memoryUsageMb ?? submission.peakMemoryMb;
   if (mb !== undefined && mb !== null) {
     return `${mb}MB`;
   }

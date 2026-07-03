@@ -7,6 +7,8 @@ public record JudgeCaseResult(
 	SubmissionVerdict verdict,
 	String stdout,
 	String expectedOutput,
-	String message
+	String message,
+	Integer executionTimeMs,
+	Integer memoryMb
 ) {
 }
