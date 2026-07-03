@@ -36,6 +36,8 @@ const (
 	javaSourceFile        = "Main.java"
 	containerWorkspaceDir = "/workspace"
 	judgeMessageMaxBytes  = 1024
+	executionSecondsKey   = "__JUDGE_EXECUTION_SECONDS__="
+	memoryKbKey           = "__JUDGE_MEMORY_KB__="
 )
 
 // ExecutionResult는 채점 결과 판정 값과 실패 사유를 동시에 담습니다.
@@ -230,7 +232,7 @@ func (e *JavaExecutor) runTestCase(
 		"-v", tempDir + ":" + containerWorkspaceDir,
 		"-w", containerWorkspaceDir,
 		e.image,
-		"java", "Main",
+		"sh", "-c", javaRunCommand(),
 	}
 
 	result, err := e.runner.Run(runCtx, "docker", args, "", bytes.NewBufferString(testCase.Input))
@@ -355,6 +357,18 @@ func dockerContainerName(label string) string {
 	return fmt.Sprintf("judge-worker-%d-%s", time.Now().UnixNano(), sanitized)
 }
 
+func javaRunCommand() string {
+	return strings.Join([]string{
+		"if [ -x /usr/bin/time ]; then",
+		"/usr/bin/time -f '" + executionSecondsKey + "%e\\n" + memoryKbKey + "%M' -o /tmp/judge-metrics java Main;",
+		"status=$?;",
+		"cat /tmp/judge-metrics >&2 2>/dev/null;",
+		"exit $status;",
+		"fi;",
+		"java Main",
+	}, " ")
+}
+
 func firstNonEmpty(fallback string, values ...string) string {
 	for _, value := range values {
 		trimmed := strings.TrimSpace(value)
@@ -447,11 +461,17 @@ func (r *dockerCommandRunner) Run(ctx context.Context, command string, args []st
 
 	err := cmd.Wait()
 	cancelStats()
+	cleanStderr, measuredExecutionTimeMs, measuredMemoryMb := parseAndStripExecutionMetrics(stderr.String())
+	executionTimeMs := durationMillis(time.Since(startedAt))
+	if measuredExecutionTimeMs > 0 {
+		executionTimeMs = measuredExecutionTimeMs
+	}
+	memoryMb := maxInt(stats.memoryMb(), measuredMemoryMb)
 	result := commandResult{
 		stdout:          stdout.String(),
-		stderr:          stderr.String(),
-		executionTimeMs: durationMillis(time.Since(startedAt)),
-		memoryMb:        stats.memoryMb(),
+		stderr:          cleanStderr,
+		executionTimeMs: executionTimeMs,
+		memoryMb:        memoryMb,
 	}
 
 	var exitErr *exec.ExitError
@@ -570,10 +590,64 @@ func parseDockerMemoryMb(value string) int {
 	return int(amount + 0.5)
 }
 
+func parseAndStripExecutionMetrics(stderr string) (string, int, int) {
+	lines := strings.Split(stderr, "\n")
+	keptLines := make([]string, 0, len(lines))
+	executionTimeMs := 0
+	memoryMb := 0
+
+	for _, line := range lines {
+		switch {
+		case strings.HasPrefix(line, executionSecondsKey):
+			executionTimeMs = parseExecutionSecondsToMillis(strings.TrimPrefix(line, executionSecondsKey))
+		case strings.HasPrefix(line, memoryKbKey):
+			memoryMb = parseMemoryKbToMb(strings.TrimPrefix(line, memoryKbKey))
+		default:
+			keptLines = append(keptLines, line)
+		}
+	}
+
+	return strings.TrimSpace(strings.Join(keptLines, "\n")), executionTimeMs, memoryMb
+}
+
+func parseExecutionSecondsToMillis(value string) int {
+	seconds, err := strconv.ParseFloat(strings.TrimSpace(value), 64)
+	if err != nil || seconds <= 0 {
+		return 0
+	}
+	millis := int(seconds*1000 + 0.5)
+	if millis <= 0 {
+		return 1
+	}
+	return millis
+}
+
+func parseMemoryKbToMb(value string) int {
+	kb, err := strconv.ParseFloat(strings.TrimSpace(value), 64)
+	if err != nil || kb <= 0 {
+		return 0
+	}
+	mb := kb / 1024
+	if mb > 0 && mb < 1 {
+		return 1
+	}
+	return int(mb + 0.5)
+}
+
 func durationMillis(duration time.Duration) int {
 	millis := duration.Milliseconds()
 	if millis <= 0 {
 		return 1
 	}
 	return int(millis)
+}
+
+func maxInt(values ...int) int {
+	maxValue := 0
+	for _, value := range values {
+		if value > maxValue {
+			maxValue = value
+		}
+	}
+	return maxValue
 }

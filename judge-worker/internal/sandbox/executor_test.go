@@ -109,6 +109,25 @@ func TestParseDockerMemoryMb(t *testing.T) {
 	}
 }
 
+func TestParseAndStripExecutionMetrics(t *testing.T) {
+	stderr, executionTimeMs, memoryMb := parseAndStripExecutionMetrics(strings.Join([]string{
+		"user warning",
+		executionSecondsKey + "0.12",
+		memoryKbKey + "32768",
+		"",
+	}, "\n"))
+
+	if stderr != "user warning" {
+		t.Fatalf("stderr = %q, want user warning", stderr)
+	}
+	if executionTimeMs != 120 {
+		t.Fatalf("executionTimeMs = %d, want 120", executionTimeMs)
+	}
+	if memoryMb != 32 {
+		t.Fatalf("memoryMb = %d, want 32", memoryMb)
+	}
+}
+
 func TestJavaExecutorReturnsDefaultCompileErrorMessage(t *testing.T) {
 	executor := NewJavaExecutorWithRunner(&fakeCommandRunner{
 		responses: []commandResponse{
