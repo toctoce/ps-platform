@@ -135,6 +135,23 @@ public class H2SubmissionRepository implements SubmissionRepository {
 		return count == null ? 0 : count;
 	}
 
+	@Override
+	public long countDistinctUsersCreatedOn(LocalDate date) {
+		Long count = jdbcTemplate.queryForObject(
+			"""
+			SELECT COUNT(DISTINCT user_id)
+			FROM submissions
+			WHERE user_id IS NOT NULL
+			  AND created_at >= ?
+			  AND created_at < ?
+			""",
+			Long.class,
+			Timestamp.valueOf(date.atStartOfDay()),
+			Timestamp.valueOf(date.plusDays(1).atStartOfDay())
+		);
+		return count == null ? 0 : count;
+	}
+
 	private Long getLongOrNull(ResultSet rs, String column) throws SQLException {
 		long value = rs.getLong(column);
 		return rs.wasNull() ? null : value;

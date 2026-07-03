@@ -198,12 +198,28 @@ class SubmissionControllerTest {
 	@Test
 	void todayStatsReturnsTodaySubmissionCount() throws Exception {
 		Problem problem = createProblem();
-		submissionRepository.save(problem.getId(), new SubmissionCreateRequest("java", "public class Main {}"));
-		submissionRepository.save(problem.getId(), new SubmissionCreateRequest("python", "print(1)"));
+		User alice = userRepository.save("alice@example.com", "alice", "hashed-password", "USER");
+		User bob = userRepository.save("bob@example.com", "bob", "hashed-password", "USER");
+		submissionRepository.save(
+			problem.getId(),
+			alice.getId(),
+			new SubmissionCreateRequest("java", "public class Main {}")
+		);
+		submissionRepository.save(
+			problem.getId(),
+			alice.getId(),
+			new SubmissionCreateRequest("python", "print(1)")
+		);
+		submissionRepository.save(
+			problem.getId(),
+			bob.getId(),
+			new SubmissionCreateRequest("cpp", "int main() { return 0; }")
+		);
 
 		mockMvc.perform(get("/api/submissions/stats/today"))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.todaySubmissionCount").value(2));
+			.andExpect(jsonPath("$.todaySubmissionCount").value(3))
+			.andExpect(jsonPath("$.todaySolverCount").value(2));
 	}
 
 	@Test

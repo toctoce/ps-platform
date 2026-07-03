@@ -8,6 +8,7 @@ import {
 export function HomePage({ navigate, setMessage }) {
   const [problems, setProblems] = useState([]);
   const [todaySubmissionCount, setTodaySubmissionCount] = useState(null);
+  const [todaySolverCount, setTodaySolverCount] = useState(null);
   const [busy, setBusy] = useState(false);
 
   const groups = useMemo(() => buildCategoryGroups(problems), [problems]);
@@ -26,6 +27,10 @@ export function HomePage({ navigate, setMessage }) {
       label: '오늘 제출 수',
       value: busy || todaySubmissionCount === null ? '-' : todaySubmissionCount.toLocaleString(),
     },
+    {
+      label: '오늘 푼 사람',
+      value: busy || todaySolverCount === null ? '-' : todaySolverCount.toLocaleString(),
+    },
   ];
 
   async function loadProblems() {
@@ -37,6 +42,7 @@ export function HomePage({ navigate, setMessage }) {
       ]);
       setProblems(Array.isArray(problemData) ? problemData : []);
       setTodaySubmissionCount(submissionStats?.todaySubmissionCount ?? 0);
+      setTodaySolverCount(submissionStats?.todaySolverCount ?? 0);
     } catch (error) {
       setMessage(error.message);
     } finally {

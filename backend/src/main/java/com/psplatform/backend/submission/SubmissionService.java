@@ -66,6 +66,10 @@ public class SubmissionService {
 	}
 
 	public SubmissionStatsResponse todayStats() {
-		return new SubmissionStatsResponse(submissionRepository.countCreatedOn(LocalDate.now()));
+		LocalDate today = LocalDate.now();
+		return new SubmissionStatsResponse(
+			submissionRepository.countCreatedOn(today),
+			submissionRepository.countDistinctUsersCreatedOn(today)
+		);
 	}
 }

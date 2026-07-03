@@ -1,6 +1,7 @@
 package com.psplatform.backend.submission;
 
 public record SubmissionStatsResponse(
-	long todaySubmissionCount
+	long todaySubmissionCount,
+	long todaySolverCount
 ) {
 }

@@ -1,8 +1,8 @@
 package com.psplatform.backend.submission;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
-import java.time.LocalDate;
 
 public interface SubmissionRepository {
 
@@ -17,6 +17,8 @@ public interface SubmissionRepository {
 	List<Submission> findByProblemId(long problemId);
 
 	long countCreatedOn(LocalDate date);
+
+	long countDistinctUsersCreatedOn(LocalDate date);
 
 	void deleteAll();
 }
