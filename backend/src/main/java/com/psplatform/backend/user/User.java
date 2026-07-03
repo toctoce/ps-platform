@@ -11,6 +11,7 @@ public class User {
 	private final String role;
 	private final LocalDateTime createdAt;
 	private final LocalDateTime updatedAt;
+	private final LocalDateTime deletedAt;
 
 	public User(
 		Long id,
@@ -19,7 +20,8 @@ public class User {
 		String passwordHash,
 		String role,
 		LocalDateTime createdAt,
-		LocalDateTime updatedAt
+		LocalDateTime updatedAt,
+		LocalDateTime deletedAt
 	) {
 		this.id = id;
 		this.email = email;
@@ -28,6 +30,7 @@ public class User {
 		this.role = role;
 		this.createdAt = createdAt;
 		this.updatedAt = updatedAt;
+		this.deletedAt = deletedAt;
 	}
 
 	public Long getId() {
@@ -56,5 +59,13 @@ public class User {
 
 	public LocalDateTime getUpdatedAt() {
 		return updatedAt;
+	}
+
+	public LocalDateTime getDeletedAt() {
+		return deletedAt;
+	}
+
+	public boolean isDeleted() {
+		return deletedAt != null;
 	}
 }

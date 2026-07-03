@@ -1,11 +1,13 @@
 package com.psplatform.backend.auth;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.jayway.jsonpath.JsonPath;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -181,5 +183,71 @@ class AuthControllerTest {
 					""".formatted(refreshToken)))
 			.andExpect(status().isUnauthorized())
 			.andExpect(jsonPath("$.message").value("Invalid refresh token"));
+	}
+
+	@Test
+	void deleteMeSoftDeletesCurrentUserAndRefreshTokens() throws Exception {
+		String loginResponse = mockMvc.perform(post("/api/auth/login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "provider": "local",
+					  "credentials": {
+					    "email": "alice@example.com",
+					    "password": "password1234"
+					  }
+					}
+					"""))
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
+		String accessToken = JsonPath.read(loginResponse, "$.accessToken");
+		String refreshToken = JsonPath.read(loginResponse, "$.refreshToken");
+		Number userId = JsonPath.read(loginResponse, "$.user.id");
+
+		mockMvc.perform(delete("/api/auth/me").header("Authorization", "Bearer " + accessToken))
+			.andExpect(status().isNoContent());
+
+		Assertions.assertThat(userRepository.findByEmail(EMAIL)).isEmpty();
+		Assertions.assertThat(userRepository.findById(userId.longValue()))
+			.hasValueSatisfying(user -> {
+				Assertions.assertThat(user.isDeleted()).isTrue();
+				Assertions.assertThat(user.getEmail()).isEqualTo("deleted-user-%d@deleted.local".formatted(userId.longValue()));
+				Assertions.assertThat(user.getUsername()).isEqualTo("deleted-user-%d".formatted(userId.longValue()));
+				Assertions.assertThat(user.getPasswordHash()).isEqualTo("deleted-password");
+				Assertions.assertThat(user.getRole()).isEqualTo("WITHDRAWN");
+			});
+		mockMvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + accessToken))
+			.andExpect(status().isUnauthorized())
+			.andExpect(jsonPath("$.message").value("User not found"));
+		mockMvc.perform(post("/api/auth/refresh")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "refreshToken": "%s"
+					}
+					""".formatted(refreshToken)))
+			.andExpect(status().isUnauthorized())
+			.andExpect(jsonPath("$.message").value("Invalid refresh token"));
+		mockMvc.perform(post("/api/auth/login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "provider": "local",
+					  "credentials": {
+					    "email": "alice@example.com",
+					    "password": "password1234"
+					  }
+					}
+					"""))
+			.andExpect(status().isUnauthorized())
+			.andExpect(jsonPath("$.message").value("Invalid email or password"));
+	}
+
+	@Test
+	void deleteMeRequiresAccessToken() throws Exception {
+		mockMvc.perform(delete("/api/auth/me"))
+			.andExpect(status().isUnauthorized())
+			.andExpect(jsonPath("$.message").value("Authorization header is required"));
 	}
 }

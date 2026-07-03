@@ -82,7 +82,9 @@ public class H2SubmissionRepository implements SubmissionRepository {
 	public Optional<Submission> findById(long id) {
 		List<Submission> submissions = jdbcTemplate.query(
 			"""
-			SELECT s.id, s.problem_id, s.user_id, u.username, s.language, s.source_code, s.status,
+			SELECT s.id, s.problem_id, s.user_id,
+			       CASE WHEN u.deleted_at IS NOT NULL THEN '탈퇴한 사용자' ELSE u.username END AS username,
+			       s.language, s.source_code, s.status,
 			       s.verdict, s.judge_message, s.created_at, s.judged_at
 			FROM submissions s
 			LEFT JOIN users u ON u.id = s.user_id
@@ -98,7 +100,9 @@ public class H2SubmissionRepository implements SubmissionRepository {
 	public List<Submission> findByProblemId(long problemId) {
 		return jdbcTemplate.query(
 			"""
-			SELECT s.id, s.problem_id, s.user_id, u.username, s.language, s.source_code, s.status,
+			SELECT s.id, s.problem_id, s.user_id,
+			       CASE WHEN u.deleted_at IS NOT NULL THEN '탈퇴한 사용자' ELSE u.username END AS username,
+			       s.language, s.source_code, s.status,
 			       s.verdict, s.judge_message, s.created_at, s.judged_at
 			FROM submissions s
 			LEFT JOIN users u ON u.id = s.user_id

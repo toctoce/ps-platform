@@ -21,6 +21,8 @@ import com.psplatform.backend.problem.ProblemCreateRequest;
 import com.psplatform.backend.problem.ProblemDifficulty;
 import com.psplatform.backend.problem.ProblemRepository;
 import com.psplatform.backend.judge.JudgeJobRepository;
+import com.psplatform.backend.user.User;
+import com.psplatform.backend.user.UserRepository;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -38,9 +40,13 @@ class SubmissionControllerTest {
 	@Autowired
 	private JudgeJobRepository judgeJobRepository;
 
+	@Autowired
+	private UserRepository userRepository;
+
 	@BeforeEach
 	void setUp() {
 		submissionRepository.deleteAll();
+		userRepository.deleteAll();
 		problemRepository.deleteAll();
 	}
 
@@ -94,6 +100,25 @@ class SubmissionControllerTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$[0].problemId").value(problem.getId()))
 			.andExpect(jsonPath("$[0].status").value("PENDING"));
+	}
+
+	@Test
+	void findSubmissionsKeepsWithdrawnUserSubmission() throws Exception {
+		Problem problem = createProblem();
+		User user = userRepository.save("alice@example.com", "alice", "hashed-password", "USER");
+		Submission submission = submissionRepository.save(
+			problem.getId(),
+			user.getId(),
+			new SubmissionCreateRequest("java", "public class Main {}")
+		);
+
+		userRepository.deleteById(user.getId());
+
+		mockMvc.perform(get("/api/problems/{problemId}/submissions", problem.getId()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$[0].id").value(submission.getId()))
+			.andExpect(jsonPath("$[0].userId").value(user.getId()))
+			.andExpect(jsonPath("$[0].username").value("탈퇴한 사용자"));
 	}
 
 	@Test

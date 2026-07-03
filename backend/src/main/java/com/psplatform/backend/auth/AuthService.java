@@ -5,6 +5,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.psplatform.backend.user.User;
 import com.psplatform.backend.user.UserRepository;
@@ -69,8 +70,18 @@ public class AuthService {
 	public User verifyAccessToken(String authorizationHeader) {
 		String accessToken = resolveBearer(authorizationHeader);
 		JwtClaims claims = jwtTokenService.parseAccessToken(accessToken);
-		return userRepository.findById(claims.userId())
+		User user = userRepository.findById(claims.userId())
 			.orElseThrow(() -> new AuthException("User not found"));
+		if (user.isDeleted()) {
+			throw new InvalidAccessTokenException("User not found");
+		}
+		return user;
+	}
+
+	@Transactional
+	public void deleteCurrentUser(String authorizationHeader) {
+		User user = verifyAccessToken(authorizationHeader);
+		userRepository.deleteById(user.getId());
 	}
 
 	private String resolveBearer(String authorizationHeader) {

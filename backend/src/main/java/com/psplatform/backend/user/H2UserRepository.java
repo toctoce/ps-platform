@@ -1,6 +1,8 @@
 package com.psplatform.backend.user;
 
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Optional;
@@ -23,7 +25,8 @@ public class H2UserRepository implements UserRepository {
 		rs.getString("password_hash"),
 		rs.getString("role"),
 		rs.getTimestamp("created_at").toLocalDateTime(),
-		rs.getTimestamp("updated_at").toLocalDateTime()
+		rs.getTimestamp("updated_at").toLocalDateTime(),
+		getTimestampOrNull(rs, "deleted_at")
 	);
 
 	public H2UserRepository(JdbcTemplate jdbcTemplate) {
@@ -60,7 +63,7 @@ public class H2UserRepository implements UserRepository {
 	public Optional<User> findById(long id) {
 		List<User> users = jdbcTemplate.query(
 			"""
-			SELECT id, email, username, password_hash, role, created_at, updated_at
+			SELECT id, email, username, password_hash, role, created_at, updated_at, deleted_at
 			FROM users
 			WHERE id = ?
 			""",
@@ -74,7 +77,7 @@ public class H2UserRepository implements UserRepository {
 	public Optional<User> findByEmail(String email) {
 		List<User> users = jdbcTemplate.query(
 			"""
-			SELECT id, email, username, password_hash, role, created_at, updated_at
+			SELECT id, email, username, password_hash, role, created_at, updated_at, deleted_at
 			FROM users
 			WHERE email = ?
 			""",
@@ -88,7 +91,7 @@ public class H2UserRepository implements UserRepository {
 	public Optional<User> findByUsername(String username) {
 		List<User> users = jdbcTemplate.query(
 			"""
-			SELECT id, email, username, password_hash, role, created_at, updated_at
+			SELECT id, email, username, password_hash, role, created_at, updated_at, deleted_at
 			FROM users
 			WHERE username = ?
 			""",
@@ -96,6 +99,29 @@ public class H2UserRepository implements UserRepository {
 			username
 		);
 		return users.stream().findFirst();
+	}
+
+	@Override
+	public void deleteById(long id) {
+		jdbcTemplate.update("DELETE FROM refresh_tokens WHERE user_id = ?", id);
+		jdbcTemplate.update(
+			"""
+			UPDATE users
+			SET email = ('deleted-user-' || id || '@deleted.local'),
+			    username = ('deleted-user-' || id),
+			    password_hash = 'deleted-password',
+			    role = 'WITHDRAWN',
+			    deleted_at = CURRENT_TIMESTAMP,
+			    updated_at = CURRENT_TIMESTAMP
+			WHERE id = ? AND deleted_at IS NULL
+			""",
+			id
+		);
+	}
+
+	private static java.time.LocalDateTime getTimestampOrNull(ResultSet rs, String column) throws SQLException {
+		Timestamp timestamp = rs.getTimestamp(column);
+		return timestamp == null ? null : timestamp.toLocalDateTime();
 	}
 
 	@Override
