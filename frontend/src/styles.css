@@ -742,6 +742,23 @@ button:disabled {
   outline: none;
 }
 
+.problem-tabs .problem-report-tab-button {
+  width: 34px;
+  padding: 0;
+  justify-content: center;
+  color: #8a5a31;
+}
+
+.problem-tabs .problem-report-tab-button:hover,
+.problem-tabs .problem-report-tab-button:focus-visible {
+  border-bottom-color: #8a5a31;
+  color: #65411f;
+}
+
+.problem-tabs .problem-report-tab-button:disabled {
+  opacity: 0.45;
+}
+
 .problem-editor-open-button {
   display: inline-flex;
   align-items: center;
@@ -856,6 +873,186 @@ button:disabled {
   color: #7f352b;
   text-decoration: underline;
   outline: none;
+}
+
+.report-list {
+  display: grid;
+  gap: 12px;
+}
+
+.report-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  gap: 14px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.report-item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.report-item-main {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.report-item-main strong {
+  display: block;
+  color: var(--text-main);
+  font-size: 14px;
+}
+
+.report-item-main span {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-sub);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.report-item-main p {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 13px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.report-review-controls {
+  display: grid;
+  gap: 8px;
+}
+
+.report-review-controls textarea {
+  min-height: 74px;
+}
+
+.problem-report-modal-backdrop {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(43, 45, 38, 0.32);
+}
+
+.problem-report-modal {
+  display: grid;
+  gap: 14px;
+  width: min(440px, 100%);
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fffdf8;
+  box-shadow: 0 18px 48px rgba(40, 43, 36, 0.22);
+}
+
+.problem-report-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.problem-report-modal-header h2 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 17px;
+  line-height: 1.25;
+}
+
+.problem-report-form {
+  display: grid;
+  gap: 10px;
+}
+
+.problem-report-field {
+  position: relative;
+  display: grid;
+  gap: 6px;
+  color: #3c4043;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.problem-report-type-control {
+  position: relative;
+}
+
+.problem-report-type-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8f5ee;
+  color: var(--text-main);
+  font-size: 14px;
+  font-weight: 750;
+  text-align: left;
+}
+
+.problem-report-type-button:hover,
+.problem-report-type-button:focus-visible {
+  border-color: var(--brand);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(110, 123, 91, 0.12);
+}
+
+.problem-report-type-menu {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  border: 1px solid #d3cbb8;
+  border-radius: 8px;
+  background: #fffdf8;
+  box-shadow: 0 10px 24px rgba(40, 43, 36, 0.14);
+}
+
+.problem-report-type-menu button {
+  display: flex;
+  align-items: center;
+  min-height: 31px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-main);
+  font-size: 13px;
+  font-weight: 750;
+  text-align: left;
+}
+
+.problem-report-type-menu button:hover,
+.problem-report-type-menu button:focus-visible,
+.problem-report-type-menu button.is-active {
+  background: #ece8dc;
+  color: var(--brand);
+  outline: none;
+}
+
+.problem-report-form textarea {
+  min-height: 112px;
+}
+
+.problem-report-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .danger-link-button:disabled {
@@ -1908,12 +2105,19 @@ textarea:focus {
 }
 
 .ide-actions {
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 8px;
   min-height: 48px;
   padding: 8px 12px;
   border-top: 1px solid #d9d1c2;
   background: #ede9df;
+}
+
+.ide-submit-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-left: auto;
 }
 
 .ide-testcase-toggle {

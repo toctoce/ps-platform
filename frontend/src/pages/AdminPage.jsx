@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react';
-import { ArrowLeft, Code2, FileText, Plus, RefreshCw, ShieldCheck, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Code2, FileText, Plus, RefreshCw, ShieldCheck, X } from 'lucide-react';
 import { request } from '../api/client.js';
 import { DIFFICULTY_OPTIONS, initialProblemForm } from '../problem/problemUtils.js';
+import {
+  PROBLEM_REPORT_STATUSES,
+  problemReportStatusLabel,
+  problemReportTypeLabel,
+} from '../problem/reportUtils.js';
 
 export function AdminPage({ auth, setMessage, navigate }) {
   const [problems, setProblems] = useState([]);
@@ -13,6 +18,9 @@ export function AdminPage({ auth, setMessage, navigate }) {
   const [exampleForms, setExampleForms] = useState([{ input: '', expectedOutput: '', description: '' }]);
   const [testCaseBusy, setTestCaseBusy] = useState(false);
   const [exampleBusy, setExampleBusy] = useState(false);
+  const [reports, setReports] = useState([]);
+  const [loadingReports, setLoadingReports] = useState(false);
+  const [reviewBusyId, setReviewBusyId] = useState(null);
   const isAuthenticated = Boolean(auth?.accessToken);
   const isAdmin = auth?.user?.role === 'ADMIN';
 
@@ -35,6 +43,24 @@ export function AdminPage({ auth, setMessage, navigate }) {
     } finally {
       setLoadingProblems(false);
     }
+  }
+
+  async function loadReports() {
+    setLoadingReports(true);
+    try {
+      const data = await request('/api/admin/problem-reports', {
+        headers: authHeaders(),
+      });
+      setReports(Array.isArray(data) ? data : []);
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setLoadingReports(false);
+    }
+  }
+
+  async function refreshAdminData() {
+    await Promise.all([loadProblems(), loadReports()]);
   }
 
   function updateProblemForm(field, value) {
@@ -199,11 +225,37 @@ export function AdminPage({ auth, setMessage, navigate }) {
     }
   }
 
+  function updateReportDraft(reportId, field, value) {
+    setReports((current) => current.map((report) => (
+      report.id === reportId ? { ...report, [field]: value } : report
+    )));
+  }
+
+  async function reviewReport(report) {
+    setReviewBusyId(report.id);
+    try {
+      const updated = await request(`/api/admin/problem-reports/${report.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({
+          status: report.status,
+          adminNote: report.adminNote ?? '',
+        }),
+      });
+      setReports((current) => current.map((item) => (item.id === updated.id ? updated : item)));
+      setMessage(`신고 #${updated.id} 상태를 ${problemReportStatusLabel(updated.status)}로 변경했습니다.`);
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setReviewBusyId(null);
+    }
+  }
+
   useEffect(() => {
     if (!isAdmin) {
       return;
     }
-    loadProblems();
+    refreshAdminData();
   }, [isAdmin]);
 
   if (!isAuthenticated) {
@@ -253,11 +305,72 @@ export function AdminPage({ auth, setMessage, navigate }) {
           <ArrowLeft size={17} />
           홈으로
         </button>
-        <button className="ghost-button with-text" type="button" onClick={loadProblems} disabled={loadingProblems}>
+        <button
+          className="ghost-button with-text"
+          type="button"
+          onClick={refreshAdminData}
+          disabled={loadingProblems || loadingReports}
+        >
           <RefreshCw size={17} />
-          문제 목록 새로고침
+          관리자 데이터 새로고침
         </button>
       </div>
+
+      <section className="panel">
+        <div className="panel-header">
+          <AlertTriangle size={18} />
+          <h2>문제 신고 관리</h2>
+        </div>
+        {reports.length === 0 ? (
+          <p className="empty">{loadingReports ? '신고 목록을 불러오는 중입니다.' : '접수된 신고가 없습니다.'}</p>
+        ) : (
+          <div className="report-list">
+            {reports.map((report) => (
+              <article className="report-item" key={report.id}>
+                <div className="report-item-main">
+                  <div>
+                    <strong>#{report.problemId} {report.problemTitle}</strong>
+                    <span>
+                      신고 #{report.id} · {problemReportTypeLabel(report.type)} · {report.reporterUsername}
+                    </span>
+                  </div>
+                  <p>{report.message}</p>
+                </div>
+                <div className="report-review-controls">
+                  <label>
+                    상태
+                    <select
+                      value={report.status}
+                      onChange={(event) => updateReportDraft(report.id, 'status', event.target.value)}
+                    >
+                      {PROBLEM_REPORT_STATUSES.map((item) => (
+                        <option key={item.value} value={item.value}>
+                          {item.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    관리자 메모
+                    <textarea
+                      value={report.adminNote ?? ''}
+                      onChange={(event) => updateReportDraft(report.id, 'adminNote', event.target.value)}
+                    />
+                  </label>
+                  <button
+                    className="primary-button"
+                    type="button"
+                    onClick={() => reviewReport(report)}
+                    disabled={reviewBusyId === report.id}
+                  >
+                    저장
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
 
       <section className="panel">
         <div className="panel-header">

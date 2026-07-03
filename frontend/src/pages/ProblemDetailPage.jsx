@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
-import { BookOpen, ChevronDown, ChevronUp, Code2, Moon, Play, Plus, RefreshCw, Send, Sun } from 'lucide-react';
+import { BookOpen, ChevronDown, ChevronUp, Code2, Moon, Play, Plus, RefreshCw, Send, Siren, Sun, X } from 'lucide-react';
 import { request } from '../api/client.js';
 import { MarkdownContent } from '../components/MarkdownContent.jsx';
 import {
@@ -15,6 +15,7 @@ import {
   normalizeTemplateSource,
 } from '../editor/config.js';
 import { difficultyLabel, problemCategoryNames, problemInputRange } from '../problem/problemUtils.js';
+import { PROBLEM_REPORT_TYPES, problemReportTypeLabel } from '../problem/reportUtils.js';
 import {
   buildInitialTestRunResults,
   formatDateTime,
@@ -45,6 +46,10 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
   const [testRunBusy, setTestRunBusy] = useState(false);
   const [testRunJobId, setTestRunJobId] = useState(null);
   const [testRunResults, setTestRunResults] = useState([]);
+  const [reportPanelOpen, setReportPanelOpen] = useState(false);
+  const [reportBusy, setReportBusy] = useState(false);
+  const [reportForm, setReportForm] = useState({ type: 'DESCRIPTION_ERROR', message: '' });
+  const [reportTypeMenuOpen, setReportTypeMenuOpen] = useState(false);
   const [problemPanelRatio, setProblemPanelRatio] = useState(44);
   const [isNarrowLayout, setIsNarrowLayout] = useState(false);
   const [editorOnlyMode, setEditorOnlyMode] = useState(false);
@@ -59,11 +64,13 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
   const testCasesRef = useRef([]);
   const testRunJobIdRef = useRef(null);
   const languageMenuRef = useRef(null);
+  const reportTypeMenuRef = useRef(null);
   const solveLayoutRef = useRef(null);
   const testCaseInputRef = useRef(null);
 
   const problemKey = `${editorStorageKeyPrefix}:${problemId}`;
   const currentUsername = auth?.user?.username;
+  const selectedReportTypeLabel = problemReportTypeLabel(reportForm.type);
 
   function showTooltip(event, text) {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -107,15 +114,17 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
   }, []);
 
   useEffect(() => {
-    function closeLanguageMenu(event) {
-      if (languageMenuRef.current?.contains(event.target)) {
-        return;
+    function closeFloatingMenus(event) {
+      if (!languageMenuRef.current?.contains(event.target)) {
+        setLanguageMenuOpen(false);
       }
-      setLanguageMenuOpen(false);
+      if (!reportTypeMenuRef.current?.contains(event.target)) {
+        setReportTypeMenuOpen(false);
+      }
     }
 
-    document.addEventListener('mousedown', closeLanguageMenu);
-    return () => document.removeEventListener('mousedown', closeLanguageMenu);
+    document.addEventListener('mousedown', closeFloatingMenus);
+    return () => document.removeEventListener('mousedown', closeFloatingMenus);
   }, []);
 
   useEffect(() => {
@@ -257,6 +266,15 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
     setSubmissionForm((current) => ({ ...current, [field]: value }));
   }
 
+  function updateReportForm(field, value) {
+    setReportForm((current) => ({ ...current, [field]: value }));
+  }
+
+  function closeProblemReportModal() {
+    setReportPanelOpen(false);
+    setReportTypeMenuOpen(false);
+  }
+
   function changeSubmissionLanguage(nextLanguage) {
     setSubmissionForm((current) => {
       const isFromTemplate = isTemplateSource(current.language, current.sourceCode);
@@ -325,6 +343,39 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
     });
     setTestCaseForm({ input: created.input, expectedOutput: created.expectedOutput });
     setMessage('테스트케이스를 추가했습니다.');
+  }
+
+  async function submitProblemReport(event) {
+    event.preventDefault();
+    if (!isAuthenticated) {
+      const returnTo = `${window.location.pathname}${window.location.search}`;
+      setMessage('로그인 후 신고할 수 있습니다.');
+      navigate(`/login?returnTo=${encodeURIComponent(returnTo)}`);
+      return;
+    }
+    if (!reportForm.message.trim()) {
+      setMessage('신고 내용을 입력해 주세요.');
+      return;
+    }
+
+    setReportBusy(true);
+    try {
+      await request(`/api/problems/${problemId}/reports`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({
+          type: reportForm.type,
+          message: reportForm.message.trim(),
+        }),
+      });
+      setMessage('문제 신고가 접수되었습니다.');
+      setReportForm({ type: 'DESCRIPTION_ERROR', message: '' });
+      closeProblemReportModal();
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setReportBusy(false);
+    }
   }
 
   function startPanelResize(event) {
@@ -641,6 +692,16 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
                 onClick={() => setActiveProblemTab('submissions')}
               >
                 제출
+              </button>
+              <button
+                className="problem-report-tab-button"
+                type="button"
+                aria-label="문제 신고"
+                title="문제 신고"
+                onClick={() => setReportPanelOpen(true)}
+                disabled={!problem}
+              >
+                <Siren size={15} />
               </button>
             </div>
             {isNarrowLayout && !editorOnlyMode ? (
@@ -996,24 +1057,104 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
                   {testCasePanelOpen ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
                   테스트케이스
                 </button>
-                <button
-                  className="primary-button ide-small-button has-tooltip"
-                  type="submit"
-                  disabled={submissionBusy || !problem}
-                  data-tooltip="⌘ / Ctrl + Enter"
-                  onMouseEnter={(event) => showTooltip(event, '⌘ / Ctrl + Enter')}
-                  onFocus={(event) => showTooltip(event, '⌘ / Ctrl + Enter')}
-                  onMouseLeave={hideTooltip}
-                  onBlur={hideTooltip}
-                >
-                  <Send size={14} />
-                  제출
-                </button>
+                <div className="ide-submit-actions">
+                  <button
+                    className="primary-button ide-small-button has-tooltip"
+                    type="submit"
+                    disabled={submissionBusy || !problem}
+                    data-tooltip="⌘ / Ctrl + Enter"
+                    onMouseEnter={(event) => showTooltip(event, '⌘ / Ctrl + Enter')}
+                    onFocus={(event) => showTooltip(event, '⌘ / Ctrl + Enter')}
+                    onMouseLeave={hideTooltip}
+                    onBlur={hideTooltip}
+                  >
+                    <Send size={14} />
+                    제출
+                  </button>
+                </div>
               </div>
             </div>
           </form>
           </section>
       </div>
+      {reportPanelOpen ? (
+        <div
+          className="problem-report-modal-backdrop"
+          role="presentation"
+          onMouseDown={closeProblemReportModal}
+        >
+          <section
+            className="problem-report-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="problem-report-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header className="problem-report-modal-header">
+              <h2 id="problem-report-title">문제 신고</h2>
+              <button
+                className="ghost-button ide-small-button"
+                type="button"
+                aria-label="신고 모달 닫기"
+                onClick={closeProblemReportModal}
+              >
+                <X size={14} />
+              </button>
+            </header>
+            <form className="problem-report-form" onSubmit={submitProblemReport}>
+              <div className="problem-report-field">
+                <span>신고 종류</span>
+                <div className="problem-report-type-control" ref={reportTypeMenuRef}>
+                  <button
+                    className="problem-report-type-button"
+                    type="button"
+                    onClick={() => setReportTypeMenuOpen((current) => !current)}
+                    aria-expanded={reportTypeMenuOpen}
+                    aria-haspopup="menu"
+                  >
+                    {selectedReportTypeLabel}
+                    <ChevronDown size={14} />
+                  </button>
+                  {reportTypeMenuOpen ? (
+                    <div className="problem-report-type-menu" role="menu">
+                      {PROBLEM_REPORT_TYPES.map((item) => (
+                        <button
+                          className={reportForm.type === item.value ? 'is-active' : ''}
+                          type="button"
+                          role="menuitem"
+                          key={item.value}
+                          onClick={() => {
+                            updateReportForm('type', item.value);
+                            setReportTypeMenuOpen(false);
+                          }}
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+              <label>
+                신고 내용
+                <textarea
+                  value={reportForm.message}
+                  onChange={(event) => updateReportForm('message', event.target.value)}
+                  placeholder="문제를 확인할 수 있도록 오류 내용을 구체적으로 적어주세요."
+                />
+              </label>
+              <div className="problem-report-actions">
+                <button className="ghost-button" type="button" onClick={closeProblemReportModal}>
+                  취소
+                </button>
+                <button className="primary-button" type="submit" disabled={reportBusy}>
+                  신고 접수
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      ) : null}
       {activeTooltip ? (
         <div
           className="global-tooltip"
