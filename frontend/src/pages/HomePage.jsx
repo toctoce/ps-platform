@@ -7,6 +7,7 @@ import {
 
 export function HomePage({ navigate, setMessage }) {
   const [problems, setProblems] = useState([]);
+  const [todaySubmissionCount, setTodaySubmissionCount] = useState(null);
   const [busy, setBusy] = useState(false);
 
   const groups = useMemo(() => buildCategoryGroups(problems), [problems]);
@@ -16,12 +17,26 @@ export function HomePage({ navigate, setMessage }) {
       .sort((a, b) => b.count - a.count || a.categoryName.localeCompare(b.categoryName))
       .slice(0, 6)
   ), [groups]);
+  const statItems = [
+    {
+      label: '총 문제 수',
+      value: busy ? '-' : problems.length.toLocaleString(),
+    },
+    {
+      label: '오늘 제출 수',
+      value: busy || todaySubmissionCount === null ? '-' : todaySubmissionCount.toLocaleString(),
+    },
+  ];
 
   async function loadProblems() {
     setBusy(true);
     try {
-      const data = await request('/api/problems');
-      setProblems(Array.isArray(data) ? data : []);
+      const [problemData, submissionStats] = await Promise.all([
+        request('/api/problems'),
+        request('/api/submissions/stats/today'),
+      ]);
+      setProblems(Array.isArray(problemData) ? problemData : []);
+      setTodaySubmissionCount(submissionStats?.todaySubmissionCount ?? 0);
     } catch (error) {
       setMessage(error.message);
     } finally {
@@ -52,21 +67,17 @@ export function HomePage({ navigate, setMessage }) {
       </section>
 
       <section className="landing-stats" aria-label="서비스 통계">
-        <div>
-          <strong>{problems.length.toLocaleString()}</strong>
-          <span>총 문제 수</span>
-        </div>
-        <div>
-          <strong>{categoryRows.length.toLocaleString()}</strong>
-          <span>카테고리</span>
-        </div>
-        <div>
-          <strong>{busy ? '-' : '실시간'}</strong>
-          <span>문제 목록</span>
-        </div>
-        <div>
-          <strong>Java</strong>
-          <span>현재 지원 언어</span>
+        <div className="landing-stats-track">
+          {[0, 1].map((setIndex) => (
+            <div className="landing-stats-set" aria-hidden={setIndex === 1} key={setIndex}>
+              {statItems.map((item) => (
+                <div className="landing-stat-item" key={`${setIndex}-${item.label}`}>
+                  <strong>{item.value}</strong>
+                  <span>{item.label}</span>
+                </div>
+              ))}
+            </div>
+          ))}
         </div>
       </section>
 

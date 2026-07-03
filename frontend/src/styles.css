@@ -362,20 +362,32 @@ button:disabled {
 }
 
 .landing-stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 0;
-  padding: 16px max(24px, calc((100vw - 900px) / 2));
+  overflow: hidden;
+  padding: 0;
   border-bottom: 1px solid var(--line);
   background: transparent;
 }
 
-.landing-stats div {
+.landing-stats-track {
+  display: flex;
+  width: max-content;
+  animation: landing-stats-marquee 18s linear infinite;
+}
+
+.landing-stats-set {
+  display: flex;
+  flex: 0 0 100vw;
+  justify-content: space-around;
+  padding: 16px max(24px, calc((100vw - 900px) / 2));
+}
+
+.landing-stat-item {
   display: flex;
   align-items: baseline;
   justify-content: center;
   gap: 8px;
   min-height: 44px;
+  min-width: 180px;
 }
 
 .landing-stats strong {
@@ -387,6 +399,22 @@ button:disabled {
   color: var(--text-sub);
   font-size: 12px;
   font-weight: 800;
+}
+
+@keyframes landing-stats-marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-stats-track {
+    animation: none;
+  }
 }
 
 .landing-section {
@@ -2203,7 +2231,6 @@ dt {
     min-width: 0;
   }
 
-  .landing-stats,
   .landing-category-grid,
   .workspace,
   .solve-layout {
@@ -2234,8 +2261,7 @@ dt {
   }
 
   .landing-hero,
-  .landing-section,
-  .landing-stats {
+  .landing-section {
     padding-left: 24px;
     padding-right: 24px;
   }
@@ -2268,10 +2294,6 @@ dt {
     min-height: auto;
     padding-top: 42px;
     padding-bottom: 34px;
-  }
-
-  .landing-stats {
-    grid-template-columns: 1fr 1fr;
   }
 
   .problem-table-head {
