@@ -14,6 +14,17 @@ spring:
     driver-class-name: org.h2.Driver
     username: sa
     password:
+  mail:
+    host: ${SMTP_HOST:localhost}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SMTP_AUTH:true}
+          starttls:
+            enable: ${SMTP_STARTTLS_ENABLE:true}
   sql:
     init:
       mode: always
@@ -26,3 +37,7 @@ app:
       secret: ${JWT_SECRET:backend-dev-secret-key-for-local-development-change-this}
       access-token-ttl-seconds: ${JWT_ACCESS_TOKEN_TTL_SECONDS:900}
       refresh-token-ttl-seconds: ${JWT_REFRESH_TOKEN_TTL_SECONDS:1209600}
+  support:
+    email:
+      to-email: ${SUPPORT_TO_EMAIL:ypungkyu0317@gmail.com}
+      from-email: ${SUPPORT_FROM_EMAIL:}

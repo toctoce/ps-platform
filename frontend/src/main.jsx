@@ -1,6 +1,6 @@
 import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Code2, LogIn, LogOut, Settings, ShieldCheck, UserPlus, UserRound } from 'lucide-react';
+import { Code2, LogIn, LogOut, MessageCircle, Settings, ShieldCheck, UserPlus, UserRound, X } from 'lucide-react';
 import './styles.css';
 import { configureAuthSession, request } from './api/client.js';
 import { clearStoredAuth, getStoredAuth, saveStoredAuth } from './auth/storage.js';
@@ -15,11 +15,26 @@ import { RandomProblemPage } from './pages/RandomProblemPage.jsx';
 import { SignupPage } from './pages/SignupPage.jsx';
 import { parseRoute } from './routing.js';
 
+const SUPPORT_INQUIRY_TYPES = [
+  { value: 'BUG', label: '버그' },
+  { value: 'ACCOUNT', label: '계정' },
+  { value: 'PROBLEM_OR_JUDGE', label: '문제/채점' },
+  { value: 'OTHER', label: '기타' },
+];
+
 function App() {
   const [route, setRoute] = useState(parseRoute);
   const [auth, setAuth] = useState(() => getStoredAuth());
   const [message, setMessage] = useState('');
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [supportInquiryOpen, setSupportInquiryOpen] = useState(false);
+  const [supportInquiryBusy, setSupportInquiryBusy] = useState(false);
+  const [supportInquiryForm, setSupportInquiryForm] = useState({
+    email: '',
+    subject: '',
+    type: 'OTHER',
+    message: '',
+  });
 
   const isAuthenticated = Boolean(auth?.accessToken);
   const isAdmin = auth?.user?.role === 'ADMIN';
@@ -50,6 +65,60 @@ function App() {
   function clearAuth() {
     setAuth(null);
     clearStoredAuth();
+  }
+
+  function openSupportInquiry() {
+    setSupportInquiryForm((current) => ({
+      ...current,
+      email: current.email || auth?.user?.email || '',
+    }));
+    setUserMenuOpen(false);
+    setSupportInquiryOpen(true);
+  }
+
+  function closeSupportInquiry() {
+    setSupportInquiryOpen(false);
+  }
+
+  function updateSupportInquiryForm(field, value) {
+    setSupportInquiryForm((current) => ({ ...current, [field]: value }));
+  }
+
+  async function submitSupportInquiry(event) {
+    event.preventDefault();
+    if (!supportInquiryForm.email.trim() || !supportInquiryForm.subject.trim() || !supportInquiryForm.message.trim()) {
+      setMessage('이메일, 제목, 문의 내용을 입력해 주세요.');
+      return;
+    }
+
+    setSupportInquiryBusy(true);
+    try {
+      await request('/api/support/inquiries', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(auth?.accessToken ? { Authorization: `Bearer ${auth.accessToken}` } : {}),
+        },
+        body: JSON.stringify({
+          email: supportInquiryForm.email.trim(),
+          subject: supportInquiryForm.subject.trim(),
+          type: supportInquiryForm.type,
+          message: supportInquiryForm.message.trim(),
+        }),
+      });
+      setMessage('문의가 접수되었습니다.');
+      setSupportInquiryForm({
+        email: auth?.user?.email || '',
+        subject: '',
+        type: 'OTHER',
+        message: '',
+      });
+      closeSupportInquiry();
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setSupportInquiryBusy(false);
+    }
   }
 
   function navigate(path) {
@@ -206,6 +275,10 @@ function App() {
                     <Settings size={16} />
                     설정
                   </button>
+                  <button type="button" onClick={openSupportInquiry}>
+                    <MessageCircle size={16} />
+                    문의하기
+                  </button>
                   <button type="button" onClick={logout}>
                     <LogOut size={16} />
                     로그아웃
@@ -230,6 +303,10 @@ function App() {
                   >
                     <Settings size={16} />
                     설정
+                  </button>
+                  <button type="button" onClick={openSupportInquiry}>
+                    <MessageCircle size={16} />
+                    문의하기
                   </button>
                 </>
               )}
@@ -307,6 +384,78 @@ function App() {
           />
         )}
       </section>
+      {supportInquiryOpen ? (
+        <div className="support-inquiry-backdrop" role="presentation" onMouseDown={closeSupportInquiry}>
+          <section
+            className="support-inquiry-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="support-inquiry-title"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <header className="support-inquiry-header">
+              <h2 id="support-inquiry-title">문의하기</h2>
+              <button
+                className="ghost-button ide-small-button"
+                type="button"
+                aria-label="문의 모달 닫기"
+                onClick={closeSupportInquiry}
+              >
+                <X size={14} />
+              </button>
+            </header>
+            <form className="support-inquiry-form" onSubmit={submitSupportInquiry}>
+              <label>
+                이메일
+                <input
+                  type="email"
+                  value={supportInquiryForm.email}
+                  onChange={(event) => updateSupportInquiryForm('email', event.target.value)}
+                  autoComplete="email"
+                />
+              </label>
+              <label>
+                문의 종류
+                <select
+                  value={supportInquiryForm.type}
+                  onChange={(event) => updateSupportInquiryForm('type', event.target.value)}
+                >
+                  {SUPPORT_INQUIRY_TYPES.map((item) => (
+                    <option key={item.value} value={item.value}>
+                      {item.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                제목
+                <input
+                  value={supportInquiryForm.subject}
+                  onChange={(event) => updateSupportInquiryForm('subject', event.target.value)}
+                  maxLength={120}
+                />
+              </label>
+              <label>
+                문의 내용
+                <textarea
+                  value={supportInquiryForm.message}
+                  onChange={(event) => updateSupportInquiryForm('message', event.target.value)}
+                  maxLength={4000}
+                  placeholder="확인할 수 있도록 상황을 구체적으로 적어주세요."
+                />
+              </label>
+              <div className="support-inquiry-actions">
+                <button className="ghost-button" type="button" onClick={closeSupportInquiry}>
+                  취소
+                </button>
+                <button className="primary-button" type="submit" disabled={supportInquiryBusy}>
+                  보내기
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }

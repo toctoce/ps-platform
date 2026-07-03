@@ -27,6 +27,20 @@ JWT_REFRESH_TOKEN_TTL_SECONDS=1209600 \
 ./gradlew bootRun
 ```
 
+문의 메일 전송을 실제로 사용하려면 SMTP 설정도 함께 주입합니다.
+
+```bash
+cd backend
+SMTP_HOST=smtp.gmail.com \
+SMTP_PORT=587 \
+SMTP_USERNAME=your-email@gmail.com \
+SMTP_PASSWORD=your-app-password \
+SMTP_AUTH=true \
+SMTP_STARTTLS_ENABLE=true \
+SUPPORT_TO_EMAIL=ypungkyu0317@gmail.com \
+./gradlew bootRun
+```
+
 ## 테스트
 
 ```bash
