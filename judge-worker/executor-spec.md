@@ -65,6 +65,11 @@ type Executor interface {
 - `javaSourceFile = "Main.java"`
 - `containerWorkspaceDir = "/workspace"`
 - `judgeMessageMaxBytes = 1024` (메시지 길이 제한)
+- 실행 시간/메모리 측정은 컨테이너 내부 `/usr/bin/time` 출력 값을 우선 사용
+  - 실행 시간: `%e` seconds → `executionTimeMs`
+  - 메모리: `%M` max RSS KB → `memoryMb`
+  - `/usr/bin/time`을 사용할 수 없거나 값이 없으면 worker 외부 실행 시간과
+    Docker stats 기반 메모리 값을 fallback으로 사용
 
 ### 실행 순서
 
@@ -78,7 +83,7 @@ type Executor interface {
    - `docker run --rm -i --network=none --memory <X>m --memory-swap <X>m -v <tmp>:/workspace -w /workspace <image> javac Main.java`
    - 실행 컨텍스트는 `context.WithTimeout(ctx, 10s)`
 6. 테스트케이스 순차 실행 (첫 실패 시 즉시 반환)
-   - 각 TC마다 `docker run ... <image> java Main`
+   - 각 TC마다 `docker run ... <image> sh -c "<metric wrapper> java Main"`
    - 표준입력으로 `JudgeTestCase.Input` 전달
    - 실행 컨텍스트는 `timeLimit`(문제별 ms)
 7. 각 TC 종료 후 출력 비교
@@ -150,8 +155,33 @@ type Executor interface {
   - 기본값 fallback (`timeLimit`, `memory` 미지정 시 기본값 적용)
 - 명령 호출 계약
   - 테스트에서 `fakeCommandRunner`로 호출 횟수/인자(특히 `--memory`, `--memory-swap`, `--network=none`) 검증
+- 실행 지표
+  - AC/WA/RE/TLE/MLE 케이스 결과에 `executionTimeMs`, `memoryMb`가 전달되는지 검증
+  - metric marker는 사용자 stderr 메시지에서 제거되어야 함
 
-## 8. 다른 언어 확장 시 구현 체크리스트
+## 8. 채점 Docker 이미지 계약
+
+모든 언어별 채점 이미지는 실행 시간/메모리 측정을 위해 `/usr/bin/time`을 포함해야 합니다.
+
+Java 17 이미지:
+
+- Dockerfile: `infra/judge-images/java17/Dockerfile`
+- 이미지 태그 예시: `ps-platform/judge-java:17`
+- 빌드 명령:
+
+```bash
+# repository root
+docker build -t ps-platform/judge-java:17 -f infra/judge-images/java17/Dockerfile .
+```
+
+추후 Python/C++ executor를 추가할 때도 같은 원칙을 따릅니다.
+
+- `ps-platform/judge-python:<version>`
+- `ps-platform/judge-cpp:<version>`
+- 각 이미지에 `/usr/bin/time` 포함
+- executor는 공통 metric wrapper 포맷을 재사용
+
+## 9. 다른 언어 확장 시 구현 체크리스트
 
 각 언어 executor는 공통 인터페이스를 따르되 언어별 단계만 달리합니다.
 
@@ -165,10 +195,11 @@ type Executor interface {
 - 출력 비교는 `judge.EvaluateOutput` 사용(공통 정규화)
 - 리소스 제약(`--memory`, `--memory-swap`, `--network=none`) 유지
 - 시간 제한은 문제별 `TimeLimitMs`, 기본값 정책, 컴파일 전용 timeout을 명시
+- 실행 명령은 `/usr/bin/time` 기반 metric wrapper로 감싸 `executionTimeMs`, `memoryMb`를 전달
 - `isMemoryLimitExceeded` 공통 또는 언어별 보강:
   - Java처럼 OOM 텍스트가 없을 수 있으므로 언어별 패턴 추가 필요 가능
 
-## 9. 명령 실행기 추상화
+## 10. 명령 실행기 추상화
 
 `commandRunner` 인터페이스와 `dockerCommandRunner` 구현 덕분에 실행기 테스트가 실제 docker 없이 가능.
 
@@ -180,7 +211,7 @@ type Executor interface {
 - `judge-worker/internal/sandbox/executor.go`
 - `judge-worker/internal/sandbox/executor_test.go`
 
-## 10. 다음 작업 포인트 (권장)
+## 11. 다음 작업 포인트 (권장)
 
 - Java 외 언어 추가 시 `main.go`에서 언어별 executor 라우팅(현재는 Java 고정) 추가
 - 언어별 Docker 이미지 환경변수 추가(`JUDGE_WORKER_<LANG>_DOCKER_IMAGE` 패턴 권장)

@@ -11,7 +11,17 @@
 - `JUDGE_WORKER_STALE_AFTER_SECONDS`  
   - 실행 중인 채점 작업이 해당 시간(초) 이상 멈춰 있으면 QUEUED로 재큐합니다.  
 - `JAVA_DOCKER_IMAGE`  
-  - Java 채점용 Docker 이미지 (예: `eclipse-temurin:17-jdk`)
+  - Java 채점용 Docker 이미지 (예: `ps-platform/judge-java:17`)
+
+## Java 채점 이미지 빌드
+
+Java 실행 시간과 메모리 사용량을 안정적으로 측정하려면 `/usr/bin/time`이 포함된
+커스텀 채점 이미지를 사용합니다.
+
+```bash
+# repository root
+docker build -t ps-platform/judge-java:17 -f infra/judge-images/java17/Dockerfile .
+```
 
 실제 값은 코드에 박아두지 않고 `.env` 계열 파일로 관리합니다.
 
@@ -22,7 +32,7 @@ cd judge-worker
 BACKEND_BASE_URL=http://localhost:8080 \
 JUDGE_WORKER_POLL_INTERVAL_MS=1000 \
 JUDGE_WORKER_STALE_AFTER_SECONDS=60 \
-JAVA_DOCKER_IMAGE=eclipse-temurin:17-jdk \
+JAVA_DOCKER_IMAGE=ps-platform/judge-java:17 \
 go run ./cmd/judge-worker
 ```
 
@@ -32,7 +42,7 @@ go run ./cmd/judge-worker
 export BACKEND_BASE_URL=http://localhost:8080
 export JUDGE_WORKER_POLL_INTERVAL_MS=1000
 export JUDGE_WORKER_STALE_AFTER_SECONDS=60
-export JAVA_DOCKER_IMAGE=eclipse-temurin:17-jdk
+export JAVA_DOCKER_IMAGE=ps-platform/judge-java:17
 go run ./cmd/judge-worker
 ```
 
