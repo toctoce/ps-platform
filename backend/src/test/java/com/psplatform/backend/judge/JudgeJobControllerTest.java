@@ -16,6 +16,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.psplatform.backend.auth.JwtTokenService;
 import com.psplatform.backend.problem.Problem;
 import com.psplatform.backend.problem.ProblemCreateRequest;
 import com.psplatform.backend.problem.ProblemDifficulty;
@@ -27,6 +28,8 @@ import com.psplatform.backend.submission.SubmissionCreateRequest;
 import com.psplatform.backend.submission.SubmissionRepository;
 import com.psplatform.backend.submission.SubmissionStatus;
 import com.psplatform.backend.submission.SubmissionVerdict;
+import com.psplatform.backend.user.User;
+import com.psplatform.backend.user.UserRepository;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -47,9 +50,16 @@ class JudgeJobControllerTest {
 	@Autowired
 	private JudgeJobRepository judgeJobRepository;
 
+	@Autowired
+	private UserRepository userRepository;
+
+	@Autowired
+	private JwtTokenService jwtTokenService;
+
 	@BeforeEach
 	void setUp() {
 		submissionRepository.deleteAll();
+		userRepository.deleteAll();
 		problemRepository.deleteAll();
 	}
 
@@ -107,8 +117,10 @@ class JudgeJobControllerTest {
 	@Test
 	void codeRunUsesProvidedTestCasesWithoutCreatingSubmission() throws Exception {
 		Problem problem = createProblem();
+		String authorization = authorizationFor("alice@example.com", "alice");
 
 		mockMvc.perform(post("/api/problems/{problemId}/runs", problem.getId())
+				.header("Authorization", authorization)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 					{
@@ -136,6 +148,59 @@ class JudgeJobControllerTest {
 			.andExpect(jsonPath("$.problemId").value(problem.getId()))
 			.andExpect(jsonPath("$.testCases[0].input").value("1 2\n"))
 			.andExpect(jsonPath("$.testCases[0].expectedOutput").value("3\n"));
+	}
+
+	@Test
+	void codeRunRequiresAuthentication() throws Exception {
+		Problem problem = createProblem();
+
+		mockMvc.perform(post("/api/problems/{problemId}/runs", problem.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "language": "java",
+					  "sourceCode": "public class Main {}",
+					  "testCases": [
+					    {
+					      "input": "1 2\\n",
+					      "expectedOutput": "3\\n"
+					    }
+					  ]
+					}
+					"""))
+			.andExpect(status().isUnauthorized())
+			.andExpect(jsonPath("$.message").value("Authorization header is required"));
+	}
+
+	@Test
+	void codeRunRejectsTooManyRequestsForSameUser() throws Exception {
+		Problem problem = createProblem();
+		String authorization = authorizationFor("alice@example.com", "alice");
+		String body = """
+			{
+			  "language": "java",
+			  "sourceCode": "public class Main {}",
+			  "testCases": [
+			    {
+			      "input": "1 2\\n",
+			      "expectedOutput": "3\\n"
+			    }
+			  ]
+			}
+			""";
+
+		mockMvc.perform(post("/api/problems/{problemId}/runs", problem.getId())
+				.header("Authorization", authorization)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(body))
+			.andExpect(status().isAccepted());
+
+		mockMvc.perform(post("/api/problems/{problemId}/runs", problem.getId())
+				.header("Authorization", authorization)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(body))
+			.andExpect(status().isTooManyRequests())
+			.andExpect(jsonPath("$.retryAfterSeconds").value(1));
 	}
 
 	@Test
@@ -266,5 +331,10 @@ class JudgeJobControllerTest {
 			List.of(),
 			List.of()
 		));
+	}
+
+	private String authorizationFor(String email, String username) {
+		User user = userRepository.save(email, username, "hashed-password", "USER");
+		return "Bearer " + jwtTokenService.createAccessToken(user);
 	}
 }

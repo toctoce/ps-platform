@@ -16,6 +16,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.psplatform.backend.auth.JwtTokenService;
 import com.psplatform.backend.problem.Problem;
 import com.psplatform.backend.problem.ProblemCreateRequest;
 import com.psplatform.backend.problem.ProblemDifficulty;
@@ -43,6 +44,9 @@ class SubmissionControllerTest {
 	@Autowired
 	private UserRepository userRepository;
 
+	@Autowired
+	private JwtTokenService jwtTokenService;
+
 	@BeforeEach
 	void setUp() {
 		submissionRepository.deleteAll();
@@ -53,8 +57,10 @@ class SubmissionControllerTest {
 	@Test
 	void createSubmissionCreatesQueuedJudgeJob() throws Exception {
 		Problem problem = createProblem();
+		String authorization = authorizationFor("alice@example.com", "alice");
 
 		mockMvc.perform(post("/api/problems/{problemId}/submissions", problem.getId())
+				.header("Authorization", authorization)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 					{
@@ -79,7 +85,10 @@ class SubmissionControllerTest {
 
 	@Test
 	void createSubmissionReturnsNotFoundWhenProblemDoesNotExist() throws Exception {
+		String authorization = authorizationFor("alice@example.com", "alice");
+
 		mockMvc.perform(post("/api/problems/{problemId}/submissions", 999)
+				.header("Authorization", authorization)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 					{
@@ -89,6 +98,50 @@ class SubmissionControllerTest {
 					"""))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.message").value("Problem not found: 999"));
+	}
+
+	@Test
+	void createSubmissionRequiresAuthentication() throws Exception {
+		Problem problem = createProblem();
+
+		mockMvc.perform(post("/api/problems/{problemId}/submissions", problem.getId())
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "language": "java",
+					  "sourceCode": "public class Main {}"
+					}
+					"""))
+			.andExpect(status().isUnauthorized())
+			.andExpect(jsonPath("$.message").value("Authorization header is required"));
+	}
+
+	@Test
+	void createSubmissionRejectsTooManyRequestsForSameUser() throws Exception {
+		Problem problem = createProblem();
+		String authorization = authorizationFor("alice@example.com", "alice");
+
+		String body = """
+			{
+			  "language": "java",
+			  "sourceCode": "public class Main {}"
+			}
+			""";
+
+		mockMvc.perform(post("/api/problems/{problemId}/submissions", problem.getId())
+				.header("Authorization", authorization)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(body))
+			.andExpect(status().isAccepted());
+
+		mockMvc.perform(post("/api/problems/{problemId}/submissions", problem.getId())
+				.header("Authorization", authorization)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(body))
+			.andExpect(status().isTooManyRequests())
+			.andExpect(header().string("Retry-After", "1"))
+			.andExpect(jsonPath("$.message").value("요청이 너무 많습니다. 잠시 후 다시 시도해주세요."))
+			.andExpect(jsonPath("$.retryAfterSeconds").value(1));
 	}
 
 	@Test
@@ -167,5 +220,10 @@ class SubmissionControllerTest {
 			List.of(),
 			List.of()
 		));
+	}
+
+	private String authorizationFor(String email, String username) {
+		User user = userRepository.save(email, username, "hashed-password", "USER");
+		return "Bearer " + jwtTokenService.createAccessToken(user);
 	}
 }

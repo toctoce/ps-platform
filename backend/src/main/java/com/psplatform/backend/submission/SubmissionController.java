@@ -32,8 +32,8 @@ public class SubmissionController {
 		@RequestBody SubmissionCreateRequest request,
 		@RequestHeader(value = "Authorization", required = false) String authorization
 	) {
-		User user = authorization == null ? null : authService.verifyAccessToken(authorization);
-		Submission submission = submissionService.create(problemId, request, user == null ? null : user.getId());
+		User user = authService.verifyAccessToken(authorization);
+		Submission submission = submissionService.create(problemId, request, user.getId());
 		return ResponseEntity
 			.accepted()
 			.location(URI.create("/api/submissions/" + submission.getId()))
