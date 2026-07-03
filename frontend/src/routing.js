@@ -29,7 +29,10 @@ export function parseRoute() {
   if (detailMatch) {
     return { name: 'problem-detail', problemId: detailMatch[1] };
   }
-  if (path === '/problems' || path === '/home' || path === '/') {
+  if (path === '/problems') {
+    return { name: 'problem-list' };
+  }
+  if (path === '/home' || path === '/') {
     return { name: 'home' };
   }
   return { name: 'home' };

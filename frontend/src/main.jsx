@@ -10,6 +10,7 @@ import { HomePage } from './pages/HomePage.jsx';
 import { LoginPage } from './pages/LoginPage.jsx';
 import { MyPage } from './pages/MyPage.jsx';
 import { ProblemDetailPage } from './pages/ProblemDetailPage.jsx';
+import { ProblemListPage } from './pages/ProblemListPage.jsx';
 import { RandomProblemPage } from './pages/RandomProblemPage.jsx';
 import { SignupPage } from './pages/SignupPage.jsx';
 import { parseRoute } from './routing.js';
@@ -250,6 +251,11 @@ function App() {
             setMessage={setMessage}
             isAuthenticated={isAuthenticated}
             auth={auth}
+          />
+        ) : route.name === 'problem-list' ? (
+          <ProblemListPage
+            navigate={navigate}
+            setMessage={setMessage}
           />
         ) : (
           <HomePage

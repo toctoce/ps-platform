@@ -1,18 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BookOpen, Play, Search } from 'lucide-react';
+import { List, Play } from 'lucide-react';
 import { request } from '../api/client.js';
 import {
   buildCategoryGroups,
-  difficultyLabel,
-  DIFFICULTY_OPTIONS,
-  problemCategoryNames,
 } from '../problem/problemUtils.js';
 
 export function HomePage({ navigate, setMessage }) {
   const [problems, setProblems] = useState([]);
   const [busy, setBusy] = useState(false);
-  const [problemSearch, setProblemSearch] = useState('');
-  const [difficultyFilter, setDifficultyFilter] = useState('ALL');
 
   const groups = useMemo(() => buildCategoryGroups(problems), [problems]);
   const categoryRows = useMemo(() => (
@@ -21,22 +16,6 @@ export function HomePage({ navigate, setMessage }) {
       .sort((a, b) => b.count - a.count || a.categoryName.localeCompare(b.categoryName))
       .slice(0, 6)
   ), [groups]);
-  const visibleProblems = useMemo(() => {
-    const keyword = problemSearch.trim().toLowerCase();
-    return [...problems]
-      .sort((a, b) => a.id - b.id)
-      .filter((problem) => {
-        if (difficultyFilter !== 'ALL' && problem.difficulty !== difficultyFilter) {
-          return false;
-        }
-        if (!keyword) {
-          return true;
-        }
-        const categories = problemCategoryNames(problem).join(' ').toLowerCase();
-        return problem.title.toLowerCase().includes(keyword) || categories.includes(keyword);
-      })
-      .slice(0, 8);
-  }, [difficultyFilter, problemSearch, problems]);
 
   async function loadProblems() {
     setBusy(true);
@@ -64,9 +43,9 @@ export function HomePage({ navigate, setMessage }) {
               <Play size={17} />
               바로 문제 풀기
             </button>
-            <button className="ghost-button" type="button" onClick={() => navigate('/categories')}>
-              <BookOpen size={17} />
-              카테고리별로 풀기
+            <button className="ghost-button" type="button" onClick={() => navigate('/problems')}>
+              <List size={17} />
+              문제 목록
             </button>
           </div>
         </div>
@@ -117,58 +96,6 @@ export function HomePage({ navigate, setMessage }) {
         </div>
       </section>
 
-      <section className="landing-section">
-        <div className="problem-list-heading">
-          <h2>문제 목록</h2>
-          <div className="problem-list-tools">
-            <label className="problem-search">
-              <Search size={16} />
-              <input
-                value={problemSearch}
-                onChange={(event) => setProblemSearch(event.target.value)}
-                placeholder="문제 검색..."
-              />
-            </label>
-            <div className="difficulty-filter" aria-label="난이도 필터">
-              {[{ value: 'ALL', label: '전체' }, ...DIFFICULTY_OPTIONS].map((item) => (
-                <button
-                  className={difficultyFilter === item.value ? 'is-active' : ''}
-                  type="button"
-                  key={item.value}
-                  onClick={() => setDifficultyFilter(item.value)}
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-        <div className="landing-problem-table">
-          <div className="problem-table-head">
-            <span>제목</span>
-            <span>카테고리</span>
-            <span>난이도</span>
-          </div>
-          {visibleProblems.length === 0 ? (
-            <p className="problem-table-empty">{busy ? '불러오는 중...' : '등록된 문제가 없습니다.'}</p>
-          ) : (
-            visibleProblems.map((problem) => (
-              <button
-                className="problem-table-row"
-                type="button"
-                key={problem.id}
-                onClick={() => navigate(`/problems/${problem.id}`)}
-              >
-                <strong>
-                  {problem.id}. {problem.title}
-                </strong>
-                <span>{problemCategoryNames(problem).filter((item) => item !== '미분류').join(', ') || '-'}</span>
-                <span className="difficulty-chip">{difficultyLabel(problem.difficulty)}</span>
-              </button>
-            ))
-          )}
-        </div>
-      </section>
     </section>
   );
 }

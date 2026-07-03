@@ -74,6 +74,7 @@ button:disabled {
   min-height: 0;
   min-width: 0;
   overflow: hidden;
+  background: var(--ivory);
 }
 
 .site-header {
@@ -295,17 +296,21 @@ button:disabled {
 }
 
 .landing-page {
+  flex: 1 1 auto;
   display: grid;
+  align-content: start;
   gap: 0;
+  width: 100%;
+  min-height: 100%;
   margin: 0 auto;
-  background: #f8f5ee;
+  background: var(--ivory);
 }
 
 .landing-hero {
   min-height: 180px;
   padding: 56px max(24px, calc((100vw - 900px) / 2)) 42px;
   border-bottom: 1px solid var(--line);
-  background: radial-gradient(circle at 50% 0%, #fffdf8 0%, #f8f5ee 56%, #f3efe5 100%);
+  background: radial-gradient(circle at 50% 0%, #fffdf8 0%, var(--ivory) 62%, #f7f2e8 100%);
 }
 
 .hero-copy {
@@ -2127,8 +2132,8 @@ dt {
   }
 
   .site-header {
-    align-items: stretch;
-    flex-direction: column;
+    align-items: center;
+    flex-direction: row;
     padding: 12px;
   }
 
@@ -2190,8 +2195,8 @@ dt {
   }
 
   .site-actions {
-    justify-content: space-between;
-    width: 100%;
+    justify-content: flex-end;
+    width: auto;
   }
 
   .auth-button {
