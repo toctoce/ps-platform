@@ -173,6 +173,83 @@ func TestJavaExecutorReturnsWrongAnswerWhenOutputDiffers(t *testing.T) {
 	}
 }
 
+func TestJavaExecutorRunsAllCodeRunCasesAfterFailure(t *testing.T) {
+	executor := NewJavaExecutorWithRunner(&fakeCommandRunner{
+		responses: []commandResponse{
+			{result: commandResult{exitCode: 0}},
+			{result: commandResult{exitCode: 0, stdout: "4\n"}},
+			{result: commandResult{exitCode: 1, stderr: "RuntimeError"}},
+			{result: commandResult{exitCode: 0, stdout: "9\n"}},
+		},
+	}, testJavaDockerImage)
+
+	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
+		JobKind:    "CODE_RUN",
+		Language:   "java",
+		SourceCode: "public class Main {}",
+		TestCases: []backend.JudgeTestCase{
+			{Input: "1 2\n", ExpectedOutput: "3\n"},
+			{Input: "bad\n", ExpectedOutput: "0\n"},
+			{Input: "4 5\n", ExpectedOutput: "9\n"},
+		},
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Verdict != VerdictWrongAnswer {
+		t.Fatalf("verdict = %s, want %s", result.Verdict, VerdictWrongAnswer)
+	}
+	if len(result.CaseResults) != 3 {
+		t.Fatalf("case result count = %d, want 3", len(result.CaseResults))
+	}
+	if result.CaseResults[0].Verdict != VerdictWrongAnswer {
+		t.Fatalf("case 1 verdict = %s, want %s", result.CaseResults[0].Verdict, VerdictWrongAnswer)
+	}
+	if result.CaseResults[1].Verdict != VerdictRuntimeError {
+		t.Fatalf("case 2 verdict = %s, want %s", result.CaseResults[1].Verdict, VerdictRuntimeError)
+	}
+	if result.CaseResults[2].Verdict != VerdictAccepted {
+		t.Fatalf("case 3 verdict = %s, want %s", result.CaseResults[2].Verdict, VerdictAccepted)
+	}
+	if got := len(executor.runner.(*fakeCommandRunner).calls); got != 4 {
+		t.Fatalf("command invocation count = %d, want 4", got)
+	}
+}
+
+func TestJavaExecutorStopsSubmissionAfterFirstFailure(t *testing.T) {
+	executor := NewJavaExecutorWithRunner(&fakeCommandRunner{
+		responses: []commandResponse{
+			{result: commandResult{exitCode: 0}},
+			{result: commandResult{exitCode: 0, stdout: "4\n"}},
+			{result: commandResult{exitCode: 0, stdout: "9\n"}},
+		},
+	}, testJavaDockerImage)
+
+	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
+		JobKind:    "SUBMISSION",
+		Language:   "java",
+		SourceCode: "public class Main {}",
+		TestCases: []backend.JudgeTestCase{
+			{Input: "1 2\n", ExpectedOutput: "3\n"},
+			{Input: "4 5\n", ExpectedOutput: "9\n"},
+		},
+	})
+
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if result.Verdict != VerdictWrongAnswer {
+		t.Fatalf("verdict = %s, want %s", result.Verdict, VerdictWrongAnswer)
+	}
+	if len(result.CaseResults) != 1 {
+		t.Fatalf("case result count = %d, want 1", len(result.CaseResults))
+	}
+	if got := len(executor.runner.(*fakeCommandRunner).calls); got != 2 {
+		t.Fatalf("command invocation count = %d, want 2", got)
+	}
+}
+
 func TestJavaExecutorReturnsMemoryLimitExceededWhenExecutionKilledByMemoryCap(t *testing.T) {
 	executor := NewJavaExecutorWithRunner(&fakeCommandRunner{
 		responses: []commandResponse{

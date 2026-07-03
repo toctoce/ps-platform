@@ -122,7 +122,7 @@ func (e *JavaExecutor) Execute(ctx context.Context, job backend.JudgeJobAssignme
 			return ExecutionResult{}, err
 		}
 		caseResults = append(caseResults, result.CaseResults...)
-		if result.Verdict != "" && job.JobKind != "CODE_RUN" {
+		if shouldStopAfterCaseFailure(job, result) {
 			result.CaseResults = caseResults
 			return result, nil
 		}
@@ -130,6 +130,10 @@ func (e *JavaExecutor) Execute(ctx context.Context, job backend.JudgeJobAssignme
 
 	verdict, message := aggregateCaseResults(caseResults)
 	return ExecutionResult{Verdict: verdict, Message: message, CaseResults: caseResults}, nil
+}
+
+func shouldStopAfterCaseFailure(job backend.JudgeJobAssignment, result ExecutionResult) bool {
+	return result.Verdict != "" && job.JobKind != "CODE_RUN"
 }
 
 func determineTimeLimit(timeLimitMs int) time.Duration {
