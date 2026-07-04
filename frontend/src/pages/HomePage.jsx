@@ -74,15 +74,11 @@ export function HomePage({ navigate, setMessage }) {
       </section>
 
       <section className="landing-stats" aria-label="서비스 통계">
-        <div className="landing-stats-track">
-          {[0, 1].map((setIndex) => (
-            <div className="landing-stats-set" aria-hidden={setIndex === 1} key={setIndex}>
-              {statItems.map((item) => (
-                <div className="landing-stat-item" key={`${setIndex}-${item.label}`}>
-                  <strong>{item.value}</strong>
-                  <span>{item.label}</span>
-                </div>
-              ))}
+        <div className="landing-stats-track" style={{ '--landing-stat-count': statItems.length }}>
+          {statItems.map((item, index) => (
+            <div className="landing-stat-item" key={item.label} style={{ '--landing-stat-index': index }}>
+              <strong>{item.value}</strong>
+              <span>{item.label}</span>
             </div>
           ))}
         </div>
