@@ -448,6 +448,13 @@ export function AdminPage({ auth, setMessage, navigate }) {
             />
           </label>
           <label>
+            입력 제한 조건
+            <textarea
+              value={problemForm.inputConstraints}
+              onChange={(event) => updateProblemForm('inputConstraints', event.target.value)}
+            />
+          </label>
+          <label>
             출력 설명
             <textarea
               value={problemForm.outputDescription}

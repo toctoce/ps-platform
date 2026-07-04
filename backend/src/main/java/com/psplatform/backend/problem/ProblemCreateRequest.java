@@ -8,6 +8,7 @@ public record ProblemCreateRequest(
 	String description,
 	String solution,
 	String inputDescription,
+	String inputConstraints,
 	String outputDescription,
 	int timeLimitMs,
 	int memoryLimitMb,
@@ -19,6 +20,9 @@ public record ProblemCreateRequest(
 
 	public ProblemCreateRequest {
 		difficulty = ProblemDifficulty.orDefault(difficulty);
+		if (inputConstraints != null && inputConstraints.isBlank()) {
+			inputConstraints = null;
+		}
 		if (categories == null) {
 			categories = List.of();
 		} else {
@@ -28,6 +32,64 @@ public record ProblemCreateRequest(
 				.distinct()
 				.collect(Collectors.toList());
 		}
+	}
+
+	public ProblemCreateRequest(
+		String title,
+		String description,
+		String solution,
+		String inputDescription,
+		String inputConstraints,
+		String outputDescription,
+		int timeLimitMs,
+		int memoryLimitMb,
+		ProblemDifficulty difficulty,
+		List<String> categories,
+		List<ProblemTestCaseCreateRequest> testCases
+	) {
+		this(
+			title,
+			description,
+			solution,
+			inputDescription,
+			inputConstraints,
+			outputDescription,
+			timeLimitMs,
+			memoryLimitMb,
+			difficulty,
+			categories,
+			testCases,
+			List.of()
+		);
+	}
+
+	public ProblemCreateRequest(
+		String title,
+		String description,
+		String solution,
+		String inputDescription,
+		String outputDescription,
+		int timeLimitMs,
+		int memoryLimitMb,
+		ProblemDifficulty difficulty,
+		List<String> categories,
+		List<ProblemTestCaseCreateRequest> testCases,
+		List<ProblemExampleCreateRequest> examples
+	) {
+		this(
+			title,
+			description,
+			solution,
+			inputDescription,
+			null,
+			outputDescription,
+			timeLimitMs,
+			memoryLimitMb,
+			difficulty,
+			categories,
+			testCases,
+			examples
+		);
 	}
 
 	public ProblemCreateRequest(
@@ -47,6 +109,7 @@ public record ProblemCreateRequest(
 			description,
 			solution,
 			inputDescription,
+			null,
 			outputDescription,
 			timeLimitMs,
 			memoryLimitMb,
@@ -73,6 +136,7 @@ public record ProblemCreateRequest(
 			description,
 			null,
 			inputDescription,
+			null,
 			outputDescription,
 			timeLimitMs,
 			memoryLimitMb,

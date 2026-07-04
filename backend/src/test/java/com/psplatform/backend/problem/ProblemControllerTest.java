@@ -98,6 +98,7 @@ class ProblemControllerTest {
 					  "description": "두 수를 더하는 문제",
 					  "solution": "## 풀이\\n두 수를 읽고 더합니다.",
 					  "inputDescription": "정수 A와 B가 주어진다.",
+					  "inputConstraints": "1 <= A, B <= 10000",
 					  "outputDescription": "A+B를 출력한다.",
 					  "difficulty": "HARD",
 					  "categories": ["수학", "입출력"],
@@ -125,6 +126,7 @@ class ProblemControllerTest {
 			.andExpect(jsonPath("$.description").value("두 수를 더하는 문제"))
 			.andExpect(jsonPath("$.solution").value("## 풀이\n두 수를 읽고 더합니다."))
 			.andExpect(jsonPath("$.inputDescription").value("정수 A와 B가 주어진다."))
+			.andExpect(jsonPath("$.inputConstraints").value("1 <= A, B <= 10000"))
 			.andExpect(jsonPath("$.outputDescription").value("A+B를 출력한다."))
 			.andExpect(jsonPath("$.difficulty").value("HARD"))
 			.andExpect(jsonPath("$.categories[*].name", hasItems("수학", "입출력")))

@@ -3,6 +3,7 @@ export const initialProblemForm = {
   description: '두 수를 더하는 문제',
   solution: '## 풀이\n입력으로 받은 두 정수를 더해 출력합니다.',
   inputDescription: '정수 A와 B가 주어진다.',
+  inputConstraints: '1 <= A, B <= 10000',
   outputDescription: 'A+B를 출력한다.',
   difficulty: 'NORMAL',
   categories: '',

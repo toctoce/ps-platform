@@ -10,6 +10,7 @@ public class Problem {
 	private final String description;
 	private final String solution;
 	private final String inputDescription;
+	private final String inputConstraints;
 	private final String outputDescription;
 	private final int timeLimitMs;
 	private final int memoryLimitMb;
@@ -23,6 +24,7 @@ public class Problem {
 		String description,
 		String solution,
 		String inputDescription,
+		String inputConstraints,
 		String outputDescription,
 		int timeLimitMs,
 		int memoryLimitMb,
@@ -35,6 +37,7 @@ public class Problem {
 			description,
 			solution,
 			inputDescription,
+			inputConstraints,
 			outputDescription,
 			timeLimitMs,
 			memoryLimitMb,
@@ -54,6 +57,35 @@ public class Problem {
 		int timeLimitMs,
 		int memoryLimitMb,
 		ProblemDifficulty difficulty,
+		LocalDateTime createdAt
+	) {
+		this(
+			id,
+			title,
+			description,
+			solution,
+			inputDescription,
+			null,
+			outputDescription,
+			timeLimitMs,
+			memoryLimitMb,
+			difficulty,
+			createdAt,
+			List.of()
+		);
+	}
+
+	public Problem(
+		Long id,
+		String title,
+		String description,
+		String solution,
+		String inputDescription,
+		String inputConstraints,
+		String outputDescription,
+		int timeLimitMs,
+		int memoryLimitMb,
+		ProblemDifficulty difficulty,
 		LocalDateTime createdAt,
 		List<ProblemCategory> categories
 	) {
@@ -62,6 +94,7 @@ public class Problem {
 		this.description = description;
 		this.solution = solution;
 		this.inputDescription = inputDescription;
+		this.inputConstraints = inputConstraints;
 		this.outputDescription = outputDescription;
 		this.timeLimitMs = timeLimitMs;
 		this.memoryLimitMb = memoryLimitMb;
@@ -88,6 +121,10 @@ public class Problem {
 
 	public String getInputDescription() {
 		return inputDescription;
+	}
+
+	public String getInputConstraints() {
+		return inputConstraints;
 	}
 
 	public String getOutputDescription() {
@@ -121,6 +158,7 @@ public class Problem {
 			description,
 			solution,
 			inputDescription,
+			inputConstraints,
 			outputDescription,
 			timeLimitMs,
 			memoryLimitMb,

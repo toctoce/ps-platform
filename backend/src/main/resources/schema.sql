@@ -4,6 +4,7 @@ CREATE TABLE IF NOT EXISTS problems (
     description TEXT NOT NULL,
     solution TEXT,
     input_description TEXT NOT NULL,
+    input_constraints TEXT,
     output_description TEXT NOT NULL,
     time_limit_ms INTEGER NOT NULL,
     memory_limit_mb INTEGER NOT NULL,
@@ -16,6 +17,9 @@ ADD COLUMN IF NOT EXISTS difficulty VARCHAR(20);
 
 ALTER TABLE problems
 ADD COLUMN IF NOT EXISTS solution TEXT;
+
+ALTER TABLE problems
+ADD COLUMN IF NOT EXISTS input_constraints TEXT;
 
 UPDATE problems
 SET difficulty = 'NORMAL'

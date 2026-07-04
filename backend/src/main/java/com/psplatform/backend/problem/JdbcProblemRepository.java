@@ -22,6 +22,7 @@ public class JdbcProblemRepository implements ProblemRepository {
 		rs.getString("description"),
 		decodeEscapedCharacters(rs.getString("solution")),
 		rs.getString("input_description"),
+		rs.getString("input_constraints"),
 		rs.getString("output_description"),
 		rs.getInt("time_limit_ms"),
 		rs.getInt("memory_limit_mb"),
@@ -46,12 +47,13 @@ public class JdbcProblemRepository implements ProblemRepository {
 				description,
 				solution,
 				input_description,
+				input_constraints,
 				output_description,
 				time_limit_ms,
 				memory_limit_mb,
 				difficulty
 			)
-			VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+			VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
 			""";
 
 		KeyHolder keyHolder = new GeneratedKeyHolder();
@@ -61,10 +63,11 @@ public class JdbcProblemRepository implements ProblemRepository {
 			ps.setString(2, request.description());
 			ps.setString(3, normalizeSolution(request.solution()));
 			ps.setString(4, request.inputDescription());
-			ps.setString(5, request.outputDescription());
-			ps.setInt(6, request.timeLimitMs());
-			ps.setInt(7, request.memoryLimitMb());
-			ps.setString(8, request.difficulty().name());
+			ps.setString(5, request.inputConstraints());
+			ps.setString(6, request.outputDescription());
+			ps.setInt(7, request.timeLimitMs());
+			ps.setInt(8, request.memoryLimitMb());
+			ps.setString(9, request.difficulty().name());
 			return ps;
 		}, keyHolder);
 
@@ -81,7 +84,7 @@ public class JdbcProblemRepository implements ProblemRepository {
 	public List<Problem> findAll() {
 		return jdbcTemplate.query(
 			"""
-			SELECT id, title, description, solution, input_description, output_description,
+			SELECT id, title, description, solution, input_description, input_constraints, output_description,
 			       time_limit_ms, memory_limit_mb, difficulty, created_at
 			FROM problems
 			ORDER BY id DESC
@@ -94,7 +97,7 @@ public class JdbcProblemRepository implements ProblemRepository {
 	public Optional<Problem> findById(long id) {
 		List<Problem> problems = jdbcTemplate.query(
 			"""
-			SELECT id, title, description, solution, input_description, output_description,
+			SELECT id, title, description, solution, input_description, input_constraints, output_description,
 			       time_limit_ms, memory_limit_mb, difficulty, created_at
 			FROM problems
 			WHERE id = ?
@@ -112,7 +115,7 @@ public class JdbcProblemRepository implements ProblemRepository {
 		}
 		return jdbcTemplate.query(
 			"""
-			SELECT p.id, p.title, p.description, p.solution, p.input_description, p.output_description,
+			SELECT p.id, p.title, p.description, p.solution, p.input_description, p.input_constraints, p.output_description,
 			       p.time_limit_ms, p.memory_limit_mb, p.difficulty, p.created_at
 			FROM problems p
 			INNER JOIN problem_category_links pcl ON p.id = pcl.problem_id
@@ -132,7 +135,7 @@ public class JdbcProblemRepository implements ProblemRepository {
 		}
 		return jdbcTemplate.query(
 			"""
-			SELECT id, title, description, solution, input_description, output_description,
+			SELECT id, title, description, solution, input_description, input_constraints, output_description,
 			       time_limit_ms, memory_limit_mb, difficulty, created_at
 			FROM problems
 			ORDER BY RANDOM()
