@@ -1,0 +1,35 @@
+{
+  "title": "문제 제목",
+  "description": "문제 설명을 한국어로 작성합니다.",
+  "inputDescription": "입력 형식을 설명합니다.",
+  "inputConstraints": "입력 값의 범위와 제한 조건을 작성합니다.",
+  "outputDescription": "출력 형식을 설명합니다.",
+  "solution": "## 풀이\n\nMarkdown 형식으로 풀이를 작성합니다.",
+  "timeLimitMs": 1000,
+  "memoryLimitMb": 128,
+  "difficulty": "EASY",
+  "categories": [
+    "구현"
+  ],
+  "examples": [
+    {
+      "input": "1 2\n",
+      "expectedOutput": "3\n",
+      "description": "1과 2를 더하면 3입니다."
+    }
+  ],
+  "testCases": [
+    {
+      "input": "1 2\n",
+      "expectedOutput": "3\n"
+    },
+    {
+      "input": "10 20\n",
+      "expectedOutput": "30\n"
+    },
+    {
+      "input": "100 200\n",
+      "expectedOutput": "300\n"
+    }
+  ]
+}
