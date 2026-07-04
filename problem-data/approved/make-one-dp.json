@@ -1,0 +1,81 @@
+{
+  "title": "1로 만들기",
+  "description": "정수 N이 주어집니다. 사용할 수 있는 연산은 세 가지입니다. N이 3으로 나누어떨어지면 3으로 나눌 수 있고, 2로 나누어떨어지면 2로 나눌 수 있으며, 언제든지 1을 뺄 수 있습니다. 이 연산들을 사용해서 N을 1로 만들 때 필요한 연산 횟수의 최솟값을 구하세요.",
+  "inputDescription": "첫째 줄에 정수 N이 주어집니다.",
+  "inputConstraints": "1 <= N <= 1,000,000\nN은 정수입니다.",
+  "outputDescription": "N을 1로 만들기 위해 필요한 연산 횟수의 최솟값을 출력합니다.",
+  "solution": "`dp[i]`를 정수 i를 1로 만들기 위한 최소 연산 횟수라고 두면, i에서 가능한 마지막 연산의 이전 상태를 비교할 수 있습니다. i에서 1을 빼는 연산을 마지막에 사용했다면 이전 상태는 `i - 1`이고, i가 2 또는 3으로 나누어떨어진다면 이전 상태는 각각 `i / 2`, `i / 3`입니다.\n\n따라서 각 i에 대해 가능한 이전 상태 중 가장 작은 값을 고르고 연산 1회를 더하면 됩니다.\n\n### 점화식\n\n```text\ndp[i] = dp[i - 1] + 1\nif i % 2 == 0: dp[i] = min(dp[i], dp[i / 2] + 1)\nif i % 3 == 0: dp[i] = min(dp[i], dp[i / 3] + 1)\n```\n\n### 예시 코드\n\n```java\nint[] dp = new int[n + 1];\nfor (int i = 2; i <= n; i++) {\n    dp[i] = dp[i - 1] + 1;\n    if (i % 2 == 0) dp[i] = Math.min(dp[i], dp[i / 2] + 1);\n    if (i % 3 == 0) dp[i] = Math.min(dp[i], dp[i / 3] + 1);\n}\n```\n\n### 복잡도\n\n1부터 N까지 한 번씩 계산하므로 시간 복잡도는 `O(N)`입니다. `dp` 배열을 사용하므로 공간 복잡도는 `O(N)`입니다.",
+  "timeLimitMs": 1000,
+  "memoryLimitMb": 128,
+  "difficulty": "NORMAL",
+  "categories": [
+    "동적 계획법"
+  ],
+  "examples": [
+    {
+      "input": "10\n",
+      "expectedOutput": "3\n",
+      "description": "10에서 1을 빼 9를 만들고, 9를 3으로 나눈 뒤 다시 3으로 나누면 1이 됩니다."
+    },
+    {
+      "input": "6\n",
+      "expectedOutput": "2\n",
+      "description": null
+    },
+    {
+      "input": "28\n",
+      "expectedOutput": "4\n",
+      "description": "28에서 1을 빼 27을 만들면, 이후 3으로 세 번 나누어 1을 만들 수 있습니다."
+    }
+  ],
+  "testCases": [
+    {
+      "input": "1\n",
+      "expectedOutput": "0\n"
+    },
+    {
+      "input": "2\n",
+      "expectedOutput": "1\n"
+    },
+    {
+      "input": "3\n",
+      "expectedOutput": "1\n"
+    },
+    {
+      "input": "4\n",
+      "expectedOutput": "2\n"
+    },
+    {
+      "input": "5\n",
+      "expectedOutput": "3\n"
+    },
+    {
+      "input": "6\n",
+      "expectedOutput": "2\n"
+    },
+    {
+      "input": "10\n",
+      "expectedOutput": "3\n"
+    },
+    {
+      "input": "27\n",
+      "expectedOutput": "3\n"
+    },
+    {
+      "input": "28\n",
+      "expectedOutput": "4\n"
+    },
+    {
+      "input": "100\n",
+      "expectedOutput": "7\n"
+    },
+    {
+      "input": "999\n",
+      "expectedOutput": "8\n"
+    },
+    {
+      "input": "1000000\n",
+      "expectedOutput": "19\n"
+    }
+  ]
+}
