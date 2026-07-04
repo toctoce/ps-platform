@@ -8,11 +8,13 @@ function normalizeText(value) {
 }
 
 function shouldRenderMath(value) {
-  if (/[가-힣]/.test(value)) {
-    return false;
-  }
-
   return /(?:<=|>=|!=|[<>=])/.test(value) || /[A-Za-z]_[A-Za-z0-9]+/.test(value);
+}
+
+function escapeText(value) {
+  return value
+    .replace(/\\/g, '\\textbackslash{}')
+    .replace(/[{}]/g, (match) => `\\${match}`);
 }
 
 function toLatex(value) {
@@ -21,7 +23,8 @@ function toLatex(value) {
     .replace(/<=/g, '\\le ')
     .replace(/>=/g, '\\ge ')
     .replace(/!=/g, '\\ne ')
-    .replace(/\*/g, '\\times ');
+    .replace(/\*/g, '\\times ')
+    .replace(/[가-힣][가-힣\s]*/g, (match) => `\\text{${escapeText(match.trimEnd())}}`);
 }
 
 export function ConstraintMath({ value }) {
