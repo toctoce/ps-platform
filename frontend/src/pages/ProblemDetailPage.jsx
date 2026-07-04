@@ -14,7 +14,7 @@ import {
   LANGUAGE_TEMPLATES,
   normalizeTemplateSource,
 } from '../editor/config.js';
-import { difficultyLabel, problemCategoryNames, problemInputRange } from '../problem/problemUtils.js';
+import { difficultyClassName, difficultyLabel, problemCategoryNames, problemInputRangeItems } from '../problem/problemUtils.js';
 import { PROBLEM_REPORT_TYPES, problemReportTypeLabel } from '../problem/reportUtils.js';
 import {
   buildInitialTestRunResults,
@@ -739,14 +739,11 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
             {activeProblemTab === 'problem' && problem ? (
               <article className="problem-document">
                 <header className="problem-title-block">
-                  <h1>{problem.id}. {problem.title}</h1>
-                  <div className="problem-meta">
-                    <span>{difficultyLabel(problem.difficulty)}</span>
-                    <span>{problemCategoryNames(problem).join(', ')}</span>
-                  </div>
-                  <div className="problem-resource-limits">
-                    <span>시간 제한 {problem.timeLimitMs}ms</span>
-                    <span>메모리 제한 {problem.memoryLimitMb}MB</span>
+                  <div className="problem-title-line">
+                    <h1>{problem.id}. {problem.title}</h1>
+                    <span className={difficultyClassName(problem.difficulty)}>
+                      {difficultyLabel(problem.difficulty)}
+                    </span>
                   </div>
                 </header>
 
@@ -761,7 +758,11 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
                   </div>
                   <div className="problem-box-part">
                     <h2>제한</h2>
-                    <p>{problemInputRange(problem)}</p>
+                    <ul className="limit-list">
+                      {problemInputRangeItems(problem).map((item, index) => (
+                        <li key={`${item}-${index}`}>{item}</li>
+                      ))}
+                    </ul>
                   </div>
                 </section>
 
@@ -800,6 +801,21 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
                     </div>
                   )}
                 </section>
+
+                <footer className="problem-footer-meta">
+                  <div className="problem-resource-limits">
+                    <span>시간 제한 {problem.timeLimitMs}ms</span>
+                    <span>메모리 제한 {problem.memoryLimitMb}MB</span>
+                  </div>
+                  <details className="problem-category-details">
+                    <summary>카테고리</summary>
+                    <div className="category-chip-list">
+                      {problemCategoryNames(problem).map((category) => (
+                        <span className="category-chip" key={category}>{category}</span>
+                      ))}
+                    </div>
+                  </details>
+                </footer>
               </article>
             ) : activeProblemTab === 'submissions' ? (
               <section className="submission-tab">

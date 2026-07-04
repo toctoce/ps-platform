@@ -35,6 +35,11 @@ export function difficultyLabel(value) {
   return DIFFICULTY_OPTIONS.find((item) => item.value === value)?.label ?? '보통';
 }
 
+export function difficultyClassName(value) {
+  const normalized = DIFFICULTY_OPTIONS.some((item) => item.value === value) ? value : 'NORMAL';
+  return `difficulty-chip difficulty-chip--${normalized.toLowerCase().replace('_', '-')}`;
+}
+
 export function problemCategoryNames(problem) {
   if (Array.isArray(problem?.categories)) {
     const names = problem.categories
@@ -61,6 +66,13 @@ export function problemInputRange(problem) {
     ?? problem?.inputConstraints
     ?? problem?.constraintDescription
     ?? '등록된 입력 범위가 없습니다.';
+}
+
+export function problemInputRangeItems(problem) {
+  return problemInputRange(problem)
+    .split(/\r?\n/)
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 export function buildCategoryGroups(problems) {

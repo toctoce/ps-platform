@@ -1349,6 +1349,30 @@ textarea:focus {
   white-space: nowrap;
 }
 
+.difficulty-chip--easy {
+  background: #e4efdc;
+  border-color: #c8dab8;
+  color: #3f5933;
+}
+
+.difficulty-chip--normal {
+  background: #f2e5bd;
+  border-color: #e0c879;
+  color: #72551c;
+}
+
+.difficulty-chip--hard {
+  background: #f2d1bf;
+  border-color: #dc9a72;
+  color: #8a3d1e;
+}
+
+.difficulty-chip--very-hard {
+  background: #3f1216;
+  border-color: #6f222a;
+  color: #fff1ee;
+}
+
 .problem-row strong {
   color: var(--text-main);
   font-size: 15px;
@@ -1463,9 +1487,16 @@ textarea:focus {
 
 .problem-title-block {
   display: grid;
+  gap: 12px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #ded6c6;
+}
+
+.problem-title-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   gap: 10px;
-  padding-bottom: 8px;
-  border-bottom: 0;
 }
 
 .problem-title-block h1 {
@@ -1476,33 +1507,13 @@ textarea:focus {
   overflow-wrap: anywhere;
 }
 
-.problem-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.problem-meta span {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 0 10px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
-  background: var(--ivory-soft);
-  color: var(--text-sub);
-  font-size: 12px;
-  font-weight: 800;
-}
-
 .problem-resource-limits {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
-  margin-top: 2px;
-  color: var(--text-main);
-  font-size: 13px;
-  font-weight: 850;
+  gap: 12px;
+  color: #777065;
+  font-size: 12px;
+  font-weight: 400;
 }
 
 .problem-resource-limits span {
@@ -1555,11 +1566,44 @@ textarea:focus {
 
 .limit-list {
   display: grid;
-  gap: 6px;
+  gap: 7px;
   margin: 0;
-  padding-left: 18px;
+  padding-left: 20px;
   color: #30382f;
   line-height: 1.6;
+}
+
+.limit-list li {
+  padding-left: 2px;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 13px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.problem-footer-meta {
+  display: grid;
+  gap: 10px;
+  padding-top: 8px;
+  color: #777065;
+  font-size: 12px;
+}
+
+.problem-category-details {
+  display: grid;
+  gap: 8px;
+}
+
+.problem-category-details summary {
+  width: fit-content;
+  color: #777065;
+  font-size: 12px;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.problem-category-details .category-chip-list {
+  margin-top: 8px;
 }
 
 .example-list {
