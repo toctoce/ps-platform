@@ -91,9 +91,6 @@ export function HomePage({ navigate, setMessage }) {
       <section className="landing-section">
         <div className="section-heading">
           <h2>카테고리별로 풀기</h2>
-          <button className="text-button" type="button" onClick={() => navigate('/categories')}>
-            전체 보기
-          </button>
         </div>
         <div className="landing-category-grid">
           {categoryRows.length === 0 ? (
