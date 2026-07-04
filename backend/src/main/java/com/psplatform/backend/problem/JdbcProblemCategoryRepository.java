@@ -68,6 +68,24 @@ public class JdbcProblemCategoryRepository implements ProblemCategoryRepository 
 	}
 
 	@Override
+	public List<ProblemCategorySummary> findAllWithProblemCount() {
+		return jdbcTemplate.query(
+			"""
+			SELECT pc.id, pc.name, COUNT(pcl.problem_id) AS problem_count
+			FROM problem_categories pc
+			LEFT JOIN problem_category_links pcl ON pcl.category_id = pc.id
+			GROUP BY pc.id, pc.name
+			ORDER BY pc.name ASC
+			""",
+			(rs, rowNum) -> new ProblemCategorySummary(
+				rs.getLong("id"),
+				rs.getString("name"),
+				rs.getLong("problem_count")
+			)
+		);
+	}
+
+	@Override
 	public Map<Long, List<ProblemCategory>> findByProblemIds(List<Long> problemIds) {
 		if (problemIds == null || problemIds.isEmpty()) {
 			return Map.of();

@@ -2,6 +2,7 @@ package com.psplatform.backend.problem;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -203,6 +204,38 @@ class ProblemControllerTest {
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$[0].title").value("A+B"))
 			.andExpect(jsonPath("$[0].categories[0].name").value("구현"));
+	}
+
+	@Test
+	void findCategories() throws Exception {
+		problemService.create(new ProblemCreateRequest(
+			"A+B",
+			"두 수를 더하는 문제",
+			"정수 A와 B가 주어진다.",
+			"A+B를 출력한다.",
+			1000,
+			128,
+			ProblemDifficulty.NORMAL,
+			List.of("수학", "구현"),
+			List.of()
+		));
+		problemService.create(new ProblemCreateRequest(
+			"문자열 출력",
+			"문자열을 그대로 출력하는 문제",
+			"문자열이 주어진다.",
+			"문자열을 출력한다.",
+			1000,
+			128,
+			ProblemDifficulty.EASY,
+			List.of("문자열", "구현"),
+			List.of()
+		));
+
+		mockMvc.perform(get("/api/categories"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$[?(@.name == '구현')].problemCount").value(hasItem(2)))
+			.andExpect(jsonPath("$[?(@.name == '수학')].problemCount").value(hasItem(1)))
+			.andExpect(jsonPath("$[?(@.name == '문자열')].problemCount").value(hasItem(1)));
 	}
 
 	@Test

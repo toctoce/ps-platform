@@ -1,23 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
 import { List, Play } from 'lucide-react';
 import { request } from '../api/client.js';
-import {
-  buildCategoryGroups,
-} from '../problem/problemUtils.js';
 
 export function HomePage({ navigate, setMessage }) {
   const [problems, setProblems] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [todaySubmissionCount, setTodaySubmissionCount] = useState(null);
   const [todaySolverCount, setTodaySolverCount] = useState(null);
   const [busy, setBusy] = useState(false);
 
-  const groups = useMemo(() => buildCategoryGroups(problems), [problems]);
   const categoryRows = useMemo(() => (
-    Array.from(groups.entries())
-      .map(([categoryName, list]) => ({ categoryName, count: list.length }))
+    categories
+      .map((category) => ({
+        categoryName: category.name,
+        count: category.problemCount ?? 0,
+      }))
       .sort((a, b) => b.count - a.count || a.categoryName.localeCompare(b.categoryName))
       .slice(0, 6)
-  ), [groups]);
+  ), [categories]);
   const statItems = [
     {
       label: '총 문제 수',
@@ -36,11 +36,13 @@ export function HomePage({ navigate, setMessage }) {
   async function loadProblems() {
     setBusy(true);
     try {
-      const [problemData, submissionStats] = await Promise.all([
+      const [problemData, submissionStats, categoryData] = await Promise.all([
         request('/api/problems'),
         request('/api/submissions/stats/today'),
+        request('/api/categories'),
       ]);
       setProblems(Array.isArray(problemData) ? problemData : []);
+      setCategories(Array.isArray(categoryData) ? categoryData : []);
       setTodaySubmissionCount(submissionStats?.todaySubmissionCount ?? 0);
       setTodaySolverCount(submissionStats?.todaySolverCount ?? 0);
     } catch (error) {

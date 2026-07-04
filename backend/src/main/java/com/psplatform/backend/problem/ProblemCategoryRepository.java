@@ -9,6 +9,8 @@ public interface ProblemCategoryRepository {
 
 	List<ProblemCategory> findAll();
 
+	List<ProblemCategorySummary> findAllWithProblemCount();
+
 	Map<Long, List<ProblemCategory>> findByProblemIds(List<Long> problemIds);
 
 	void deleteAll();

@@ -2,22 +2,21 @@ import { useEffect, useMemo, useState } from 'react';
 import { FileText } from 'lucide-react';
 import { request } from '../api/client.js';
 import { ProblemRow } from '../components/ProblemRow.jsx';
-import { buildCategoryGroups } from '../problem/problemUtils.js';
 
 export function CategoryPage({ category, navigate, setMessage }) {
   const [problems, setProblems] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [busy, setBusy] = useState(false);
 
-  const groups = useMemo(() => buildCategoryGroups(problems), [problems]);
   const categoryRows = useMemo(() => {
     if (!category) {
-      return Array.from(groups.entries())
-        .map(([categoryName, list]) => ({ categoryName, count: list.length }))
+      return categories
+        .map((item) => ({ categoryName: item.name, count: item.problemCount ?? 0 }))
         .sort((a, b) => a.categoryName.localeCompare(b.categoryName));
     }
 
-    return [{ categoryName: category, count: (groups.get(category) ?? []).length }];
-  }, [category, groups]);
+    return [{ categoryName: category, count: problems.length }];
+  }, [categories, category, problems.length]);
 
   const selectedProblems = useMemo(() => {
     return category ? [...problems] : [];
@@ -26,11 +25,15 @@ export function CategoryPage({ category, navigate, setMessage }) {
   async function loadProblems() {
     setBusy(true);
     try {
-      const endpoint = category
-        ? `/api/problems?category=${encodeURIComponent(category)}`
-        : '/api/problems';
-      const data = await request(endpoint);
-      setProblems(data);
+      if (category) {
+        const data = await request(`/api/problems?category=${encodeURIComponent(category)}`);
+        setProblems(Array.isArray(data) ? data : []);
+        setCategories([]);
+      } else {
+        const data = await request('/api/categories');
+        setCategories(Array.isArray(data) ? data : []);
+        setProblems([]);
+      }
     } catch (error) {
       setMessage(error.message);
     } finally {

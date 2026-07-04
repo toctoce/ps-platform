@@ -55,6 +55,10 @@ public class ProblemService {
 		return hydrateCategories(problemRepository.findRandom(safeCount));
 	}
 
+	public List<ProblemCategorySummary> findCategories() {
+		return problemCategoryRepository.findAllWithProblemCount();
+	}
+
 	public Problem findById(long id) {
 		Problem problem = problemRepository.findById(id)
 			.orElseThrow(() -> new ProblemNotFoundException(id));
