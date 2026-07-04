@@ -1,6 +1,6 @@
 import { StrictMode, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Code2, LogIn, LogOut, MessageCircle, Settings, ShieldCheck, UserPlus, UserRound, X } from 'lucide-react';
+import { LogIn, LogOut, MessageCircle, Settings, ShieldCheck, UserPlus, UserRound, X } from 'lucide-react';
 import './styles.css';
 import { configureAuthSession, request } from './api/client.js';
 import { clearStoredAuth, getStoredAuth, saveStoredAuth } from './auth/storage.js';
@@ -21,6 +21,8 @@ const SUPPORT_INQUIRY_TYPES = [
   { value: 'PROBLEM_OR_JUDGE', label: '문제/채점' },
   { value: 'OTHER', label: '기타' },
 ];
+
+const SITE_LOGO_SRC = '/assets/로고-2d배경없음2.png';
 
 function App() {
   const [route, setRoute] = useState(parseRoute);
@@ -225,7 +227,7 @@ function App() {
       <header className="site-header">
         <button className="site-logo" type="button" onClick={() => navigate('/')}>
           <span className="site-logo-mark">
-            <Code2 size={18} />
+            <img src={SITE_LOGO_SRC} alt="" />
           </span>
           <strong>빵구리즘</strong>
         </button>
