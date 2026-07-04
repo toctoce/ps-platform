@@ -173,6 +173,27 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
     return submissionNickname(submission) === currentUsername;
   }
 
+  function hasAcceptedMySubmission() {
+    return submissions.some((submission) => (
+      isMySubmission(submission)
+      && submission.status === 'JUDGED'
+      && submission.verdict === 'ACCEPTED'
+    ));
+  }
+
+  function openSolutionTab() {
+    if (activeProblemTab === 'solution') {
+      return;
+    }
+    if (!hasAcceptedMySubmission()) {
+      const confirmed = window.confirm('아직 이 문제의 정답을 맞추지 못했습니다. 그래도 풀이를 보시겠습니까?');
+      if (!confirmed) {
+        return;
+      }
+    }
+    setActiveProblemTab('solution');
+  }
+
   function handleEditorBeforeMount(monaco) {
     monaco.editor.defineTheme('ps-dark', {
       base: 'vs-dark',
@@ -682,7 +703,7 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
               <button
                 className={activeProblemTab === 'solution' ? 'is-active' : ''}
                 type="button"
-                onClick={() => setActiveProblemTab('solution')}
+                onClick={openSolutionTab}
               >
                 풀이
               </button>
