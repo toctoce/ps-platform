@@ -16,7 +16,6 @@ export function HomePage({ navigate, setMessage }) {
         count: category.problemCount ?? 0,
       }))
       .sort((a, b) => b.count - a.count || a.categoryName.localeCompare(b.categoryName))
-      .slice(0, 6)
   ), [categories]);
   const statItems = [
     {

@@ -514,17 +514,18 @@ button:disabled {
 
 .landing-category-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(148px, 176px));
   gap: 10px;
+  justify-content: start;
 }
 
 .landing-category-card {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  min-height: 64px;
-  padding: 14px 16px;
+  gap: 8px;
+  min-height: 52px;
+  padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.66);
@@ -2492,7 +2493,6 @@ dt {
     min-width: 0;
   }
 
-  .landing-category-grid,
   .workspace,
   .solve-layout {
     grid-template-columns: 1fr;
