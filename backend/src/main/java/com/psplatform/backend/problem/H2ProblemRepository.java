@@ -135,7 +135,7 @@ public class H2ProblemRepository implements ProblemRepository {
 			SELECT id, title, description, solution, input_description, output_description,
 			       time_limit_ms, memory_limit_mb, difficulty, created_at
 			FROM problems
-			ORDER BY RAND()
+			ORDER BY RANDOM()
 			LIMIT ?
 			""",
 			rowMapper,
