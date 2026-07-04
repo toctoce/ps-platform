@@ -4,7 +4,7 @@
   "inputDescription": "입력 형식을 설명합니다.",
   "inputConstraints": "입력 값의 범위와 제한 조건을 작성합니다.",
   "outputDescription": "출력 형식을 설명합니다.",
-  "solution": "## 풀이\n\nMarkdown 형식으로 풀이를 작성합니다.",
+  "solution": "문제를 풀기 위해 어떤 목적의 알고리즘이나 아이디어를 적용하는지 설명합니다.\n\n### 복잡도\n\n시간 복잡도와 공간 복잡도를 설명합니다.\n\n### 핵심 구현\n\n필요하다면 코드블럭이나 핵심 코드 일부를 작성합니다.",
   "timeLimitMs": 1000,
   "memoryLimitMb": 128,
   "difficulty": "EASY",
@@ -15,12 +15,12 @@
     {
       "input": "1 2\n",
       "expectedOutput": "3\n",
-      "description": "1과 2를 더하면 3입니다."
+      "description": null
     },
     {
       "input": "10 20\n",
       "expectedOutput": "30\n",
-      "description": "10과 20을 더하면 30입니다."
+      "description": null
     }
   ],
   "testCases": [

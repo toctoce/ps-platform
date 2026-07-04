@@ -147,7 +147,7 @@ function validateProblem(problem, templateFields, allowedCategories) {
   ].forEach((field) => validateTextField(errors, problem, field));
 
   if (typeof problem.solution === 'string' && !/(^|\n)#{1,6}\s+\S/.test(problem.solution)) {
-    errors.push("'solution'은 Markdown 제목을 포함해야 합니다. 예: '## 풀이'");
+    errors.push("'solution'은 Markdown 제목을 포함해야 합니다.");
   }
 
   validatePositiveInteger(errors, problem, 'timeLimitMs');
