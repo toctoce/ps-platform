@@ -13,12 +13,40 @@ function safeJsonRequest(response) {
 
 class ApiError extends Error {
   constructor(response, body) {
-    const message = body && typeof body === 'object' && 'message' in body ? body.message : body;
-    super(`${response.status} ${response.statusText}${message ? `: ${message}` : ''}`);
+    const message = userMessageForError(response, body);
+    super(message);
     this.name = 'ApiError';
     this.status = response.status;
+    this.statusText = response.statusText;
     this.body = body;
+    this.userMessage = message;
+    this.developerMessage = `${response.status} ${response.statusText}${message ? `: ${message}` : ''}`;
   }
+}
+
+function userMessageForError(response, body) {
+  if (body && typeof body === 'object' && typeof body.message === 'string' && body.message.trim()) {
+    return body.message.trim();
+  }
+  if (typeof body === 'string' && body.trim() && !body.trim().startsWith('<')) {
+    return body.trim();
+  }
+  if (response.status === 401) {
+    return '로그인이 필요합니다.';
+  }
+  if (response.status === 403) {
+    return '접근 권한이 없습니다.';
+  }
+  if (response.status === 404) {
+    return '요청한 정보를 찾을 수 없습니다.';
+  }
+  if (response.status === 429) {
+    return '요청이 너무 많습니다. 잠시 후 다시 시도해주세요.';
+  }
+  if (response.status >= 500) {
+    return '서버에서 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+  }
+  return '요청을 처리하지 못했습니다.';
 }
 
 let authSession = {

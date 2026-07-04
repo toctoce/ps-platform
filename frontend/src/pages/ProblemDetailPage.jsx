@@ -510,7 +510,7 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
     } catch (error) {
       stopRunPolling(jobId);
       setTestRunBusy(false);
-      setMessage(`실행 결과 조회 실패 (${jobId}): ${error.message}`);
+      setMessage(error.message);
     }
   }
 
@@ -561,7 +561,7 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
       }
     } catch (error) {
       stopPolling(submissionId);
-      setMessage(`채점 상태 조회 실패 (${submissionId}): ${error.message}`);
+      setMessage(error.message);
     }
   }
 

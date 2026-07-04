@@ -40,7 +40,7 @@ export function LoginPage({ onLoginSuccess, setMessage, isAuthenticated, navigat
       }
       onLoginSuccess(auth);
     } catch (error) {
-      if (error.message.includes('401') || error.message.includes('Invalid email or password')) {
+      if (error.status === 401 || error.message.includes('Invalid email or password')) {
         const message = '아이디 또는 비밀번호가 올바르지 않습니다.';
         setLoginError(message);
         setMessage(message);

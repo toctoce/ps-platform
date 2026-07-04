@@ -152,7 +152,7 @@ function App() {
       applyAuth({ ...(getStoredAuth() ?? auth), user });
     } catch (error) {
       clearAuth();
-      setMessage(`자동 로그인 세션이 만료되어 로그아웃됩니다. (${error.message})`);
+      setMessage('자동 로그인 세션이 만료되어 로그아웃됩니다.');
     }
   }
 
@@ -167,7 +167,7 @@ function App() {
       }
       setMessage('로그아웃했습니다.');
     } catch (error) {
-      setMessage(`로그아웃 중 오류가 발생해 로그인 정보를 초기화합니다. (${error.message})`);
+      setMessage('로그아웃 중 오류가 발생해 로그인 정보를 초기화합니다.');
     } finally {
       clearAuth();
       setUserMenuOpen(false);
