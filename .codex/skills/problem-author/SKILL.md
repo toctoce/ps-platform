@@ -1,0 +1,84 @@
+---
+name: problem-author
+description: Generate PS Platform algorithm problem JSON. Use when asked to create, draft, or author coding-test/problem-solving problem data for this repository, especially JSON matching harness/problem-template.json with Korean statements, examples, test cases, solution markdown, difficulty, and categories.
+---
+
+# Problem Author
+
+Generate one PS Platform problem as JSON. Do not save files, call APIs, insert DB rows, or modify the repository unless the user separately asks for that.
+
+## Required References
+
+Before generating, read these project files from the repository root:
+
+- `harness/problem-template.json`
+- `docs/problem-categories.md`
+
+Follow the template field names exactly. Choose categories only from `docs/problem-categories.md`.
+
+## Output Contract
+
+- Output exactly one JSON object and nothing else.
+- Do not wrap the JSON in Markdown code fences.
+- Do not add explanatory text before or after the JSON.
+- Do not add fields that are not in `harness/problem-template.json`.
+- Use valid JSON syntax: double-quoted strings, no trailing commas, no comments.
+- Write all user-facing content in Korean.
+
+## Problem Source Policy
+
+- Base the problem on a famous, widely solved algorithm problem pattern.
+- Do not invent obscure or artificial tasks when a standard well-known pattern fits.
+- Do not copy proprietary problem statements, examples, or explanations verbatim from external sites.
+- Rewrite the statement, examples, and solution in original Korean text.
+- Keep the problem deterministic and objectively judgeable.
+- Do not create ambiguous tasks or tasks with multiple acceptable output formats unless the exact judging rule is clearly stated.
+
+## Field Rules
+
+- `title`: concise Korean title.
+- `description`: explain the task clearly without mentioning implementation strategy.
+- `inputDescription`: describe the input format.
+- `inputConstraints`: write input ranges and conditions as formulas or bullet-like mathematical text. Include bounds, size limits, uniqueness conditions, graph constraints, indexing rules, and other input validity assumptions here.
+- `outputDescription`: describe the exact output format.
+- `solution`: Markdown string. Include approach, correctness idea, and complexity when useful.
+- `timeLimitMs`: positive integer, usually `1000` or `2000`.
+- `memoryLimitMb`: positive integer, usually `128`, `256`, or `512`.
+- `difficulty`: one of `EASY`, `NORMAL`, `HARD`, `VERY_HARD`.
+- `categories`: non-empty array using only allowed categories from `docs/problem-categories.md`.
+- `examples`: 2 to 4 items.
+- `testCases`: at least 10 items.
+
+## Example Rules
+
+- Provide at least 2 examples.
+- Use up to 4 examples only when the problem has meaningfully different ordinary cases.
+- Do not put edge cases in `examples`; reserve edge cases for `testCases`.
+- Each example must include `input`, `expectedOutput`, and `description`.
+- `description` explains how the input produces the output.
+- If the explanation would be too trivial, set `description` to `null`.
+- `expectedOutput` must never be `null`.
+
+## Test Case Rules
+
+- Provide at least 10 test cases.
+- Include small boundary values.
+- Include large boundary values near the input limit.
+- Include edge cases such as empty-like minimum sizes, duplicates, sorted/reversed data, disconnected graphs, single-node trees, all-equal values, negative values, or overflow-risk values when relevant.
+- Ensure every `expectedOutput` is manually computed and non-null.
+- Make test cases diverse enough to catch common wrong approaches.
+- Keep test inputs valid according to `inputConstraints`.
+
+## Quality Checklist
+
+Before final output, verify mentally:
+
+- The JSON parses.
+- All template fields are present.
+- Category names are allowed.
+- Difficulty is allowed.
+- Examples are ordinary, not edge cases.
+- Test cases include edge and boundary cases.
+- Every expected output is correct.
+- The solution matches the generated problem and test cases.
+- No DB/API/file-write action is attempted.
