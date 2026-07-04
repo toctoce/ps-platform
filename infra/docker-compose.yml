@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: ps-platform-postgres
+    environment:
+      POSTGRES_DB: ps_platform
+      POSTGRES_USER: ps_user
+      POSTGRES_PASSWORD: ps_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - ps-postgres-data:/var/lib/postgresql/data
+
+volumes:
+  ps-postgres-data:
