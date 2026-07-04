@@ -1581,10 +1581,18 @@ textarea:focus {
 
 .limit-list li {
   padding-left: 2px;
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 13px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.constraint-text {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+.constraint-math .katex {
+  color: inherit;
+  font-size: 1em;
 }
 
 .problem-footer-meta {

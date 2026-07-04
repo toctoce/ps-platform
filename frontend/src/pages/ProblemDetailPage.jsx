@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import { BookOpen, ChevronDown, ChevronUp, Code2, Moon, Play, Plus, RefreshCw, Send, Siren, Sun, X } from 'lucide-react';
 import { request } from '../api/client.js';
+import { ConstraintMath } from '../components/ConstraintMath.jsx';
 import { MarkdownContent } from '../components/MarkdownContent.jsx';
 import {
   editorFileName,
@@ -756,7 +757,9 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
                     <h2>제한</h2>
                     <ul className="limit-list">
                       {problemInputRangeItems(problem).map((item, index) => (
-                        <li key={`${item}-${index}`}>{item}</li>
+                        <li key={`${item}-${index}`}>
+                          <ConstraintMath value={item} />
+                        </li>
                       ))}
                     </ul>
                   </div>
