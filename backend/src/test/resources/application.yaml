@@ -1,0 +1,33 @@
+spring:
+  application:
+    name: backend
+  datasource:
+    url: jdbc:h2:mem:ps-platform;MODE=PostgreSQL;DATABASE_TO_UPPER=false
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  mail:
+    host: localhost
+    port: 587
+    username:
+    password:
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+  sql:
+    init:
+      mode: always
+
+app:
+  auth:
+    jwt:
+      secret: backend-test-secret-key-for-test-context-only
+      access-token-ttl-seconds: 900
+      refresh-token-ttl-seconds: 1209600
+  support:
+    email:
+      to-email: test-support@example.com
+      from-email:

@@ -9,11 +9,6 @@ spring:
         - src/main/resources
       poll-interval: 1s
       quiet-period: 400ms
-  datasource:
-    url: jdbc:h2:mem:ps-platform;MODE=PostgreSQL;DATABASE_TO_UPPER=false
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
   mail:
     host: ${SMTP_HOST:localhost}
     port: ${SMTP_PORT:587}
@@ -25,11 +20,7 @@ spring:
           auth: ${SMTP_AUTH:true}
           starttls:
             enable: ${SMTP_STARTTLS_ENABLE:true}
-  sql:
-    init:
-      mode: always
-      data-locations:
-        - optional:file:./seed-data.sql
+
 
 app:
   auth:
