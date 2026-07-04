@@ -56,7 +56,7 @@ Do not insert rows into the database.
 - `inputDescription`: describe the input format.
 - `inputConstraints`: write input ranges and conditions as formulas or bullet-like mathematical text. Include bounds, size limits, uniqueness conditions, graph constraints, indexing rules, and other input validity assumptions here.
 - `outputDescription`: describe the exact output format.
-- `solution`: Markdown string. Explain what algorithm or idea is applied for what purpose, and connect it to the time complexity. Use readable headings such as approach, complexity, and implementation notes. Use `##`, `###`, code blocks, and backticks when they improve readability. Include a full code example only when necessary; otherwise include the essential snippet or pseudocode needed to make the approach clear.
+- `solution`: Markdown string. Explain what algorithm or idea is applied for what purpose, and connect it to the time complexity. Use readable headings such as approach, complexity, and implementation notes. Use `##`, `###`, code blocks, and backticks when they improve readability. Include a concise example code snippet or reference implementation when it helps the reader understand the core algorithm.
 - `timeLimitMs`: positive integer, usually `1000` or `2000`.
 - `memoryLimitMb`: positive integer, usually `128`, `256`, or `512`.
 - `difficulty`: one of `EASY`, `NORMAL`, `HARD`, `VERY_HARD`.
