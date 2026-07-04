@@ -16,6 +16,11 @@
       "input": "1 2\n",
       "expectedOutput": "3\n",
       "description": "1과 2를 더하면 3입니다."
+    },
+    {
+      "input": "10 20\n",
+      "expectedOutput": "30\n",
+      "description": "10과 20을 더하면 30입니다."
     }
   ],
   "testCases": [
@@ -30,6 +35,34 @@
     {
       "input": "100 200\n",
       "expectedOutput": "300\n"
+    },
+    {
+      "input": "1 1\n",
+      "expectedOutput": "2\n"
+    },
+    {
+      "input": "10000 10000\n",
+      "expectedOutput": "20000\n"
+    },
+    {
+      "input": "1 10000\n",
+      "expectedOutput": "10001\n"
+    },
+    {
+      "input": "9999 1\n",
+      "expectedOutput": "10000\n"
+    },
+    {
+      "input": "1234 5678\n",
+      "expectedOutput": "6912\n"
+    },
+    {
+      "input": "5000 5000\n",
+      "expectedOutput": "10000\n"
+    },
+    {
+      "input": "42 58\n",
+      "expectedOutput": "100\n"
     }
   ]
 }
