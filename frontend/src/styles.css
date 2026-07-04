@@ -378,6 +378,29 @@ button:disabled {
   padding: 24px 0;
 }
 
+.open-page {
+  display: grid;
+  align-content: start;
+  gap: 22px;
+  width: min(1120px, calc(100vw - 48px));
+  margin: 28px auto 44px;
+}
+
+.open-page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 42px;
+}
+
+.open-page-header h1 {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 26px;
+  line-height: 1.15;
+}
+
 .landing-page {
   flex: 1 1 auto;
   display: grid;
@@ -1208,22 +1231,34 @@ textarea:focus {
   gap: 8px;
 }
 
+.airy-problem-list {
+  gap: 10px;
+}
+
+.airy-problem-list .problem-row {
+  min-height: 70px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
 .category-list {
   display: grid;
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 10px;
 }
 
 .category-panel {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
   width: 100%;
-  min-height: 56px;
-  padding: 12px 14px;
+  min-height: 92px;
+  padding: 14px;
   border: 1px solid var(--line-soft);
   border-radius: 8px;
-  background: #ffffff;
+  background: rgba(255, 255, 255, 0.68);
   color: var(--text-main);
   text-align: left;
 }
@@ -1236,13 +1271,13 @@ textarea:focus {
 .category-panel span {
   min-width: 0;
   overflow-wrap: anywhere;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 750;
 }
 
 .category-panel strong {
   color: var(--text-sub);
-  font-size: 13px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -2502,6 +2537,11 @@ dt {
     max-width: 960px;
   }
 
+  .open-page {
+    width: min(100% - 32px, 960px);
+    margin-top: 20px;
+  }
+
   .solve-layout {
     height: 100%;
     min-height: 0;
@@ -2531,6 +2571,19 @@ dt {
 @media (max-width: 720px) {
   .workspace {
     grid-template-columns: 1fr;
+  }
+
+  .open-page-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .open-page-header h1 {
+    font-size: 23px;
+  }
+
+  .category-list {
+    grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
   }
 
   .field-row,

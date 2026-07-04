@@ -25,28 +25,24 @@ export function RandomProblemPage({ navigate, setMessage }) {
   }, []);
 
   return (
-    <section className="home-page">
-      <section className="panel">
-        <div className="panel-header split">
-          <span className="heading-inline">
-            <RefreshCw size={18} />
-            <h2>랜덤 5문제</h2>
-          </span>
-          <button className="ghost-button with-text" type="button" onClick={loadProblems}>
-            새로 뽑기
-          </button>
-        </div>
+    <section className="open-page random-page">
+      <header className="open-page-header">
+        <h1>랜덤 5문제</h1>
+        <button className="ghost-button with-text" type="button" onClick={loadProblems}>
+          <RefreshCw size={16} />
+          새로 뽑기
+        </button>
+      </header>
 
-        <div className="problem-list">
-          {busy ? <p className="empty">불러오는 중...</p> : null}
-          {!busy && randomProblems.length === 0 ? (
-            <p className="empty">문제가 없습니다.</p>
-          ) : null}
-          {!busy ? randomProblems.map((problem) => (
-            <ProblemRow key={problem.id} problem={problem} navigate={navigate} />
-          )) : null}
-        </div>
-      </section>
+      <div className="problem-list airy-problem-list random-problem-list">
+        {busy ? <p className="empty">불러오는 중...</p> : null}
+        {!busy && randomProblems.length === 0 ? (
+          <p className="empty">문제가 없습니다.</p>
+        ) : null}
+        {!busy ? randomProblems.map((problem) => (
+          <ProblemRow key={problem.id} problem={problem} navigate={navigate} />
+        )) : null}
+      </div>
     </section>
   );
 }
