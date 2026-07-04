@@ -1,11 +1,11 @@
 ---
 name: problem-author
-description: Generate PS Platform algorithm problem JSON. Use when asked to create, draft, or author coding-test/problem-solving problem data for this repository, especially JSON matching harness/problem-template.json with Korean statements, examples, test cases, solution markdown, difficulty, and categories.
+description: Generate and optionally draft PS Platform algorithm problem JSON. Use when asked to create, draft, or author coding-test/problem-solving problem data for this repository, especially JSON matching harness/problem-template.json with Korean statements, examples, test cases, solution markdown, difficulty, and categories; when saving drafts, validate them with harness/validate-problem-json.sh.
 ---
 
 # Problem Author
 
-Generate one PS Platform problem as JSON. Do not save files, call APIs, insert DB rows, or modify the repository unless the user separately asks for that.
+Generate one PS Platform problem as JSON. If the user asks to save a draft, save it under `problem-data/drafts` and validate it. Do not move files to `problem-data/approved`, call APIs, run imports, or insert DB rows.
 
 ## Required References
 
@@ -18,12 +18,27 @@ Follow the template field names exactly. Choose categories only from `docs/probl
 
 ## Output Contract
 
-- Output exactly one JSON object and nothing else.
+- If the user asks only for generated content, output exactly one JSON object and nothing else.
 - Do not wrap the JSON in Markdown code fences.
 - Do not add explanatory text before or after the JSON.
 - Do not add fields that are not in `harness/problem-template.json`.
 - Use valid JSON syntax: double-quoted strings, no trailing commas, no comments.
 - Write all user-facing content in Korean.
+
+## Draft Workflow
+
+When the user asks to save the generated problem:
+
+- Save the JSON file under `problem-data/drafts`.
+- Use a lowercase, hyphen-separated filename that identifies the source or pattern, for example `boj-2751-sort-numbers-2.json`.
+- Run `./harness/validate-problem-json.sh <draft-file>` after saving.
+- If validation fails, fix the JSON and run the validation command again.
+- Repeat until the draft passes validation or the issue requires user input.
+
+Do not move draft files to `problem-data/approved`.
+Do not run `harness/import-problem-json.sh`.
+Do not call backend APIs.
+Do not insert rows into the database.
 
 ## Problem Source Policy
 
@@ -81,4 +96,4 @@ Before final output, verify mentally:
 - Test cases include edge and boundary cases.
 - Every expected output is correct.
 - The solution matches the generated problem and test cases.
-- No DB/API/file-write action is attempted.
+- No approved move, DB import, API call, or direct DB write is attempted.
