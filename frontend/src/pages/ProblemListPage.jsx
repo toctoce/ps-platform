@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Search } from 'lucide-react';
 import { request } from '../api/client.js';
+import { ProblemTable } from '../components/ProblemTable.jsx';
 import {
-  difficultyLabel,
   DIFFICULTY_OPTIONS,
   problemCategoryNames,
 } from '../problem/problemUtils.js';
@@ -73,31 +73,11 @@ export function ProblemListPage({ navigate, setMessage }) {
             </div>
           </div>
         </div>
-        <div className="landing-problem-table">
-          <div className="problem-table-head">
-            <span>제목</span>
-            <span>카테고리</span>
-            <span>난이도</span>
-          </div>
-          {visibleProblems.length === 0 ? (
-            <p className="problem-table-empty">{busy ? '불러오는 중...' : '등록된 문제가 없습니다.'}</p>
-          ) : (
-            visibleProblems.map((problem) => (
-              <button
-                className="problem-table-row"
-                type="button"
-                key={problem.id}
-                onClick={() => navigate(`/problems/${problem.id}`)}
-              >
-                <strong>
-                  {problem.id}. {problem.title}
-                </strong>
-                <span>{problemCategoryNames(problem).filter((item) => item !== '미분류').join(', ') || '-'}</span>
-                <span className="difficulty-chip">{difficultyLabel(problem.difficulty)}</span>
-              </button>
-            ))
-          )}
-        </div>
+        <ProblemTable
+          problems={visibleProblems}
+          busy={busy}
+          navigate={navigate}
+        />
       </section>
     </section>
   );

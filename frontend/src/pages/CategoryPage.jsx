@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { request } from '../api/client.js';
-import { ProblemRow } from '../components/ProblemRow.jsx';
+import { ProblemTable } from '../components/ProblemTable.jsx';
 
 export function CategoryPage({ category, navigate, setMessage }) {
   const [problems, setProblems] = useState([]);
@@ -74,19 +74,12 @@ export function CategoryPage({ category, navigate, setMessage }) {
           )}
         </div>
       ) : (
-        <div className="problem-list airy-problem-list">
-          {busy ? <p className="empty">불러오는 중...</p> : null}
-          {!busy && selectedProblems.length === 0 ? (
-            <p className="empty">해당 카테고리에 문제가 없습니다.</p>
-          ) : null}
-          {!busy ? selectedProblems.map((problem) => (
-            <ProblemRow
-              key={problem.id}
-              problem={problem}
-              navigate={navigate}
-            />
-          )) : null}
-        </div>
+        <ProblemTable
+          problems={selectedProblems}
+          busy={busy}
+          emptyMessage="해당 카테고리에 문제가 없습니다."
+          navigate={navigate}
+        />
       )}
     </section>
   );
