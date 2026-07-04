@@ -1,0 +1,68 @@
+{
+  "title": "동전 개수 최소화",
+  "description": "가치가 서로 다른 동전들이 오름차순으로 주어지고, 만들어야 할 금액 K가 주어집니다. 각 동전은 필요한 만큼 사용할 수 있습니다. 큰 동전부터 적절히 사용해 금액 K를 만들 때 필요한 동전 개수의 최솟값을 구하세요.",
+  "inputDescription": "첫째 줄에 동전 종류의 수 N과 목표 금액 K가 주어집니다. 둘째 줄부터 N개의 줄에 걸쳐 동전의 가치가 오름차순으로 하나씩 주어집니다.",
+  "inputConstraints": "1 <= N <= 10\n0 <= K <= 100,000\n1 <= 동전의 가치 <= 100,000\n동전의 가치는 오름차순으로 주어집니다.\n각 동전의 가치는 바로 이전 동전 가치의 배수입니다.\n가치가 1인 동전이 항상 주어집니다.",
+  "outputDescription": "금액 K를 만들기 위해 필요한 동전 개수의 최솟값을 출력합니다.",
+  "solution": "동전 가치가 작은 동전의 배수 관계를 이루므로, 현재 남은 금액에서 가장 큰 동전을 최대한 사용하는 선택이 최적입니다. 큰 동전으로 만들 수 있는 금액을 작은 동전 여러 개로 바꾸면 동전 개수가 줄어들지 않기 때문입니다.\n\n큰 가치의 동전부터 차례대로 보면서 현재 남은 금액에 몇 개 사용할 수 있는지 계산하고, 그만큼 개수를 더한 뒤 나머지 금액만 남기면 됩니다.\n\n### 예시 코드\n\n```java\nint count = 0;\nfor (int i = n - 1; i >= 0; i--) {\n    count += amount / coins[i];\n    amount %= coins[i];\n}\n```\n\n### 복잡도\n\n동전 종류를 한 번씩 확인하므로 시간 복잡도는 `O(N)`입니다. 동전 배열을 제외한 추가 공간은 `O(1)`입니다.",
+  "timeLimitMs": 1000,
+  "memoryLimitMb": 128,
+  "difficulty": "NORMAL",
+  "categories": [
+    "그리디"
+  ],
+  "examples": [
+    {
+      "input": "4 4720\n1\n10\n100\n1000\n",
+      "expectedOutput": "13\n",
+      "description": "1000원 동전 4개, 100원 동전 7개, 10원 동전 2개를 사용하면 총 13개입니다."
+    },
+    {
+      "input": "3 620\n1\n10\n100\n",
+      "expectedOutput": "8\n",
+      "description": null
+    }
+  ],
+  "testCases": [
+    {
+      "input": "3 620\n1\n10\n100\n",
+      "expectedOutput": "8\n"
+    },
+    {
+      "input": "4 4720\n1\n10\n100\n1000\n",
+      "expectedOutput": "13\n"
+    },
+    {
+      "input": "1 7\n1\n",
+      "expectedOutput": "7\n"
+    },
+    {
+      "input": "5 0\n1\n5\n10\n50\n100\n",
+      "expectedOutput": "0\n"
+    },
+    {
+      "input": "5 999\n1\n10\n100\n1000\n10000\n",
+      "expectedOutput": "27\n"
+    },
+    {
+      "input": "5 4200\n1\n5\n10\n100\n1000\n",
+      "expectedOutput": "6\n"
+    },
+    {
+      "input": "6 12345\n1\n5\n10\n50\n100\n500\n",
+      "expectedOutput": "32\n"
+    },
+    {
+      "input": "4 8888\n1\n10\n100\n1000\n",
+      "expectedOutput": "32\n"
+    },
+    {
+      "input": "7 100000\n1\n10\n100\n1000\n10000\n50000\n100000\n",
+      "expectedOutput": "1\n"
+    },
+    {
+      "input": "6 76543\n1\n10\n100\n1000\n10000\n50000\n",
+      "expectedOutput": "21\n"
+    }
+  ]
+}

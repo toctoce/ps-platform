@@ -1,0 +1,74 @@
+{
+  "title": "파일 합치기 최소 비용",
+  "description": "여러 개의 파일이 순서대로 놓여 있습니다. 한 번의 작업으로 인접한 두 파일 묶음을 합칠 수 있고, 이때 비용은 합치는 파일들의 크기 합입니다. 모든 파일을 하나로 합치는 데 필요한 최소 비용을 구하세요.",
+  "inputDescription": "첫째 줄에 파일의 개수 K가 주어집니다. 둘째 줄에 K개 파일의 크기가 순서대로 공백으로 구분되어 주어집니다.",
+  "inputConstraints": "2 <= K <= 500\n1 <= 각 파일의 크기 <= 10,000\n파일은 입력된 순서를 유지한 채 인접한 묶음끼리만 합칠 수 있습니다.",
+  "outputDescription": "모든 파일을 하나로 합칠 때 필요한 최소 비용을 출력합니다.",
+  "solution": "인접한 파일 묶음만 합칠 수 있으므로, 구간 단위로 최소 비용을 계산하는 구간 동적 계획법을 사용합니다. `dp[l][r]`을 l번 파일부터 r번 파일까지 하나로 합치는 최소 비용이라고 둡니다. 마지막으로 합치는 시점에는 어떤 k를 기준으로 `[l, k]`와 `[k + 1, r]` 두 묶음을 합치게 됩니다.\n\n따라서 가능한 모든 k를 시도해 두 구간의 최소 비용과 현재 구간 전체 크기 합을 더한 값의 최솟값을 선택합니다.\n\n### 점화식\n\n```text\ndp[l][r] = min(dp[l][k] + dp[k + 1][r]) + sum(l, r)\n```\n\n구간 합은 누적합으로 미리 구해 두면 `O(1)`에 계산할 수 있습니다.\n\n### 예시 코드\n\n```java\nfor (int len = 2; len <= k; len++) {\n    for (int left = 0; left + len - 1 < k; left++) {\n        int right = left + len - 1;\n        dp[left][right] = INF;\n        for (int mid = left; mid < right; mid++) {\n            dp[left][right] = Math.min(dp[left][right], dp[left][mid] + dp[mid + 1][right]);\n        }\n        dp[left][right] += prefix[right + 1] - prefix[left];\n    }\n}\n```\n\n### 복잡도\n\n구간의 시작점, 끝점, 분할점을 모두 고려하므로 시간 복잡도는 `O(K^3)`입니다. `dp` 배열을 사용하므로 공간 복잡도는 `O(K^2)`입니다.",
+  "timeLimitMs": 2000,
+  "memoryLimitMb": 256,
+  "difficulty": "VERY_HARD",
+  "categories": [
+    "동적 계획법",
+    "고급"
+  ],
+  "examples": [
+    {
+      "input": "4\n40 30 30 50\n",
+      "expectedOutput": "300\n",
+      "description": "합치는 순서에 따라 전체 비용이 달라지며, 최소 비용은 300입니다."
+    },
+    {
+      "input": "5\n1 1 1 1 1\n",
+      "expectedOutput": "12\n",
+      "description": null
+    },
+    {
+      "input": "3\n10 20 30\n",
+      "expectedOutput": "90\n",
+      "description": null
+    }
+  ],
+  "testCases": [
+    {
+      "input": "2\n40 30\n",
+      "expectedOutput": "70\n"
+    },
+    {
+      "input": "3\n10 20 30\n",
+      "expectedOutput": "90\n"
+    },
+    {
+      "input": "4\n40 30 30 50\n",
+      "expectedOutput": "300\n"
+    },
+    {
+      "input": "5\n1 1 1 1 1\n",
+      "expectedOutput": "12\n"
+    },
+    {
+      "input": "5\n10 100 10 100 10\n",
+      "expectedOutput": "570\n"
+    },
+    {
+      "input": "6\n5 10 15 20 25 30\n",
+      "expectedOutput": "255\n"
+    },
+    {
+      "input": "7\n7 6 5 4 3 2 1\n",
+      "expectedOutput": "74\n"
+    },
+    {
+      "input": "8\n1 2 3 4 5 6 7 8\n",
+      "expectedOutput": "102\n"
+    },
+    {
+      "input": "10\n10 20 30 40 50 60 70 80 90 100\n",
+      "expectedOutput": "1730\n"
+    },
+    {
+      "input": "6\n100 1 100 1 100 1\n",
+      "expectedOutput": "808\n"
+    }
+  ]
+}
