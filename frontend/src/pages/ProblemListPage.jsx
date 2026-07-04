@@ -7,11 +7,13 @@ import {
   problemCategoryNames,
 } from '../problem/problemUtils.js';
 
-export function ProblemListPage({ navigate, setMessage }) {
+export function ProblemListPage({ navigate, setMessage, auth, isAuthenticated }) {
   const [problems, setProblems] = useState([]);
+  const [solvedProblemIds, setSolvedProblemIds] = useState([]);
   const [busy, setBusy] = useState(false);
   const [problemSearch, setProblemSearch] = useState('');
   const [difficultyFilter, setDifficultyFilter] = useState('ALL');
+  const [showCategories, setShowCategories] = useState(false);
 
   const visibleProblems = useMemo(() => {
     const keyword = problemSearch.trim().toLowerCase();
@@ -32,8 +34,16 @@ export function ProblemListPage({ navigate, setMessage }) {
   async function loadProblems() {
     setBusy(true);
     try {
-      const data = await request('/api/problems');
-      setProblems(Array.isArray(data) ? data : []);
+      const [problemData, solvedData] = await Promise.all([
+        request('/api/problems'),
+        isAuthenticated && auth?.accessToken
+          ? request('/api/me/solved-problems', {
+            headers: { Authorization: `Bearer ${auth.accessToken}` },
+          })
+          : Promise.resolve([]),
+      ]);
+      setProblems(Array.isArray(problemData) ? problemData : []);
+      setSolvedProblemIds(Array.isArray(solvedData) ? solvedData : []);
     } catch (error) {
       setMessage(error.message);
     } finally {
@@ -43,7 +53,7 @@ export function ProblemListPage({ navigate, setMessage }) {
 
   useEffect(() => {
     loadProblems();
-  }, []);
+  }, [auth?.accessToken, isAuthenticated]);
 
   return (
     <section className="landing-page problem-list-page">
@@ -51,6 +61,14 @@ export function ProblemListPage({ navigate, setMessage }) {
         <div className="problem-list-heading">
           <h2>문제 목록</h2>
           <div className="problem-list-tools">
+            <button
+              className="category-toggle-button"
+              type="button"
+              aria-pressed={showCategories}
+              onClick={() => setShowCategories((current) => !current)}
+            >
+              {showCategories ? '카테고리 숨기기' : '카테고리 보기'}
+            </button>
             <label className="problem-search">
               <Search size={16} />
               <input
@@ -77,6 +95,8 @@ export function ProblemListPage({ navigate, setMessage }) {
           problems={visibleProblems}
           busy={busy}
           navigate={navigate}
+          showCategories={showCategories}
+          solvedProblemIds={solvedProblemIds}
         />
       </section>
     </section>

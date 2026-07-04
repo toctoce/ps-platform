@@ -120,6 +120,22 @@ public class JdbcSubmissionRepository implements SubmissionRepository {
 	}
 
 	@Override
+	public List<Long> findAcceptedProblemIdsByUserId(long userId) {
+		return jdbcTemplate.queryForList(
+			"""
+			SELECT DISTINCT problem_id
+			FROM submissions
+			WHERE user_id = ?
+			  AND verdict = ?
+			ORDER BY problem_id
+			""",
+			Long.class,
+			userId,
+			SubmissionVerdict.ACCEPTED.name()
+		);
+	}
+
+	@Override
 	public long countCreatedOn(LocalDate date) {
 		Long count = jdbcTemplate.queryForObject(
 			"""

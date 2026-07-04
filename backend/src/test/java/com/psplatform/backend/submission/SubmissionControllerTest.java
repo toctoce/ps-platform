@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.psplatform.backend.auth.JwtTokenService;
@@ -46,6 +47,9 @@ class SubmissionControllerTest {
 
 	@Autowired
 	private JwtTokenService jwtTokenService;
+
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
 
 	@BeforeEach
 	void setUp() {
@@ -196,6 +200,42 @@ class SubmissionControllerTest {
 	}
 
 	@Test
+	void findMySolvedProblemIdsReturnsAcceptedProblemIdsForCurrentUser() throws Exception {
+		Problem acceptedProblem = createProblem("A+B");
+		Problem wrongProblem = createProblem("A-B");
+		Problem otherUserProblem = createProblem("A*C");
+		User alice = userRepository.save("alice@example.com", "alice", "hashed-password", "USER");
+		User bob = userRepository.save("bob@example.com", "bob", "hashed-password", "USER");
+		String authorization = "Bearer " + jwtTokenService.createAccessToken(alice);
+
+		Submission acceptedSubmission = submissionRepository.save(
+			acceptedProblem.getId(),
+			alice.getId(),
+			new SubmissionCreateRequest("java", "public class Main {}")
+		);
+		Submission wrongSubmission = submissionRepository.save(
+			wrongProblem.getId(),
+			alice.getId(),
+			new SubmissionCreateRequest("java", "public class Main {}")
+		);
+		Submission otherUserSubmission = submissionRepository.save(
+			otherUserProblem.getId(),
+			bob.getId(),
+			new SubmissionCreateRequest("java", "public class Main {}")
+		);
+
+		markJudged(acceptedSubmission.getId(), SubmissionVerdict.ACCEPTED);
+		markJudged(wrongSubmission.getId(), SubmissionVerdict.WRONG_ANSWER);
+		markJudged(otherUserSubmission.getId(), SubmissionVerdict.ACCEPTED);
+
+		mockMvc.perform(get("/api/me/solved-problems")
+				.header("Authorization", authorization))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$[0]").value(acceptedProblem.getId()))
+			.andExpect(jsonPath("$[1]").doesNotExist());
+	}
+
+	@Test
 	void todayStatsReturnsTodaySubmissionCount() throws Exception {
 		Problem problem = createProblem();
 		User alice = userRepository.save("alice@example.com", "alice", "hashed-password", "USER");
@@ -236,8 +276,12 @@ class SubmissionControllerTest {
 	}
 
 	private Problem createProblem() {
+		return createProblem("A+B");
+	}
+
+	private Problem createProblem(String title) {
 		return problemRepository.save(new ProblemCreateRequest(
-			"A+B",
+			title,
 			"두 수를 더하는 문제",
 			"정수 A와 B가 주어진다.",
 			"A+B를 출력한다.",
@@ -252,5 +296,14 @@ class SubmissionControllerTest {
 	private String authorizationFor(String email, String username) {
 		User user = userRepository.save(email, username, "hashed-password", "USER");
 		return "Bearer " + jwtTokenService.createAccessToken(user);
+	}
+
+	private void markJudged(long submissionId, SubmissionVerdict verdict) {
+		jdbcTemplate.update(
+			"UPDATE submissions SET status = ?, verdict = ? WHERE id = ?",
+			SubmissionStatus.JUDGED.name(),
+			verdict.name(),
+			submissionId
+		);
 	}
 }

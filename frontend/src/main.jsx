@@ -379,6 +379,8 @@ function App() {
           <ProblemListPage
             navigate={navigate}
             setMessage={setMessage}
+            auth={auth}
+            isAuthenticated={isAuthenticated}
           />
         ) : (
           <HomePage

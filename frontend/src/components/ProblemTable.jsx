@@ -6,8 +6,10 @@ export function ProblemTable({
   emptyMessage = '등록된 문제가 없습니다.',
   navigate,
   showCategories = true,
+  solvedProblemIds = [],
 }) {
   const rows = Array.isArray(problems) ? problems : [];
+  const solvedProblemIdSet = new Set(solvedProblemIds.map((id) => Number(id)));
 
   return (
     <div className={`landing-problem-table${showCategories ? '' : ' hide-category-column'}`}>
@@ -21,7 +23,7 @@ export function ProblemTable({
       ) : (
         rows.map((problem) => (
           <button
-            className="problem-table-row"
+            className={`problem-table-row${solvedProblemIdSet.has(Number(problem.id)) ? ' is-solved' : ''}`}
             type="button"
             key={problem.id}
             onClick={() => navigate(`/problems/${problem.id}`)}

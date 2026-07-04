@@ -53,6 +53,14 @@ public class SubmissionController {
 		return SubmissionResponse.from(submissionService.findById(id));
 	}
 
+	@GetMapping("/api/me/solved-problems")
+	public List<Long> findMySolvedProblemIds(
+		@RequestHeader(value = "Authorization", required = false) String authorization
+	) {
+		User user = authService.verifyAccessToken(authorization);
+		return submissionService.findAcceptedProblemIdsByUserId(user.getId());
+	}
+
 	@GetMapping("/api/submissions/stats/today")
 	public SubmissionStatsResponse todayStats() {
 		return submissionService.todayStats();

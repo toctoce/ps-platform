@@ -662,6 +662,24 @@ button:disabled {
   outline: none;
 }
 
+.category-toggle-button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid #d8cfbc;
+  border-radius: 6px;
+  background: #fbf8f0;
+  color: var(--text-sub);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.category-toggle-button:hover,
+.category-toggle-button:focus-visible {
+  border-color: var(--brand);
+  color: var(--brand);
+  outline: none;
+}
+
 .problem-table-head,
 .problem-table-row {
   display: grid;
@@ -696,6 +714,19 @@ button:disabled {
 .problem-table-row:focus-visible {
   background: #fffdf8;
   outline: none;
+}
+
+.problem-table-row.is-solved {
+  background: #eef7e9;
+}
+
+.problem-table-row.is-solved:hover,
+.problem-table-row.is-solved:focus-visible {
+  background: #f5fbf1;
+}
+
+.problem-table-row.is-solved strong {
+  color: #2f6b35;
 }
 
 .problem-table-row strong {

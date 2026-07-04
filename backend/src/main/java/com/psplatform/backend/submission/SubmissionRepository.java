@@ -16,6 +16,8 @@ public interface SubmissionRepository {
 
 	List<Submission> findByProblemId(long problemId);
 
+	List<Long> findAcceptedProblemIdsByUserId(long userId);
+
 	long countCreatedOn(LocalDate date);
 
 	long countDistinctUsersCreatedOn(LocalDate date);

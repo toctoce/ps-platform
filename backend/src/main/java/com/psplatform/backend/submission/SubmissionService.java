@@ -65,6 +65,10 @@ public class SubmissionService {
 		return submissionRepository.findByProblemId(problemId);
 	}
 
+	public List<Long> findAcceptedProblemIdsByUserId(long userId) {
+		return submissionRepository.findAcceptedProblemIdsByUserId(userId);
+	}
+
 	public SubmissionStatsResponse todayStats() {
 		LocalDate today = LocalDate.now();
 		return new SubmissionStatsResponse(
