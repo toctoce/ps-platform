@@ -582,21 +582,17 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
         request(`/api/problems/${problemId}`),
         request(`/api/problems/${problemId}/submissions`),
       ]);
-      const [testCaseData, exampleData] = await Promise.all([
-        request(`/api/problems/${problemId}/test-cases`),
-        request(`/api/problems/${problemId}/examples`),
-      ]);
+      const exampleData = await request(`/api/problems/${problemId}/examples`);
       const fetchedSubmissions = Array.isArray(submissionData) ? submissionData : [];
 
       setProblem(problemData);
-      const fetchedTestCases = Array.isArray(testCaseData) ? testCaseData : [];
       const fetchedExamples = Array.isArray(exampleData) ? exampleData : [];
       setExampleCases(fetchedExamples);
-      setTestCases(fetchedTestCases);
+      setTestCases(fetchedExamples);
       setActiveIdeTestCaseIndex(0);
       setTestCaseForm({
-        input: fetchedTestCases[0]?.input ?? '',
-        expectedOutput: fetchedTestCases[0]?.expectedOutput ?? '',
+        input: fetchedExamples[0]?.input ?? '',
+        expectedOutput: fetchedExamples[0]?.expectedOutput ?? '',
       });
       setSubmissions(fetchedSubmissions);
       lastSubmissionStatus.current = fetchedSubmissions.reduce((acc, submission) => {
