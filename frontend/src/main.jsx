@@ -22,7 +22,7 @@ const SUPPORT_INQUIRY_TYPES = [
   { value: 'OTHER', label: '기타' },
 ];
 
-const SITE_LOGO_SRC = '/assets/로고-2d배경없음2.png';
+const SITE_LOGO_SRC = '/assets/logo-home.png';
 
 function App() {
   const [route, setRoute] = useState(parseRoute);

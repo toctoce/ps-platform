@@ -108,8 +108,8 @@ button:disabled {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   overflow: hidden;
   border-radius: 8px;
   background: transparent;
