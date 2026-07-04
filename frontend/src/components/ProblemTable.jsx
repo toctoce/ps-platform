@@ -1,18 +1,19 @@
-import { difficultyLabel, problemCategoryNames } from '../problem/problemUtils.js';
+import { difficultyClassName, difficultyLabel, problemCategoryNames } from '../problem/problemUtils.js';
 
 export function ProblemTable({
   problems,
   busy = false,
   emptyMessage = '등록된 문제가 없습니다.',
   navigate,
+  showCategories = true,
 }) {
   const rows = Array.isArray(problems) ? problems : [];
 
   return (
-    <div className="landing-problem-table">
+    <div className={`landing-problem-table${showCategories ? '' : ' hide-category-column'}`}>
       <div className="problem-table-head">
         <span>제목</span>
-        <span>카테고리</span>
+        {showCategories ? <span>카테고리</span> : null}
         <span>난이도</span>
       </div>
       {rows.length === 0 ? (
@@ -28,8 +29,10 @@ export function ProblemTable({
             <strong>
               {problem.id}. {problem.title}
             </strong>
-            <span>{problemCategoryNames(problem).filter((item) => item !== '미분류').join(', ') || '-'}</span>
-            <span className="difficulty-chip">{difficultyLabel(problem.difficulty)}</span>
+            {showCategories ? (
+              <span>{problemCategoryNames(problem).filter((item) => item !== '미분류').join(', ') || '-'}</span>
+            ) : null}
+            <span className={difficultyClassName(problem.difficulty)}>{difficultyLabel(problem.difficulty)}</span>
           </button>
         ))
       )}

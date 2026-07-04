@@ -671,6 +671,11 @@ button:disabled {
   padding: 0 20px;
 }
 
+.hide-category-column .problem-table-head,
+.hide-category-column .problem-table-row {
+  grid-template-columns: minmax(220px, 1fr) 120px;
+}
+
 .problem-table-head {
   background: #fbf8f0;
   color: var(--text-sub);

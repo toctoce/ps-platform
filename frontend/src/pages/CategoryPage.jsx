@@ -79,6 +79,7 @@ export function CategoryPage({ category, navigate, setMessage }) {
           busy={busy}
           emptyMessage="해당 카테고리에 문제가 없습니다."
           navigate={navigate}
+          showCategories={false}
         />
       )}
     </section>

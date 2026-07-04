@@ -40,7 +40,7 @@ export function RandomProblemPage({ navigate, setMessage }) {
           <p className="empty">문제가 없습니다.</p>
         ) : null}
         {!busy ? randomProblems.map((problem) => (
-          <ProblemRow key={problem.id} problem={problem} navigate={navigate} />
+          <ProblemRow key={problem.id} problem={problem} navigate={navigate} showCategories={false} />
         )) : null}
       </div>
     </section>
