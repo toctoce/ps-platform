@@ -10,7 +10,7 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class H2ProblemTestCaseRepository implements ProblemTestCaseRepository {
+public class JdbcProblemTestCaseRepository implements ProblemTestCaseRepository {
 
 	private final JdbcTemplate jdbcTemplate;
 
@@ -22,7 +22,7 @@ public class H2ProblemTestCaseRepository implements ProblemTestCaseRepository {
 		rs.getInt("sort_order")
 	);
 
-	public H2ProblemTestCaseRepository(JdbcTemplate jdbcTemplate) {
+	public JdbcProblemTestCaseRepository(JdbcTemplate jdbcTemplate) {
 		this.jdbcTemplate = jdbcTemplate;
 	}
 

@@ -14,7 +14,7 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class H2UserRepository implements UserRepository {
+public class JdbcUserRepository implements UserRepository {
 
 	private final JdbcTemplate jdbcTemplate;
 
@@ -29,7 +29,7 @@ public class H2UserRepository implements UserRepository {
 		getTimestampOrNull(rs, "deleted_at")
 	);
 
-	public H2UserRepository(JdbcTemplate jdbcTemplate) {
+	public JdbcUserRepository(JdbcTemplate jdbcTemplate) {
 		this.jdbcTemplate = jdbcTemplate;
 	}
 

@@ -15,7 +15,7 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class H2SubmissionRepository implements SubmissionRepository {
+public class JdbcSubmissionRepository implements SubmissionRepository {
 
 	private final JdbcTemplate jdbcTemplate;
 
@@ -40,7 +40,7 @@ public class H2SubmissionRepository implements SubmissionRepository {
 		);
 	};
 
-	public H2SubmissionRepository(JdbcTemplate jdbcTemplate) {
+	public JdbcSubmissionRepository(JdbcTemplate jdbcTemplate) {
 		this.jdbcTemplate = jdbcTemplate;
 	}
 

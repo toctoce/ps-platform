@@ -13,7 +13,7 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class H2RefreshTokenRepository implements RefreshTokenRepository {
+public class JdbcRefreshTokenRepository implements RefreshTokenRepository {
 
 	private final JdbcTemplate jdbcTemplate;
 
@@ -26,7 +26,7 @@ public class H2RefreshTokenRepository implements RefreshTokenRepository {
 		rs.getTimestamp("created_at").toLocalDateTime()
 	);
 
-	public H2RefreshTokenRepository(JdbcTemplate jdbcTemplate) {
+	public JdbcRefreshTokenRepository(JdbcTemplate jdbcTemplate) {
 		this.jdbcTemplate = jdbcTemplate;
 	}
 

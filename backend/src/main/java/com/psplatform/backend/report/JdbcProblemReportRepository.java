@@ -13,7 +13,7 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class H2ProblemReportRepository implements ProblemReportRepository {
+public class JdbcProblemReportRepository implements ProblemReportRepository {
 
 	private final JdbcTemplate jdbcTemplate;
 
@@ -34,7 +34,7 @@ public class H2ProblemReportRepository implements ProblemReportRepository {
 		);
 	};
 
-	public H2ProblemReportRepository(JdbcTemplate jdbcTemplate) {
+	public JdbcProblemReportRepository(JdbcTemplate jdbcTemplate) {
 		this.jdbcTemplate = jdbcTemplate;
 	}
 

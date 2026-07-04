@@ -12,7 +12,7 @@ import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class H2ProblemRepository implements ProblemRepository {
+public class JdbcProblemRepository implements ProblemRepository {
 
 	private final JdbcTemplate jdbcTemplate;
 
@@ -29,7 +29,7 @@ public class H2ProblemRepository implements ProblemRepository {
 		rs.getTimestamp("created_at").toLocalDateTime()
 	);
 
-	public H2ProblemRepository(JdbcTemplate jdbcTemplate) {
+	public JdbcProblemRepository(JdbcTemplate jdbcTemplate) {
 		this.jdbcTemplate = jdbcTemplate;
 	}
 

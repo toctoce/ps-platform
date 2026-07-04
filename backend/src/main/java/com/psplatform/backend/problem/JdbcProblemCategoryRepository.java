@@ -12,11 +12,11 @@ import org.springframework.jdbc.core.ResultSetExtractor;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public class H2ProblemCategoryRepository implements ProblemCategoryRepository {
+public class JdbcProblemCategoryRepository implements ProblemCategoryRepository {
 
 	private final JdbcTemplate jdbcTemplate;
 
-	public H2ProblemCategoryRepository(JdbcTemplate jdbcTemplate) {
+	public JdbcProblemCategoryRepository(JdbcTemplate jdbcTemplate) {
 		this.jdbcTemplate = jdbcTemplate;
 	}
 

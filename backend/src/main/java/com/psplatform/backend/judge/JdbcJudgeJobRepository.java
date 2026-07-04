@@ -25,7 +25,7 @@ import com.psplatform.backend.submission.SubmissionStatus;
 import com.psplatform.backend.submission.SubmissionVerdict;
 
 @Repository
-public class H2JudgeJobRepository implements JudgeJobRepository {
+public class JdbcJudgeJobRepository implements JudgeJobRepository {
 
 	private final JdbcTemplate jdbcTemplate;
 	private final ProblemTestCaseRepository problemTestCaseRepository;
@@ -51,7 +51,7 @@ public class H2JudgeJobRepository implements JudgeJobRepository {
 		);
 	};
 
-	public H2JudgeJobRepository(
+	public JdbcJudgeJobRepository(
 		JdbcTemplate jdbcTemplate,
 		ProblemTestCaseRepository problemTestCaseRepository
 	) {
