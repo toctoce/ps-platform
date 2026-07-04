@@ -402,6 +402,7 @@ button:disabled {
 }
 
 .landing-page {
+  --landing-side-padding: max(48px, calc((100vw - 1120px) / 2));
   flex: 1 1 auto;
   display: grid;
   align-content: start;
@@ -414,7 +415,7 @@ button:disabled {
 
 .landing-hero {
   min-height: 180px;
-  padding: 56px max(24px, calc((100vw - 900px) / 2)) 42px;
+  padding: 56px var(--landing-side-padding) 42px;
   border-bottom: 1px solid var(--line);
   background: radial-gradient(circle at 50% 0%, #fffdf8 0%, var(--ivory) 62%, #f7f2e8 100%);
 }
@@ -458,7 +459,7 @@ button:disabled {
   display: flex;
   flex: 0 0 100vw;
   justify-content: space-around;
-  padding: 16px max(24px, calc((100vw - 900px) / 2));
+  padding: 16px var(--landing-side-padding);
 }
 
 .landing-stat-item {
@@ -500,7 +501,7 @@ button:disabled {
 .landing-section {
   display: grid;
   gap: 16px;
-  padding: 34px max(24px, calc((100vw - 900px) / 2));
+  padding: 34px var(--landing-side-padding);
 }
 
 .section-heading {
