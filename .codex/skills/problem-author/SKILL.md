@@ -70,8 +70,9 @@ Do not insert rows into the database.
 - Use up to 4 examples only when the problem has meaningfully different ordinary cases.
 - Do not put edge cases in `examples`; reserve edge cases for `testCases`.
 - Each example must include `input`, `expectedOutput`, and `description`.
-- `description` explains how the input produces the output.
-- If the explanation would be too trivial, set `description` to `null`.
+- `description` explains how the input produces the output only when that explanation adds useful clarity.
+- If the example is simple or the explanation would be too trivial, omit the explanation by setting `description` to `null`.
+- Treat restating the obvious output transformation as too trivial. For example, do not write explanations like "5, 4, 3, 2, 1을 오름차순으로 정렬하면 1, 2, 3, 4, 5입니다."; use `null` instead.
 - `expectedOutput` must never be `null`.
 
 ## Test Case Rules
