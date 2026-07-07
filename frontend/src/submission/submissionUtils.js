@@ -38,13 +38,25 @@ export function submissionMemory(submission) {
   return kb === undefined || kb === null ? '-' : `${kb}KB`;
 }
 
-export function formatDateTime(value) {
+export function formatSubmissionDate(value) {
   if (!value) {
     return '-';
   }
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) {
     return value;
+  }
+  const diffMs = Date.now() - date.getTime();
+  if (diffMs >= 0) {
+    const diffMinutes = Math.floor(diffMs / 60000);
+    if (diffMinutes < 60) {
+      return `${diffMinutes}분 전`;
+    }
+    if (diffMinutes < 1440) {
+      const hours = Math.floor(diffMinutes / 60);
+      const minutes = diffMinutes % 60;
+      return `${hours}시간 ${minutes}분 전`;
+    }
   }
   return new Intl.DateTimeFormat('ko-KR', {
     year: 'numeric',
@@ -189,15 +201,45 @@ export function statusToLabel(status, verdict) {
   return STATUS_LABELS[status] ?? status ?? '알 수 없음';
 }
 
-export function submissionBadgeClass(status) {
+export function submissionBadgeClass(status, verdict) {
+  return `is-${submissionResultClass(status, verdict)}`;
+}
+
+export function submissionResultClass(status, verdict) {
   if (status === 'JUDGED') {
-    return 'verdict';
+    if (verdict === 'ACCEPTED') {
+      return 'accepted';
+    }
+    if (verdict === 'WRONG_ANSWER') {
+      return 'wrong-answer';
+    }
+    if (verdict === 'TIME_LIMIT_EXCEEDED' || verdict === 'MEMORY_LIMIT_EXCEEDED') {
+      return 'limit-exceeded';
+    }
+    if (verdict === 'COMPILE_ERROR' || verdict === 'RUNTIME_ERROR') {
+      return 'error';
+    }
+    return 'error';
   }
   if (status === 'FAILED') {
-    return 'failed';
+    return 'error';
   }
   if (status === 'RUNNING') {
     return 'running';
   }
   return 'pending';
+}
+
+export function submissionLanguageLabel(language) {
+  const normalized = String(language ?? '').toLowerCase();
+  if (normalized === 'java') {
+    return 'Java';
+  }
+  if (normalized === 'python') {
+    return 'Python';
+  }
+  if (normalized === 'cpp' || normalized === 'c++') {
+    return 'C++';
+  }
+  return language ?? '-';
 }

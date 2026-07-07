@@ -19,12 +19,13 @@ import { difficultyClassName, difficultyLabel, problemCategoryNames, problemInpu
 import { PROBLEM_REPORT_TYPES, problemReportTypeLabel } from '../problem/reportUtils.js';
 import {
   buildInitialTestRunResults,
-  formatDateTime,
+  formatSubmissionDate,
   isFinishedStatus,
   isPendingStatus,
   mapCodeRunResults,
   statusToLabel,
   submissionBadgeClass,
+  submissionLanguageLabel,
   submissionMemory,
   submissionNickname,
   submissionTime,
@@ -836,13 +837,13 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
                         key={submission.id}
                       >
                         <span>{submissionNickname(submission)}</span>
-                        <strong className={`submission-badge ${submissionBadgeClass(submission.status)}`}>
+                        <strong className={`submission-badge ${submissionBadgeClass(submission.status, submission.verdict)}`}>
                           {statusToLabel(submission.status, submission.verdict)}
                         </strong>
                         <span>{submissionTime(submission)}</span>
                         <span>{submissionMemory(submission)}</span>
-                        <span>{submission.language}</span>
-                        <span>{formatDateTime(submission.createdAt)}</span>
+                        <span>{submissionLanguageLabel(submission.language)}</span>
+                        <span>{formatSubmissionDate(submission.createdAt)}</span>
                       </div>
                     ))}
                   </div>
@@ -1038,7 +1039,6 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
                           value={testCaseForm.input}
                           onChange={(event) => setTestCaseForm((current) => ({ ...current, input: event.target.value }))}
                           readOnly={activeIdeTestCaseIndex < testCases.length}
-                          placeholder="예: 1 2"
                         />
                       </label>
                       <label>
@@ -1047,7 +1047,6 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
                           value={testCaseForm.expectedOutput}
                           onChange={(event) => setTestCaseForm((current) => ({ ...current, expectedOutput: event.target.value }))}
                           readOnly={activeIdeTestCaseIndex < testCases.length}
-                          placeholder="예: 3"
                         />
                       </label>
                     </div>

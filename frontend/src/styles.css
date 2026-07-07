@@ -2502,8 +2502,44 @@ dt {
 }
 
 .submission-badge {
-  color: var(--brand);
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  min-height: 24px;
+  padding: 0 8px;
+  border-radius: 999px;
   font-size: 13px;
+  font-weight: 850;
+}
+
+.submission-badge.is-accepted {
+  background: #e8f6ec;
+  color: #24743d;
+}
+
+.submission-badge.is-wrong-answer {
+  background: #fdecec;
+  color: #b42318;
+}
+
+.submission-badge.is-limit-exceeded {
+  background: #fff4dc;
+  color: #9a5b00;
+}
+
+.submission-badge.is-error {
+  background: #f3edf8;
+  color: #7a3f98;
+}
+
+.submission-badge.is-running {
+  background: #e8f0fb;
+  color: #2f5f9f;
+}
+
+.submission-badge.is-pending {
+  background: #eeeeea;
+  color: #67685f;
 }
 
 .auth-page {
