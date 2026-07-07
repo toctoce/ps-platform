@@ -695,6 +695,13 @@ button:disabled {
   outline: none;
 }
 
+.category-page-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .problem-table-head,
 .problem-table-row {
   display: grid;
@@ -2756,6 +2763,11 @@ dt {
 
   .problem-list-heading,
   .problem-list-tools {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .category-page-actions {
     align-items: stretch;
     flex-direction: column;
   }

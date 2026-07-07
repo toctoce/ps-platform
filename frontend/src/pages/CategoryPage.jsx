@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { request } from '../api/client.js';
 import { ProblemTable } from '../components/ProblemTable.jsx';
+import { DIFFICULTY_OPTIONS } from '../problem/problemUtils.js';
 
 export function CategoryPage({ category, navigate, setMessage }) {
   const [problems, setProblems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [busy, setBusy] = useState(false);
+  const [difficultyFilter, setDifficultyFilter] = useState('ALL');
 
   const categoryRows = useMemo(() => {
     if (!category) {
@@ -18,8 +20,13 @@ export function CategoryPage({ category, navigate, setMessage }) {
   }, [categories, category, problems.length]);
 
   const selectedProblems = useMemo(() => {
-    return category ? [...problems] : [];
-  }, [category, problems]);
+    if (!category) {
+      return [];
+    }
+    return [...problems]
+      .sort((a, b) => a.id - b.id)
+      .filter((problem) => difficultyFilter === 'ALL' || problem.difficulty === difficultyFilter);
+  }, [category, difficultyFilter, problems]);
 
   async function loadProblems() {
     setBusy(true);
@@ -42,16 +49,28 @@ export function CategoryPage({ category, navigate, setMessage }) {
 
   useEffect(() => {
     loadProblems();
+    setDifficultyFilter('ALL');
   }, [category]);
 
   return (
     <section className="open-page category-page">
       <header className="open-page-header">
-        <h1>{category ? `${category} 카테고리` : '카테고리 목록'}</h1>
+        <h1>{category ? category : '카테고리 목록'}</h1>
         {category ? (
-          <button className="ghost-button with-text" type="button" onClick={() => navigate('/categories')}>
-            목록
-          </button>
+          <div className="category-page-actions">
+            <div className="difficulty-filter" aria-label="난이도 필터">
+              {[{ value: 'ALL', label: '전체' }, ...DIFFICULTY_OPTIONS].map((item) => (
+                <button
+                  className={difficultyFilter === item.value ? 'is-active' : ''}
+                  type="button"
+                  key={item.value}
+                  onClick={() => setDifficultyFilter(item.value)}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
         ) : null}
       </header>
 
