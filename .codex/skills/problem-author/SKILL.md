@@ -1,113 +1,113 @@
 ---
 name: problem-author
-description: Generate and optionally save new PS Platform algorithm problem JSON drafts. Use when asked to create, restore, draft, or author new coding-test/problem-solving problem data for this repository, especially JSON matching harness/problem-template.json with Korean statements, examples, test cases, solution markdown, difficulty, and categories. Do not use for reviewing existing draft or approved problem JSON; use problem-reviewer for that.
+description: PS Platform 알고리즘 문제 JSON draft를 생성하거나 저장할 때 사용한다. 사용자가 문제 생성, 복원, draft 작성, 코딩테스트/문제풀이 문제 데이터 생성을 요청하면 사용하며, 특히 harness/problem-template.json 형식에 맞춘 한국어 문제 설명, 예제, 테스트 케이스, 풀이 markdown, 난이도, 카테고리를 작성할 때 사용한다. 기존 draft 또는 approved 문제 JSON 검수에는 사용하지 말고 problem-reviewer를 사용한다.
 ---
 
-# Problem Author
+# 문제 작성
 
-Generate one new PS Platform problem as JSON. If the user asks to save a draft, save it under `problem-data/drafts` and validate it. Do not review existing problem files with this skill; use `problem-reviewer` for that. Do not move files to `problem-data/approved`, call APIs, run imports, or insert DB rows.
+새 PS Platform 문제 하나를 JSON으로 작성한다. 사용자가 draft 저장을 요청하면 `problem-data/drafts` 아래에 저장하고 검증한다. 기존 문제 파일 검수에는 이 스킬을 사용하지 않고 `problem-reviewer`를 사용한다. 파일을 `problem-data/approved`로 옮기거나, API 호출, import 실행, DB 삽입은 하지 않는다.
 
-## Required References
+## 필수 참고 파일
 
-Before generating, read these project files from the repository root:
+문제를 생성하기 전에 저장소 루트에서 다음 파일을 읽는다.
 
 - `harness/problem-template.json`
 - `docs/problem-categories.md`
 - `docs/problem-authoring-guidelines.md`
 
-Follow the template field names exactly. Choose categories only from `docs/problem-categories.md`.
+템플릿의 필드명을 정확히 따른다. 카테고리는 반드시 `docs/problem-categories.md`에 있는 값만 사용한다.
 
-## Output Contract
+## 출력 규칙
 
-- If the user asks only for generated content, output exactly one JSON object and nothing else.
-- Do not wrap the JSON in Markdown code fences.
-- Do not add explanatory text before or after the JSON.
-- Do not add fields that are not in `harness/problem-template.json`.
-- Use valid JSON syntax: double-quoted strings, no trailing commas, no comments.
-- Write all user-facing content in Korean.
+- 사용자가 생성된 내용만 요청하면 JSON 객체 하나만 출력하고 다른 설명은 붙이지 않는다.
+- JSON을 Markdown 코드 블록으로 감싸지 않는다.
+- JSON 앞뒤에 설명 문장을 붙이지 않는다.
+- `harness/problem-template.json`에 없는 필드를 추가하지 않는다.
+- 올바른 JSON 문법을 사용한다. 문자열은 큰따옴표를 쓰고, trailing comma나 주석은 넣지 않는다.
+- 사용자에게 보이는 모든 내용은 한국어로 작성한다.
 
-## Draft Workflow
+## Draft 저장 절차
 
-When the user asks to save the generated problem:
+사용자가 생성한 문제를 저장하라고 요청한 경우 다음 절차를 따른다.
 
-- Save the JSON file under `problem-data/drafts`.
-- Use a lowercase, hyphen-separated filename that identifies the source or pattern, for example `boj-2751-sort-numbers-2.json`.
-- Run `./harness/validate-problem-json.sh <draft-file>` after saving.
-- If validation fails, fix the JSON and run the validation command again.
-- Repeat until the draft passes validation or the issue requires user input.
+- JSON 파일을 `problem-data/drafts` 아래에 저장한다.
+- 출처나 패턴을 알아볼 수 있는 소문자 하이픈 파일명을 사용한다. 예: `boj-2751-sort-numbers-2.json`
+- 저장 후 `./harness/validate-problem-json.sh <draft-file>`을 실행한다.
+- 검증이 실패하면 JSON을 고치고 검증 명령을 다시 실행한다.
+- draft가 검증을 통과하거나 사용자 입력이 필요한 문제가 나올 때까지 반복한다.
 
-Do not move draft files to `problem-data/approved`.
-Do not run `harness/import-problem-json.sh`.
-Do not call backend APIs.
-Do not insert rows into the database.
-Do not commit generated or edited problem data files unless the user explicitly asks for that commit.
+draft 파일을 `problem-data/approved`로 옮기지 않는다.
+`harness/import-problem-json.sh`를 실행하지 않는다.
+backend API를 호출하지 않는다.
+DB에 row를 삽입하지 않는다.
+사용자가 명시적으로 커밋을 요청하지 않는 한 생성하거나 수정한 문제 데이터 파일은 커밋하지 않는다.
 
-## Problem Source Policy
+## 문제 출처 원칙
 
-- Base the problem on the actual public problem requested by the user.
-- If a problem number is provided, verify the real problem conditions from external sources before drafting.
-- Do not query BOJ or solved.ac directly during verification. Treat those services as unavailable unless the user explicitly says they are usable again.
-- For BOJ-based problems, verify conditions with reliable alternative sources such as Web Archive snapshots, solution blogs, archived summaries, or public writeups that confirm input format, output format, constraints, examples, and key rules.
-- Do not rely only on memory, problem title, a famous pattern, or inferred algorithm type.
-- If the real problem conditions cannot be verified, stop and report that the source could not be confirmed instead of generating a draft.
-- Do not copy proprietary problem statements, examples, or explanations verbatim from external sites.
-- Rewrite the statement, examples, and solution in original Korean text.
-- Keep the problem deterministic and objectively judgeable.
-- Do not create ambiguous tasks or tasks with multiple acceptable output formats unless the exact judging rule is clearly stated.
-- In the final response, state whether the real source was verified and mention any remaining uncertainty.
+- 사용자가 요청한 실제 공개 문제를 기반으로 작성한다.
+- 문제 번호가 주어진 경우, draft를 작성하기 전에 외부 출처로 실제 문제 조건을 확인한다.
+- 검증 중 BOJ나 solved.ac를 직접 조회하지 않는다. 사용자가 다시 사용할 수 있다고 명시하기 전까지 두 서비스는 사용할 수 없는 출처로 간주한다.
+- BOJ 기반 문제는 Web Archive 스냅샷, 풀이 블로그, 아카이브 요약, 공개 풀이 글처럼 입력 형식, 출력 형식, 제한, 예제, 핵심 규칙을 확인할 수 있는 신뢰 가능한 대체 출처로 조건을 확인한다.
+- 기억, 문제 제목, 유명한 유형, 추정한 알고리즘만으로 작성하지 않는다.
+- 실제 문제 조건을 확인할 수 없으면 draft를 만들지 말고 출처 확인에 실패했다고 보고한다.
+- 외부 사이트의 원문 문제 설명, 예제 설명, 해설을 그대로 복사하지 않는다.
+- 문제 설명, 예제 설명, 풀이를 플랫폼용 한국어 문장으로 다시 작성한다.
+- 문제는 결정적이고 객관적으로 채점 가능해야 한다.
+- 정확한 채점 규칙을 명시하지 않는 한 모호한 문제나 여러 출력 형식이 가능한 문제를 만들지 않는다.
+- 최종 응답에는 실제 출처 확인 여부와 남은 불확실성을 언급한다.
 
-## Field Rules
+## 필드 작성 규칙
 
-- `title`: concise Korean title.
-- `description`: explain the task clearly without mentioning implementation strategy.
-- `inputDescription`: describe the input format.
-- `inputConstraints`: write input ranges and conditions as formulas or bullet-like mathematical text. Include bounds, size limits, uniqueness conditions, graph constraints, indexing rules, and other input validity assumptions here.
-- Use thousands separators in numeric bounds in `inputConstraints`; use `100,000`, not `100000`.
-- Prefer clean decimal platform limits such as `1,000,000,000` over implementation-shaped limits such as `2,147,483,647`, unless the exact original boundary is essential to the problem.
-- `outputDescription`: describe the exact output format.
-- `solution`: Markdown string. Explain what algorithm or idea is applied for what purpose, and connect it to the time complexity. Use readable headings such as approach, complexity, and implementation notes. Use `##`, `###`, code blocks, and backticks when they improve readability. Include a concise example code snippet or reference implementation when it helps the reader understand the core algorithm.
-- `timeLimitMs`: positive integer, usually `1000` or `2000`.
-- `memoryLimitMb`: positive integer, usually `128`, `256`, or `512`.
-- `difficulty`: one of `EASY`, `NORMAL`, `HARD`, `VERY_HARD`.
-- `categories`: non-empty array using only allowed categories from `docs/problem-categories.md`.
-- `examples`: 2 to 4 items.
-- `testCases`: at least 10 items.
+- `title`: 간결한 한국어 제목
+- `description`: 구현 전략을 언급하지 않고 문제에서 해야 할 일을 명확히 설명한다.
+- `inputDescription`: 입력 형식을 설명한다.
+- `inputConstraints`: 입력 범위와 조건을 수식 또는 bullet-like 문장으로 작성한다. 범위, 크기 제한, 유일성 조건, 그래프 조건, 인덱스 기준, 입력 유효성 가정을 여기에 포함한다.
+- `inputConstraints`의 숫자 범위에는 세 자리 단위 쉼표를 사용한다. `100000`이 아니라 `100,000`처럼 쓴다.
+- 정확한 원문 경계가 문제의 핵심이 아닌 한 `2,147,483,647` 같은 구현 자료형 경계보다 `1,000,000,000` 같은 읽기 쉬운 십진수 플랫폼 제한을 우선한다.
+- `outputDescription`: 정확한 출력 형식을 설명한다.
+- `solution`: Markdown 문자열로 작성한다. 어떤 알고리즘이나 아이디어를 어떤 목적으로 쓰는지 설명하고 시간 복잡도와 연결한다. 가독성에 도움이 되면 `##`, `###`, 코드 블록, 백틱을 사용한다. 핵심 알고리즘 이해에 도움이 될 때는 간결한 예시 코드나 기준 구현을 포함한다.
+- `timeLimitMs`: 양의 정수. 보통 `1000` 또는 `2000`을 사용한다.
+- `memoryLimitMb`: 양의 정수. 보통 `128`, `256`, `512`를 사용한다.
+- `difficulty`: `EASY`, `NORMAL`, `HARD`, `VERY_HARD` 중 하나
+- `categories`: `docs/problem-categories.md`에 있는 허용 카테고리만 사용하는 비어 있지 않은 배열
+- `examples`: 2개에서 4개
+- `testCases`: 최소 10개
 
-## Example Rules
+## 예제 작성 규칙
 
-- Provide at least 2 examples.
-- Use up to 4 examples only when the problem has meaningfully different ordinary cases.
-- Do not put edge cases in `examples`; reserve edge cases for `testCases`.
-- Each example must include `input`, `expectedOutput`, and `description`.
-- `description` explains how the input produces the output only when that explanation adds useful clarity.
-- If the example is simple or the explanation would be too trivial, omit the explanation by setting `description` to `null`.
-- Treat restating the obvious output transformation as too trivial. For example, do not write explanations like "5, 4, 3, 2, 1을 오름차순으로 정렬하면 1, 2, 3, 4, 5입니다."; use `null` instead.
-- When an example explanation is useful, explain the actual reasoning or intermediate values that produce the output.
-- `expectedOutput` must never be `null`.
+- 예제는 최소 2개 제공한다.
+- 의미 있게 다른 일반 사례가 있을 때만 최대 4개까지 사용한다.
+- 경계 사례는 `examples`에 넣지 말고 `testCases`에 둔다.
+- 각 예제는 `input`, `expectedOutput`, `description`을 포함해야 한다.
+- `description`은 출력이 나오는 과정을 설명했을 때 이해가 좋아지는 경우에만 작성한다.
+- 예제가 단순하거나 설명이 너무 당연하면 `description`을 `null`로 둔다.
+- 당연한 출력 변환을 다시 말하는 설명은 너무 단순한 것으로 본다. 예를 들어 "5, 4, 3, 2, 1을 오름차순으로 정렬하면 1, 2, 3, 4, 5입니다." 같은 설명은 쓰지 않고 `null`을 사용한다.
+- 예제 설명이 필요하면 실제 추론 과정이나 중간값을 설명한다.
+- `expectedOutput`은 절대 `null`이면 안 된다.
 
-## Test Case Rules
+## 테스트 케이스 작성 규칙
 
-- Provide at least 10 test cases.
-- Include small boundary values.
-- Include large boundary values near the input limit.
-- Include edge cases such as empty-like minimum sizes, duplicates, sorted/reversed data, disconnected graphs, single-node trees, all-equal values, negative values, or overflow-risk values when relevant.
-- Ensure every `expectedOutput` is manually computed and non-null.
-- Make test cases diverse enough to catch common wrong approaches.
-- When adding requested test cases, append new cases instead of replacing existing valid cases unless the user explicitly asks to replace them.
-- Include large numeric cases when the required data type matters.
-- Recompute every `expectedOutput` with an independent calculation or reference script when feasible.
-- Keep test inputs valid according to `inputConstraints`.
+- 테스트 케이스는 최소 10개 제공한다.
+- 작은 경계값을 포함한다.
+- 입력 제한에 가까운 큰 경계값을 포함한다.
+- 관련 있는 경우 최소 크기, 중복, 정렬/역정렬 데이터, 연결되지 않은 그래프, 단일 노드 트리, 모든 값이 같은 경우, 음수, overflow 위험 값을 포함한다.
+- 모든 `expectedOutput`은 직접 계산되어야 하며 `null`이면 안 된다.
+- 흔한 오답을 잡을 수 있도록 다양한 테스트 케이스를 만든다.
+- 사용자가 테스트 추가를 요청하면 명시적으로 교체를 요청한 경우가 아닌 한 기존의 유효한 테스트를 대체하지 말고 새 케이스를 append한다.
+- 필요한 자료형이 중요한 문제는 큰 수 케이스를 포함한다.
+- 가능하면 모든 `expectedOutput`을 독립 계산이나 기준 스크립트로 다시 계산한다.
+- 테스트 입력은 `inputConstraints`에 맞는 유효한 입력이어야 한다.
 
-## Quality Checklist
+## 품질 체크리스트
 
-Before final output, verify mentally:
+최종 출력 전에 다음을 확인한다.
 
-- The JSON parses.
-- All template fields are present.
-- Category names are allowed.
-- Difficulty is allowed.
-- Examples are ordinary, not edge cases.
-- Test cases include edge and boundary cases.
-- Every expected output is correct.
-- The solution matches the generated problem and test cases.
-- No approved move, DB import, API call, or direct DB write is attempted.
+- JSON이 파싱된다.
+- 템플릿의 모든 필드가 있다.
+- 카테고리명이 허용된 값이다.
+- 난이도가 허용된 값이다.
+- 예제는 일반 사례이고 경계 사례가 아니다.
+- 테스트 케이스에 경계값과 예외적인 케이스가 포함되어 있다.
+- 모든 expected output이 정확하다.
+- 풀이가 생성한 문제 및 테스트 케이스와 일치한다.
+- approved 이동, DB import, API 호출, 직접 DB 쓰기를 시도하지 않았다.

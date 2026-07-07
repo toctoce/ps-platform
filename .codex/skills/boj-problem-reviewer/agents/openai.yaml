@@ -1,0 +1,4 @@
+interface:
+  display_name: "백준 문제 검수"
+  short_description: "BOJ 기반 문제를 대체 출처로 대조 검수"
+  default_prompt: "$boj-problem-reviewer를 사용해서 BOJ 기반 문제 JSON을 실제 출처와 대조하고 보강해줘."

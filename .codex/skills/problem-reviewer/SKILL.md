@@ -1,63 +1,60 @@
 ---
 name: problem-reviewer
-description: Review, verify, and improve existing PS Platform problem JSON files in drafts or approved. Use when asked to 검수, review, compare with an actual BOJ/public problem, fix descriptions, examples, constraints, categories, test cases, expectedOutput, or move a reviewed problem toward approval. Do not use to create brand-new problem drafts from scratch; use problem-author for that.
+description: drafts 또는 approved에 있는 기존 PS Platform 문제 JSON 자체의 품질, 형식, 명확성, 예제, 테스트, 제한, 카테고리, expectedOutput을 검수하고 보강할 때 사용한다. 문제 출처와 무관한 내부 품질 검수에 사용하며, BOJ 원문 대조가 필요하면 boj-problem-reviewer도 함께 사용한다. 새 문제 생성에는 problem-author를 사용한다.
 ---
 
-# Problem Reviewer
+# 문제 검수
 
-## Overview
+## 개요
 
-Review existing PS Platform problem JSON against source material and repository standards. Keep changes scoped to the requested problem files, validate JSON, and report source verification status and remaining risks.
+기존 PS Platform 문제 JSON을 저장소 기준에 맞춰 검수한다. 출처가 어디인지와 관계없이 JSON 필드, 설명의 명확성, 입출력 형식, 제한, 예제, 테스트, 풀이, 난이도, 카테고리의 자체 품질을 확인한다.
 
-## Required References
+변경은 요청받은 문제 파일에만 좁게 적용하고, JSON 검증을 실행한 뒤 수정 내용과 남은 위험을 보고한다.
 
-Before reviewing a problem, read these project files from the repository root:
+## 필수 참고 파일
+
+문제를 검수하기 전에 저장소 루트에서 다음 파일을 읽는다.
 
 - `harness/problem-template.json`
 - `docs/problem-categories.md`
 - `docs/problem-authoring-guidelines.md`
 
-Read the target problem JSON before deciding what to edit. Choose categories only from `docs/problem-categories.md`.
+무엇을 수정할지 결정하기 전에 대상 문제 JSON을 먼저 읽는다. 카테고리는 반드시 `docs/problem-categories.md`에 있는 값만 사용한다.
 
-## Source Verification
+## 검수 절차
 
-- Verify the requested problem against real public source material before claiming it matches the original.
-- Do not query BOJ or solved.ac directly. Treat them as unavailable unless the user explicitly says they are usable again.
-- For BOJ-based problems, prefer Web Archive snapshots of the BOJ page. If unavailable, use reliable solution blogs, archived summaries, public writeups, or public code repositories that state input, output, constraints, examples, and core rules.
-- Do not rely only on memory, title, problem number, or known algorithm pattern.
-- If source verification fails, say so clearly and separate verified fixes from assumptions.
-- Do not copy original statements verbatim; rewrite platform text in Korean.
+1. 사용자 요청과 현재 draft/approved 순서를 보고 검수할 문제 파일을 정한다.
+2. 대상 JSON과 관련 참고 파일을 읽는다.
+3. JSON을 `harness/problem-template.json` 및 `docs/problem-authoring-guidelines.md`와 대조한다.
+4. 설명, 입력/출력 설명, 제한, 예제, 예제 설명, 풀이, 난이도, 카테고리, 테스트의 자체 일관성을 확인한다.
+5. 필요한 부분만 수정한다.
+6. 가능하면 독립 계산이나 기준 스크립트로 `expectedOutput`을 다시 계산한다.
+7. 수정한 모든 문제 JSON에 대해 `./harness/validate-problem-json.sh <file>`을 실행한다.
+8. 변경 범위가 크거나 docs/code를 건드렸거나 사용자가 최종 승인을 요청한 경우 `./harness/verify.sh`를 실행한다.
 
-## Review Workflow
+import 스크립트, backend API, DB 쓰기는 호출하지 않는다. 사용자가 명시적으로 요청하지 않는 한 생성/수정한 문제 데이터는 커밋하지 않는다. 사용자가 `approved` 이동을 명시하면 요청받은 파일만 이동하고, 관련 없는 워크트리 변경은 그대로 둔다.
 
-1. Identify the next problem file from the user's request and the current draft/approved ordering.
-2. Read the target JSON and relevant references.
-3. Verify source conditions: title, input format, output format, constraints, examples, impossible cases, ordering rules, multiple-answer rules, and time/memory limits.
-4. Compare the JSON against both the source and `docs/problem-authoring-guidelines.md`.
-5. Edit only what is needed: statement clarity, input/output descriptions, constraints, examples, example descriptions, solution, difficulty, categories, and tests.
-6. Recompute `expectedOutput` with an independent calculation or reference script whenever feasible.
-7. Run `./harness/validate-problem-json.sh <file>` for every edited problem JSON.
-8. Run `./harness/verify.sh` when the change is broad, touches docs/code, or the user asks for final approval.
+## 검수 우선순위
 
-Do not call import scripts, backend APIs, or database writes. Do not commit generated or edited problem data unless the user explicitly asks. If the user explicitly asks to move a problem to `approved`, move only the requested file and keep unrelated worktree changes intact.
+- 문제 설명은 초보자가 이해할 수 있게 쓰되, 구현 힌트를 문제 설명에 넣지 않는다.
+- 문제 설명, 입력 설명, 출력 설명, 제한, 예제, 테스트, 풀이가 서로 일관되게 맞아야 한다.
+- `timeLimitMs`는 `1000`, `memoryLimitMb`는 `128`로 가능한지 먼저 판단하고, 가능하면 그렇게 수정한다.
+- `1000ms`/`128MB`가 어렵지만 입력 범위를 조금 조정하면 가능할 때는 플랫폼 문제로서 무리가 없는 범위에서 입력 제한을 조정할 수 있다.
+- 제한을 크게 바꿔야만 `1000ms`/`128MB`가 가능하다면 기존 제한을 유지하되, `timeLimitMs`는 `2000`, `memoryLimitMb`는 `256`을 넘기지 않는다.
+- `inputConstraints`의 큰 수에는 `100,000`처럼 세 자리 단위 쉼표를 사용한다.
+- 정확한 경계가 문제의 핵심이 아닌 한 `2,147,483,647` 같은 구현 자료형 경계보다 `1,000,000,000` 같은 읽기 쉬운 십진수 제한을 우선한다.
+- 명확히 필요한 기존 카테고리는 추가하고, 새 카테고리가 필요하면 사용자에게 먼저 말한다.
+- 너무 단순한 예제 설명은 `null`로 두고, 헷갈릴 수 있는 추론을 설명할 때만 예제 설명을 작성한다.
+- 사용자가 테스트 추가를 요청하면 기존의 유효한 테스트를 대체하지 말고 새 테스트를 append한다. 사용자가 명시적으로 대체를 요청한 경우만 교체한다.
+- 모든 `expectedOutput`은 문제 조건에 따라 다시 계산하고, 계산 방식이 불확실하면 남은 위험으로 보고한다.
+- 불가능한 경우, 여러 답이 가능한 경우, 정렬 기준, 공백 형식, 소수 출력 형식처럼 채점 결과가 갈릴 수 있는 조건은 출력 설명에 명시한다.
 
-## Review Priorities
+## 보고 기준
 
-- Make the problem understandable to beginners without adding implementation hints to the statement.
-- Keep platform-specific input/output changes consistent across description, examples, tests, and solution.
-- Use three-digit thousands separators in `inputConstraints`, such as `100,000`.
-- Prefer clean decimal platform limits such as `1,000,000,000` over implementation-shaped limits such as `2,147,483,647`, unless the exact boundary is essential.
-- Add existing categories when clearly appropriate, and tell the user when a new category would be needed.
-- Keep trivial example descriptions as `null`; add explanations only when they clarify non-obvious reasoning.
-- Append requested new tests instead of replacing valid existing tests unless the user explicitly asks to replace them.
+최종 응답에는 다음 내용을 포함한다.
 
-## Reporting
-
-In the final response, include:
-
-- Files changed.
-- Whether real source conditions were verified and which source type was used.
-- Validation commands and results.
-- How `expectedOutput` was recomputed.
-- Categories added or changed.
-- Any unverified details or residual risks.
+- 수정한 파일
+- 검증 명령과 결과
+- `expectedOutput` 재계산 방식
+- 추가하거나 변경한 카테고리
+- 확인하지 못한 부분이나 남은 위험

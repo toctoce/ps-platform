@@ -1,4 +1,4 @@
 interface:
-  display_name: "Problem Reviewer"
-  short_description: "PS 문제 JSON을 실제 출처와 대조해 검수"
-  default_prompt: "Use $problem-reviewer to verify and improve the next draft problem JSON."
+  display_name: "문제 검수"
+  short_description: "PS 문제 JSON 자체 품질과 형식을 검수"
+  default_prompt: "$problem-reviewer를 사용해서 다음 문제 JSON의 설명, 예제, 테스트, 제한, 카테고리를 검수해줘."
