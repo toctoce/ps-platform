@@ -1,11 +1,11 @@
 ---
 name: problem-author
-description: Generate and optionally draft PS Platform algorithm problem JSON. Use when asked to create, draft, or author coding-test/problem-solving problem data for this repository, especially JSON matching harness/problem-template.json with Korean statements, examples, test cases, solution markdown, difficulty, and categories; when saving drafts, validate them with harness/validate-problem-json.sh.
+description: Generate and optionally save new PS Platform algorithm problem JSON drafts. Use when asked to create, restore, draft, or author new coding-test/problem-solving problem data for this repository, especially JSON matching harness/problem-template.json with Korean statements, examples, test cases, solution markdown, difficulty, and categories. Do not use for reviewing existing draft or approved problem JSON; use problem-reviewer for that.
 ---
 
 # Problem Author
 
-Generate one PS Platform problem as JSON. If the user asks to save a draft, save it under `problem-data/drafts` and validate it. Do not move files to `problem-data/approved`, call APIs, run imports, or insert DB rows.
+Generate one new PS Platform problem as JSON. If the user asks to save a draft, save it under `problem-data/drafts` and validate it. Do not review existing problem files with this skill; use `problem-reviewer` for that. Do not move files to `problem-data/approved`, call APIs, run imports, or insert DB rows.
 
 ## Required References
 
@@ -13,6 +13,7 @@ Before generating, read these project files from the repository root:
 
 - `harness/problem-template.json`
 - `docs/problem-categories.md`
+- `docs/problem-authoring-guidelines.md`
 
 Follow the template field names exactly. Choose categories only from `docs/problem-categories.md`.
 
@@ -43,12 +44,17 @@ Do not commit generated or edited problem data files unless the user explicitly 
 
 ## Problem Source Policy
 
-- Base the problem on a famous, widely solved algorithm problem pattern.
-- Do not invent obscure or artificial tasks when a standard well-known pattern fits.
+- Base the problem on the actual public problem requested by the user.
+- If a problem number is provided, verify the real problem conditions from external sources before drafting.
+- Do not query BOJ or solved.ac directly during verification. Treat those services as unavailable unless the user explicitly says they are usable again.
+- For BOJ-based problems, verify conditions with reliable alternative sources such as Web Archive snapshots, solution blogs, archived summaries, or public writeups that confirm input format, output format, constraints, examples, and key rules.
+- Do not rely only on memory, problem title, a famous pattern, or inferred algorithm type.
+- If the real problem conditions cannot be verified, stop and report that the source could not be confirmed instead of generating a draft.
 - Do not copy proprietary problem statements, examples, or explanations verbatim from external sites.
 - Rewrite the statement, examples, and solution in original Korean text.
 - Keep the problem deterministic and objectively judgeable.
 - Do not create ambiguous tasks or tasks with multiple acceptable output formats unless the exact judging rule is clearly stated.
+- In the final response, state whether the real source was verified and mention any remaining uncertainty.
 
 ## Field Rules
 
@@ -56,6 +62,8 @@ Do not commit generated or edited problem data files unless the user explicitly 
 - `description`: explain the task clearly without mentioning implementation strategy.
 - `inputDescription`: describe the input format.
 - `inputConstraints`: write input ranges and conditions as formulas or bullet-like mathematical text. Include bounds, size limits, uniqueness conditions, graph constraints, indexing rules, and other input validity assumptions here.
+- Use thousands separators in numeric bounds in `inputConstraints`; use `100,000`, not `100000`.
+- Prefer clean decimal platform limits such as `1,000,000,000` over implementation-shaped limits such as `2,147,483,647`, unless the exact original boundary is essential to the problem.
 - `outputDescription`: describe the exact output format.
 - `solution`: Markdown string. Explain what algorithm or idea is applied for what purpose, and connect it to the time complexity. Use readable headings such as approach, complexity, and implementation notes. Use `##`, `###`, code blocks, and backticks when they improve readability. Include a concise example code snippet or reference implementation when it helps the reader understand the core algorithm.
 - `timeLimitMs`: positive integer, usually `1000` or `2000`.
@@ -74,6 +82,7 @@ Do not commit generated or edited problem data files unless the user explicitly 
 - `description` explains how the input produces the output only when that explanation adds useful clarity.
 - If the example is simple or the explanation would be too trivial, omit the explanation by setting `description` to `null`.
 - Treat restating the obvious output transformation as too trivial. For example, do not write explanations like "5, 4, 3, 2, 1을 오름차순으로 정렬하면 1, 2, 3, 4, 5입니다."; use `null` instead.
+- When an example explanation is useful, explain the actual reasoning or intermediate values that produce the output.
 - `expectedOutput` must never be `null`.
 
 ## Test Case Rules
@@ -84,6 +93,9 @@ Do not commit generated or edited problem data files unless the user explicitly 
 - Include edge cases such as empty-like minimum sizes, duplicates, sorted/reversed data, disconnected graphs, single-node trees, all-equal values, negative values, or overflow-risk values when relevant.
 - Ensure every `expectedOutput` is manually computed and non-null.
 - Make test cases diverse enough to catch common wrong approaches.
+- When adding requested test cases, append new cases instead of replacing existing valid cases unless the user explicitly asks to replace them.
+- Include large numeric cases when the required data type matters.
+- Recompute every `expectedOutput` with an independent calculation or reference script when feasible.
 - Keep test inputs valid according to `inputConstraints`.
 
 ## Quality Checklist
