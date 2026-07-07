@@ -81,6 +81,7 @@ chore: 루트 gitignore 추가
 * 의도한 파일만 stage합니다.
 * `.gitignore` 대상 파일은 커밋하지 않습니다.
 * `harness/task.md`는 로컬 작업 목록이므로 커밋하지 않습니다.
+* 문제 데이터 생성/추가 작업으로 만들어진 `problem-data/drafts/*.json`, `problem-data/approved/*.json` 파일은 사용자가 명시적으로 커밋을 요청하기 전까지 커밋하지 않습니다.
 * 사용자 변경으로 보이는 관련 없는 파일은 건드리지 않습니다.
 
 검증이 실패하면 커밋하지 않고 실패 원인과 남은 작업을 먼저 보고합니다.

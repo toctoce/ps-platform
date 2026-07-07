@@ -39,6 +39,7 @@ Do not move draft files to `problem-data/approved`.
 Do not run `harness/import-problem-json.sh`.
 Do not call backend APIs.
 Do not insert rows into the database.
+Do not commit generated or edited problem data files unless the user explicitly asks for that commit.
 
 ## Problem Source Policy
 
