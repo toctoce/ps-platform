@@ -5,14 +5,15 @@ React + Vite 기반 프론트엔드 애플리케이션입니다.
 ## 최초 설치
 
 ```bash
-cd frontend
 npm install
 ```
 
 ## 실행 방법
 
+프론트엔드는 현재 필수 환경변수를 사용하지 않습니다.
+Vite 개발 서버는 `/api` 요청을 `http://localhost:8080` 백엔드로 프록시합니다.
+
 ```bash
-cd frontend
 npm run dev
 ```
 
@@ -28,6 +29,5 @@ Vite 개발 서버는 `/api` 요청을 백엔드로 프록시합니다.
 ## 빌드
 
 ```bash
-cd frontend
 npm run build
 ```
