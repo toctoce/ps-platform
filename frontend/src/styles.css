@@ -413,6 +413,12 @@ button:disabled {
   background: var(--ivory);
 }
 
+.problem-list-page {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 .landing-hero {
   min-height: 180px;
   padding: 56px var(--landing-side-padding) 42px;
