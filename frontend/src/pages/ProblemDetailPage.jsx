@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
+import solarizedLightTheme from '../editor/themes/Solarized-light.json';
+import krTheme from '../editor/themes/krTheme.json';
 import { BookOpen, ChevronDown, ChevronUp, Code2, Moon, Play, Plus, RefreshCw, Send, Siren, Sun, X } from 'lucide-react';
 import { request } from '../api/client.js';
 import { ConstraintMath } from '../components/ConstraintMath.jsx';
@@ -30,6 +32,11 @@ import {
   submissionNickname,
   submissionTime,
 } from '../submission/submissionUtils.js';
+
+function defineEditorThemes(monaco) {
+  monaco.editor.defineTheme('ps-dark', krTheme);
+  monaco.editor.defineTheme('ps-light', solarizedLightTheme);
+}
 
 export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthenticated, auth }) {
   const [problem, setProblem] = useState(null);
@@ -197,46 +204,7 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
   }
 
   function handleEditorBeforeMount(monaco) {
-    monaco.editor.defineTheme('ps-dark', {
-      base: 'vs-dark',
-      inherit: true,
-      rules: [
-        { token: 'keyword', foreground: 'c792ea' },
-        { token: 'number', foreground: 'f78c6c' },
-        { token: 'string', foreground: 'c3e88d' },
-        { token: 'comment', foreground: '676e95', fontStyle: 'italic' },
-        { token: 'type.identifier', foreground: 'ffcb6b' },
-      ],
-      colors: {
-        'editor.background': '#1e1e1e',
-        'editor.foreground': '#d4d4d4',
-        'editorLineNumber.foreground': '#6f737b',
-        'editorLineNumber.activeForeground': '#c7c7c7',
-        'editorCursor.foreground': '#ffffff',
-        'editor.selectionBackground': '#3a4a5f',
-        'editor.lineHighlightBackground': '#252526',
-      },
-    });
-    monaco.editor.defineTheme('ps-light', {
-      base: 'vs',
-      inherit: true,
-      rules: [
-        { token: 'keyword', foreground: '6f42c1' },
-        { token: 'number', foreground: 'a14d00' },
-        { token: 'string', foreground: '2f7d32' },
-        { token: 'comment', foreground: '7c7a6f', fontStyle: 'italic' },
-        { token: 'type.identifier', foreground: '8a6116' },
-      ],
-      colors: {
-        'editor.background': '#fffdf8',
-        'editor.foreground': '#24271f',
-        'editorLineNumber.foreground': '#a49d8c',
-        'editorLineNumber.activeForeground': '#5b614f',
-        'editorCursor.foreground': '#24271f',
-        'editor.selectionBackground': '#dfe7d4',
-        'editor.lineHighlightBackground': '#f6f1e7',
-      },
-    });
+    defineEditorThemes(monaco);
   }
 
   function handleEditorMount(editor, monaco) {
