@@ -1,4 +1,4 @@
 interface:
   display_name: "문제 검수"
-  short_description: "PS 문제 JSON 자체 품질과 형식을 검수"
-  default_prompt: "$problem-reviewer를 사용해서 다음 문제 JSON의 설명, 예제, 테스트, 제한, 카테고리를 검수해줘."
+  short_description: "draft 문제 JSON 자체 품질과 형식을 검수"
+  default_prompt: "$problem-reviewer를 사용해서 draft 문제 JSON의 설명, 예제, 테스트, 제한, 카테고리를 검수해줘."

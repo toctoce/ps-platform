@@ -1,13 +1,13 @@
 ---
 name: boj-problem-reviewer
-description: BOJ 기반 PS Platform 문제 JSON을 실제 BOJ 문제 조건과 대조해 검수하고 보강할 때 사용한다. 사용자가 백준 문제 번호, BOJ 기반 문제, 원문 대조, 실제 문제 기반 여부 확인, Web Archive/블로그 기반 검증, BOJ 예제/제한/입출력 비교를 요청하면 사용한다. JSON 자체 품질 검수에는 problem-reviewer도 함께 사용한다.
+description: drafts에 있는 BOJ 기반 PS Platform 문제 JSON을 실제 BOJ 문제 조건과 대조해 검수하고 보강할 때 사용한다. approved 문제는 검수하지 않는다. 사용자가 백준 문제 번호, BOJ 기반 draft 문제, 원문 대조, 실제 문제 기반 여부 확인, Web Archive/블로그 기반 검증, BOJ 예제/제한/입출력 비교를 요청하면 사용한다. JSON 자체 품질 검수에는 problem-reviewer도 함께 사용한다.
 ---
 
 # 백준 문제 검수
 
 ## 개요
 
-BOJ 기반 문제 JSON이 실제 문제 조건을 제대로 반영하는지 검수한다. BOJ 원문을 그대로 복사하지 않고, 확인한 조건을 바탕으로 PS Platform용 한국어 문제로 다시 정리한다.
+`problem-data/drafts`에 있는 BOJ 기반 문제 JSON이 실제 문제 조건을 제대로 반영하는지 검수한다. `problem-data/approved`에 있는 문제는 검수 대상에서 제외한다. BOJ 원문을 그대로 복사하지 않고, 확인한 조건을 바탕으로 PS Platform용 한국어 문제로 다시 정리한다.
 
 이 스킬은 출처 대조 절차만 다룬다. JSON 형식, 설명 품질, 예제 설명, 테스트 다양성, 카테고리 같은 내부 품질 검수는 `problem-reviewer` 기준도 함께 적용한다.
 
@@ -33,7 +33,7 @@ BOJ 기반 문제 JSON이 실제 문제 조건을 제대로 반영하는지 검�
 
 ## 대조 절차
 
-1. 요청에서 BOJ 번호, 제목, 대상 JSON 파일을 확인한다.
+1. 요청에서 BOJ 번호, 제목, 대상 JSON 파일을 확인한다. 대상은 `problem-data/drafts` 아래 파일로 한정하며, `approved`에만 있으면 검수하지 않고 대상이 없다고 보고한다.
 2. Web Archive 또는 신뢰 가능한 대체 출처에서 실제 문제 조건을 찾는다.
 3. 제목, 입력 형식, 출력 형식, 제한, 예제, 불가능한 경우, 정렬 기준, 여러 답 처리, 시간/메모리 제한을 확인한다.
 4. 대상 JSON이 실제 조건을 유지하는지 비교한다.
