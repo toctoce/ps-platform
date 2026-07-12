@@ -1,0 +1,4 @@
+interface:
+  display_name: "대형 테스트 데이터 축소"
+  short_description: "과도하게 큰 테스트를 가치 있는 작은 테스트로 교체"
+  default_prompt: "$reduce-large-test-data를 사용해서 요청 크기를 초과하는 문제 테스트 데이터를 축소해줘."
