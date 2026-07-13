@@ -1,50 +1,36 @@
-import { marked } from 'marked';
-import { useMemo } from 'react';
+import ReactMarkdown from 'react-markdown';
+import rehypeKatex from 'rehype-katex';
+import remarkBreaks from 'remark-breaks';
+import remarkGfm from 'remark-gfm';
+import remarkMath from 'remark-math';
 
-function sanitizeHtml(html) {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
+const markdownComponents = {
+  a: ({ children, node: _node, ...props }) => (
+    <a {...props} target="_blank" rel="noopener noreferrer">
+      {children}
+    </a>
+  ),
+  // 문제 데이터에 포함된 외부 이미지가 사용자 추적 요청을 만들지 않도록 렌더링하지 않는다.
+  img: () => null,
+};
 
-  doc.querySelectorAll('script, style').forEach((node) => {
-    node.remove();
-  });
-
-  doc.querySelectorAll('*').forEach((node) => {
-    Array.from(node.attributes).forEach((attribute) => {
-      const name = attribute.name.toLowerCase();
-      const value = attribute.value ?? '';
-
-      if (name.startsWith('on')) {
-        node.removeAttribute(attribute.name);
-        return;
-      }
-
-      if (name === 'href' && /^\s*javascript:/i.test(value)) {
-        node.setAttribute(attribute.name, '#');
-      }
-    });
-  });
-
-  return doc.body.innerHTML;
-}
-
-export function MarkdownContent({ source, emptyMessage = '등록된 내용이 없습니다.' }) {
+export function MarkdownContent({ source, emptyMessage = '등록된 내용이 없습니다.', className = '' }) {
   const text = source?.trim();
 
   if (!text) {
-    return <p className="empty">{emptyMessage}</p>;
+    return emptyMessage ? <p className="empty">{emptyMessage}</p> : null;
   }
 
-  const html = useMemo(() => {
-    const rawHtml = marked.parse(text, {
-      gfm: true,
-      breaks: true,
-      mangle: false,
-      headerIds: false,
-    });
-
-    return sanitizeHtml(rawHtml);
-  }, [text]);
-
-  return <div className="markdown-content" dangerouslySetInnerHTML={{ __html: html }} />;
+  return (
+    <div className={`markdown-content ${className}`.trim()}>
+      <ReactMarkdown
+        skipHtml
+        remarkPlugins={[remarkGfm, remarkBreaks, remarkMath]}
+        rehypePlugins={[rehypeKatex]}
+        components={markdownComponents}
+      >
+        {text}
+      </ReactMarkdown>
+    </div>
+  );
 }

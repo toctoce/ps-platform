@@ -4,7 +4,7 @@ import solarizedLightTheme from '../editor/themes/Solarized-light.json';
 import krTheme from '../editor/themes/krTheme.json';
 import { BookOpen, ChevronDown, ChevronUp, Code2, Info, Moon, Play, Plus, Send, Siren, Sun, X } from 'lucide-react';
 import { request } from '../api/client.js';
-import { ConstraintMath } from '../components/ConstraintMath.jsx';
+import { ConstraintContent } from '../components/ConstraintContent.jsx';
 import { MarkdownContent } from '../components/MarkdownContent.jsx';
 import {
   editorFileName,
@@ -743,20 +743,28 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
                 </header>
 
                 <section className="problem-section problem-body-section">
-                  <p>{problem.description}</p>
+                  <MarkdownContent
+                    source={problem.description}
+                    emptyMessage="등록된 문제 설명이 없습니다."
+                    className="problem-markdown"
+                  />
                 </section>
 
                 <section className="problem-section problem-box-section">
                   <div className="problem-box-part">
                     <h2>입력</h2>
-                    <p>{problem.inputDescription}</p>
+                    <MarkdownContent
+                      source={problem.inputDescription}
+                      emptyMessage="등록된 입력 설명이 없습니다."
+                      className="problem-markdown"
+                    />
                   </div>
                   <div className="problem-box-part">
                     <h2>제한</h2>
                     <ul className="limit-list">
                       {problemInputRangeItems(problem).map((item, index) => (
                         <li key={`${item}-${index}`}>
-                          <ConstraintMath value={item} />
+                          <ConstraintContent value={item} />
                         </li>
                       ))}
                     </ul>
@@ -765,7 +773,11 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
 
                 <section className="problem-section problem-box-section">
                   <h2>출력</h2>
-                  <p>{problem.outputDescription}</p>
+                  <MarkdownContent
+                    source={problem.outputDescription}
+                    emptyMessage="등록된 출력 설명이 없습니다."
+                    className="problem-markdown"
+                  />
                 </section>
 
                 <section className="problem-section">
@@ -790,7 +802,11 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
                           {testCase.description ? (
                             <details className="example-description">
                               <summary>설명</summary>
-                              <p>{testCase.description}</p>
+                              <MarkdownContent
+                                source={testCase.description}
+                                emptyMessage={null}
+                                className="example-description-markdown"
+                              />
                             </details>
                           ) : null}
                         </div>

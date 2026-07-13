@@ -1,11 +1,4 @@
-import { InlineMath } from 'react-katex';
-
-function normalizeText(value) {
-  return value
-    .replace(/<=/g, '≤')
-    .replace(/>=/g, '≥')
-    .replace(/!=/g, '≠');
-}
+import { MarkdownContent } from './MarkdownContent.jsx';
 
 function shouldRenderMath(value) {
   return /(?:<=|>=|!=|[<>=])/.test(value) || /[A-Za-z]_[A-Za-z0-9]+/.test(value);
@@ -27,22 +20,26 @@ function toLatex(value) {
     .replace(/[가-힣][가-힣\s]*/g, (match) => `\\text{${escapeText(match.trimEnd())}}`);
 }
 
-export function ConstraintMath({ value }) {
+function constraintMarkdown(value) {
+  if (/`|\$/.test(value) || !shouldRenderMath(value)) {
+    return value;
+  }
+
+  return `$${toLatex(value)}$`;
+}
+
+export function ConstraintContent({ value }) {
   const text = String(value ?? '').trim();
 
   if (!text) {
     return null;
   }
 
-  const fallback = <span className="constraint-text">{normalizeText(text)}</span>;
-
-  if (!shouldRenderMath(text)) {
-    return fallback;
-  }
-
   return (
-    <span className="constraint-math">
-      <InlineMath math={toLatex(text)} renderError={() => fallback} />
-    </span>
+    <MarkdownContent
+      source={constraintMarkdown(text)}
+      emptyMessage={null}
+      className="constraint-markdown"
+    />
   );
 }

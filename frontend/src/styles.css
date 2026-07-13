@@ -1629,23 +1629,20 @@ textarea:focus {
   margin: 0;
   padding-left: 20px;
   color: #30382f;
-  line-height: 1.6;
+  line-height: 1.7;
 }
 
 .limit-list li {
   padding-left: 2px;
-  font-size: 13px;
+  font-size: inherit;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
-.constraint-text {
-  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
-}
-
-.constraint-math .katex {
-  color: inherit;
-  font-size: 1em;
+.constraint-markdown {
+  display: block;
+  gap: 0;
+  line-height: inherit;
 }
 
 .problem-footer-meta {
@@ -1744,13 +1741,12 @@ textarea:focus {
   cursor: pointer;
 }
 
-.example-description p {
-  margin: 0;
+.example-description-markdown {
+  gap: 8px;
   padding: 0 12px 12px;
   color: #30382f;
   font-size: 13px;
   line-height: 1.6;
-  white-space: pre-wrap;
 }
 
 .solution-tab {
@@ -1762,6 +1758,10 @@ textarea:focus {
   gap: 14px;
   color: #30382f;
   line-height: 1.75;
+}
+
+.problem-markdown {
+  gap: 8px;
 }
 
 .markdown-content h1,
@@ -1790,6 +1790,7 @@ textarea:focus {
 }
 
 .markdown-content p,
+.markdown-content ol,
 .markdown-content ul,
 .markdown-content blockquote {
   margin: 0;
@@ -1810,10 +1811,24 @@ textarea:focus {
   border: 1px solid #d3cbb8;
 }
 
+.markdown-content ol,
 .markdown-content ul {
   display: grid;
   gap: 6px;
   padding-left: 22px;
+}
+
+.markdown-content hr {
+  width: 100%;
+  margin: 2px 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+.markdown-content .katex-display {
+  margin: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .markdown-content code {
