@@ -610,7 +610,7 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
       lastSubmissionStatus.current[visibleSubmission.id] = visibleSubmission.status;
       setSubmissions((current) => [visibleSubmission, ...current]);
       setActiveProblemTab('submissions');
-      setMessage(`제출 #${created.id}이 접수되었습니다.`);
+      setMessage('제출이 접수되었습니다.');
       startPolling(visibleSubmission.id);
     } catch (error) {
       setMessage(error.message);
