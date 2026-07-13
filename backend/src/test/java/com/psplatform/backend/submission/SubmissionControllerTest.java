@@ -207,6 +207,31 @@ class SubmissionControllerTest {
 	}
 
 	@Test
+	void findSubmissionsByProblemIdExcludesAdminSubmission() throws Exception {
+		Problem problem = createProblem();
+		User user = userRepository.save("alice@example.com", "alice", "hashed-password", "USER");
+		User admin = userRepository.save("admin@example.com", "admin", "hashed-password", "ADMIN");
+		Submission userSubmission = submissionRepository.save(
+			problem.getId(),
+			user.getId(),
+			new SubmissionCreateRequest("java", "public class Main {}")
+		);
+		Submission adminSubmission = submissionRepository.save(
+			problem.getId(),
+			admin.getId(),
+			new SubmissionCreateRequest("java", "public class Main {}")
+		);
+
+		mockMvc.perform(get("/api/problems/{problemId}/submissions", problem.getId()))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$[0].id").value(userSubmission.getId()))
+			.andExpect(jsonPath("$[1]").doesNotExist());
+
+		org.assertj.core.api.Assertions.assertThat(submissionRepository.findById(adminSubmission.getId()))
+			.isPresent();
+	}
+
+	@Test
 	void findSubmissionsKeepsWithdrawnUserSubmission() throws Exception {
 		Problem problem = createProblem();
 		User user = userRepository.save("alice@example.com", "alice", "hashed-password", "USER");
@@ -287,6 +312,7 @@ class SubmissionControllerTest {
 		Problem problem = createProblem();
 		User alice = userRepository.save("alice@example.com", "alice", "hashed-password", "USER");
 		User bob = userRepository.save("bob@example.com", "bob", "hashed-password", "USER");
+		User admin = userRepository.save("admin@example.com", "admin", "hashed-password", "ADMIN");
 		submissionRepository.save(
 			problem.getId(),
 			alice.getId(),
@@ -301,6 +327,11 @@ class SubmissionControllerTest {
 			problem.getId(),
 			bob.getId(),
 			new SubmissionCreateRequest("cpp", "int main() { return 0; }")
+		);
+		submissionRepository.save(
+			problem.getId(),
+			admin.getId(),
+			new SubmissionCreateRequest("java", "public class Main {}")
 		);
 
 		mockMvc.perform(get("/api/submissions/stats/today"))

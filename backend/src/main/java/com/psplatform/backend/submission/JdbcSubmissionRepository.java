@@ -16,6 +16,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class JdbcSubmissionRepository implements SubmissionRepository {
+	private static final String ADMIN_ROLE = "ADMIN";
 
 	private final JdbcTemplate jdbcTemplate;
 
@@ -114,10 +115,12 @@ public class JdbcSubmissionRepository implements SubmissionRepository {
 			FROM submissions s
 			LEFT JOIN users u ON u.id = s.user_id
 			WHERE s.problem_id = ?
+			  AND (s.user_id IS NULL OR u.role <> ?)
 			ORDER BY id DESC
 			""",
 			rowMapper,
-			problemId
+			problemId,
+			ADMIN_ROLE
 		);
 	}
 
@@ -142,13 +145,16 @@ public class JdbcSubmissionRepository implements SubmissionRepository {
 		Long count = jdbcTemplate.queryForObject(
 			"""
 			SELECT COUNT(*)
-			FROM submissions
-			WHERE created_at >= ?
-			  AND created_at < ?
+			FROM submissions s
+			LEFT JOIN users u ON u.id = s.user_id
+			WHERE s.created_at >= ?
+			  AND s.created_at < ?
+			  AND (s.user_id IS NULL OR u.role <> ?)
 			""",
 			Long.class,
 			Timestamp.valueOf(date.atStartOfDay()),
-			Timestamp.valueOf(date.plusDays(1).atStartOfDay())
+			Timestamp.valueOf(date.plusDays(1).atStartOfDay()),
+			ADMIN_ROLE
 		);
 		return count == null ? 0 : count;
 	}
@@ -158,14 +164,16 @@ public class JdbcSubmissionRepository implements SubmissionRepository {
 		Long count = jdbcTemplate.queryForObject(
 			"""
 			SELECT COUNT(DISTINCT user_id)
-			FROM submissions
-			WHERE user_id IS NOT NULL
-			  AND created_at >= ?
-			  AND created_at < ?
+			FROM submissions s
+			JOIN users u ON u.id = s.user_id
+			WHERE s.created_at >= ?
+			  AND s.created_at < ?
+			  AND u.role <> ?
 			""",
 			Long.class,
 			Timestamp.valueOf(date.atStartOfDay()),
-			Timestamp.valueOf(date.plusDays(1).atStartOfDay())
+			Timestamp.valueOf(date.plusDays(1).atStartOfDay()),
+			ADMIN_ROLE
 		);
 		return count == null ? 0 : count;
 	}
