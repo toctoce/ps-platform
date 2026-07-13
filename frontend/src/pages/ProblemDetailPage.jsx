@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import solarizedLightTheme from '../editor/themes/Solarized-light.json';
 import krTheme from '../editor/themes/krTheme.json';
-import { BookOpen, ChevronDown, ChevronUp, Code2, Moon, Play, Plus, Send, Siren, Sun, X } from 'lucide-react';
+import { AlignLeft, BookOpen, ChevronDown, ChevronUp, Code2, Moon, Play, Plus, Send, Siren, Sun, X } from 'lucide-react';
 import { request } from '../api/client.js';
 import { ConstraintMath } from '../components/ConstraintMath.jsx';
 import { MarkdownContent } from '../components/MarkdownContent.jsx';
@@ -19,6 +19,7 @@ import {
   readEditorDraft,
   writeEditorDraft,
 } from '../editor/config.js';
+import { formatCode, formatShortcutLabel } from '../editor/formatter.js';
 import { difficultyClassName, difficultyLabel, problemCategoryNames, problemInputRangeItems } from '../problem/problemUtils.js';
 import { PROBLEM_REPORT_TYPES, problemReportTypeLabel } from '../problem/reportUtils.js';
 import {
@@ -45,6 +46,7 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
   const [submissions, setSubmissions] = useState([]);
   const [busy, setBusy] = useState(false);
   const [submissionBusy, setSubmissionBusy] = useState(false);
+  const [formatBusy, setFormatBusy] = useState(false);
   const [submissionForm, setSubmissionForm] = useState(initialSubmissionForm);
   const [exampleCases, setExampleCases] = useState([]);
   const [testCases, setTestCases] = useState([]);
@@ -69,6 +71,7 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
   const pollingRef = useRef({});
   const lastSubmissionStatus = useRef({});
   const editorRef = useRef(null);
+  const formatterDisposablesRef = useRef([]);
   const formRef = useRef(null);
   const runCodeRef = useRef(null);
   const submissionFormRef = useRef(submissionForm);
@@ -82,6 +85,7 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
   const problemKey = `${editorStorageKeyPrefix}:${problemId}`;
   const currentUsername = auth?.user?.username;
   const selectedReportTypeLabel = problemReportTypeLabel(reportForm.type);
+  const editorFormatShortcut = formatShortcutLabel();
 
   function showTooltip(event, text) {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -211,6 +215,23 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
 
   function handleEditorMount(editor, monaco) {
     editorRef.current = editor;
+    formatterDisposablesRef.current.forEach((disposable) => disposable.dispose());
+    formatterDisposablesRef.current = ['java', 'python', 'cpp'].map((language) => (
+      monaco.languages.registerDocumentFormattingEditProvider(language, {
+        async provideDocumentFormattingEdits(model) {
+          setFormatBusy(true);
+          try {
+            const formattedSource = await formatCode(language, model.getValue());
+            return [{ range: model.getFullModelRange(), text: formattedSource }];
+          } catch {
+            setMessage('코드를 정리할 수 없습니다. 문법을 확인해 주세요.');
+            return [];
+          } finally {
+            setFormatBusy(false);
+          }
+        },
+      })
+    ));
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
       if (formRef.current) {
         formRef.current.requestSubmit();
@@ -228,7 +249,25 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
       writeEditorDraft(localStorage, draftKey, editor.getValue(), Date.now(), true);
       setMessage('임시 저장 완료');
     });
+    editor.addCommand(monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyF, () => {
+      editor.getAction('editor.action.formatDocument')?.run();
+    });
+    if (/Linux/.test(navigator.platform)) {
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyI, () => {
+        editor.getAction('editor.action.formatDocument')?.run();
+      });
+    }
   }
+
+  function formatEditorCode() {
+    editorRef.current?.getAction('editor.action.formatDocument')?.run();
+  }
+
+  useEffect(() => () => {
+    formatterDisposablesRef.current.forEach((disposable) => disposable.dispose());
+    formatterDisposablesRef.current = [];
+    editorRef.current = null;
+  }, []);
 
   function startTestCaseInputResize(event) {
     event.preventDefault();
@@ -884,6 +923,19 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
               </span>
             </button>
             <span className="editor-file-name">{editorFileName(submissionForm.language)}</span>
+            <button
+              className="ide-format-button"
+              type="button"
+              onClick={formatEditorCode}
+              disabled={formatBusy}
+              aria-label="코드 정리"
+              onMouseEnter={(event) => showTooltip(event, editorFormatShortcut)}
+              onFocus={(event) => showTooltip(event, editorFormatShortcut)}
+              onMouseLeave={hideTooltip}
+              onBlur={hideTooltip}
+            >
+              <AlignLeft size={16} />
+            </button>
           </div>
           <form className="submission-form" onSubmit={submitCode} ref={formRef}>
             <div className="editor-shell">
@@ -905,7 +957,6 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
                     detectIndentation: false,
                     fontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", monospace',
                     fontSize: 14,
-                    formatOnPaste: true,
                     hover: { enabled: false },
                     insertSpaces: true,
                     lineHeight: 22,
