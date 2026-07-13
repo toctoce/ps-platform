@@ -46,8 +46,8 @@ public class JdbcJudgeJobRepository implements JudgeJobRepository {
 			rs.getString("judge_message"),
 			getIntegerOrNull(rs, "execution_time_ms"),
 			getIntegerOrNull(rs, "memory_mb"),
-			rs.getTimestamp("created_at").toLocalDateTime(),
-			judgedAt == null ? null : judgedAt.toLocalDateTime()
+			rs.getTimestamp("created_at").toInstant(),
+			judgedAt == null ? null : judgedAt.toInstant()
 		);
 	};
 

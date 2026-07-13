@@ -1,6 +1,6 @@
 package com.psplatform.backend.submission;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public class Submission {
 
@@ -15,8 +15,8 @@ public class Submission {
 	private final String judgeMessage;
 	private final Integer executionTimeMs;
 	private final Integer memoryMb;
-	private final LocalDateTime createdAt;
-	private final LocalDateTime judgedAt;
+	private final Instant createdAt;
+	private final Instant judgedAt;
 
 	public Submission(
 		Long id,
@@ -30,8 +30,8 @@ public class Submission {
 		String judgeMessage,
 		Integer executionTimeMs,
 		Integer memoryMb,
-		LocalDateTime createdAt,
-		LocalDateTime judgedAt
+		Instant createdAt,
+		Instant judgedAt
 	) {
 		this.id = id;
 		this.problemId = problemId;
@@ -56,8 +56,8 @@ public class Submission {
 		SubmissionStatus status,
 		SubmissionVerdict verdict,
 		String judgeMessage,
-		LocalDateTime createdAt,
-		LocalDateTime judgedAt
+		Instant createdAt,
+		Instant judgedAt
 	) {
 		this(id, problemId, null, null, language, sourceCode, status, verdict, judgeMessage, null, null, createdAt, judgedAt);
 	}
@@ -106,11 +106,11 @@ public class Submission {
 		return memoryMb;
 	}
 
-	public LocalDateTime getCreatedAt() {
+	public Instant getCreatedAt() {
 		return createdAt;
 	}
 
-	public LocalDateTime getJudgedAt() {
+	public Instant getJudgedAt() {
 		return judgedAt;
 	}
 }

@@ -4,6 +4,8 @@ spring:
     driver-class-name: org.postgresql.Driver
     username: ps_user
     password: ps_password
+    hikari:
+      connection-init-sql: SET TIME ZONE 'UTC'
   sql:
     init:
       mode: always

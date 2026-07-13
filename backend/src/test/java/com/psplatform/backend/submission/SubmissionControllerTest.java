@@ -6,6 +6,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -83,6 +85,8 @@ class SubmissionControllerTest {
 			.andExpect(jsonPath("$.createdAt", org.hamcrest.Matchers.endsWith("Z")));
 
 		Submission submission = submissionRepository.findByProblemId(problem.getId()).getFirst();
+		org.assertj.core.api.Assertions.assertThat(submission.getCreatedAt())
+			.isCloseTo(Instant.now(), org.assertj.core.api.Assertions.within(5, ChronoUnit.SECONDS));
 		org.assertj.core.api.Assertions.assertThat(
 			judgeJobRepository.countBySubmissionId(submission.getId())
 		).isEqualTo(1);

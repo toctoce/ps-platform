@@ -2,6 +2,7 @@ services:
   postgres:
     image: postgres:16
     container_name: ps-platform-postgres
+    command: ["postgres", "-c", "timezone=UTC"]
     environment:
       POSTGRES_DB: ps_platform
       POSTGRES_USER: ps_user

@@ -3,14 +3,13 @@ package com.psplatform.backend.submission;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 
 import org.junit.jupiter.api.Test;
 
 class SubmissionResponseTest {
 
 	@Test
-	void convertsDatabaseTimestampsToUtcInstants() {
+	void preservesSubmissionInstants() {
 		Submission submission = new Submission(
 			1L,
 			2L,
@@ -23,8 +22,8 @@ class SubmissionResponseTest {
 			null,
 			10,
 			32,
-			LocalDateTime.of(2026, 7, 13, 1, 2, 3),
-			LocalDateTime.of(2026, 7, 13, 1, 2, 4)
+			Instant.parse("2026-07-13T01:02:03Z"),
+			Instant.parse("2026-07-13T01:02:04Z")
 		);
 
 		SubmissionResponse response = SubmissionResponse.from(submission);
@@ -43,7 +42,7 @@ class SubmissionResponseTest {
 			SubmissionStatus.PENDING,
 			null,
 			null,
-			LocalDateTime.of(2026, 7, 13, 1, 2, 3),
+			Instant.parse("2026-07-13T01:02:03Z"),
 			null
 		);
 

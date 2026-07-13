@@ -1,8 +1,6 @@
 package com.psplatform.backend.submission;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 
 public record SubmissionResponse(
 	Long id,
@@ -33,12 +31,8 @@ public record SubmissionResponse(
 			submission.getJudgeMessage(),
 			submission.getExecutionTimeMs(),
 			submission.getMemoryMb(),
-			toUtcInstant(submission.getCreatedAt()),
-			toUtcInstant(submission.getJudgedAt())
+			submission.getCreatedAt(),
+			submission.getJudgedAt()
 		);
-	}
-
-	private static Instant toUtcInstant(LocalDateTime dateTime) {
-		return dateTime == null ? null : dateTime.toInstant(ZoneOffset.UTC);
 	}
 }
