@@ -1,4 +1,4 @@
-import { StrictMode, useEffect, useState } from 'react';
+import { StrictMode, useCallback, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { LogIn, LogOut, MessageCircle, Settings, ShieldCheck, UserPlus, UserRound, X } from 'lucide-react';
 import 'katex/dist/katex.min.css';
@@ -24,11 +24,39 @@ const SUPPORT_INQUIRY_TYPES = [
 ];
 
 const SITE_LOGO_SRC = '/assets/logo-home.png';
+const TOAST_VISIBLE_MS = 2600;
+const TOAST_FADE_MS = 400;
+const MAX_TOASTS = 5;
+
+let nextToastId = 0;
+
+function Toast({ toast, onRemove }) {
+  const [isLeaving, setIsLeaving] = useState(false);
+
+  useEffect(() => {
+    const fadeTimer = window.setTimeout(() => setIsLeaving(true), TOAST_VISIBLE_MS);
+    const removeTimer = window.setTimeout(
+      () => onRemove(toast.id),
+      TOAST_VISIBLE_MS + TOAST_FADE_MS,
+    );
+
+    return () => {
+      window.clearTimeout(fadeTimer);
+      window.clearTimeout(removeTimer);
+    };
+  }, [onRemove, toast.id]);
+
+  return (
+    <div className={`app-toast ${isLeaving ? 'is-leaving' : ''}`}>
+      <span>{toast.message}</span>
+    </div>
+  );
+}
 
 function App() {
   const [route, setRoute] = useState(parseRoute);
   const [auth, setAuth] = useState(() => getStoredAuth());
-  const [message, setMessage] = useState('');
+  const [toasts, setToasts] = useState([]);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [supportInquiryOpen, setSupportInquiryOpen] = useState(false);
   const [supportInquiryBusy, setSupportInquiryBusy] = useState(false);
@@ -41,6 +69,20 @@ function App() {
 
   const isAuthenticated = Boolean(auth?.accessToken);
   const isAdmin = auth?.user?.role === 'ADMIN';
+
+  const removeToast = useCallback((toastId) => {
+    setToasts((current) => current.filter((toast) => toast.id !== toastId));
+  }, []);
+
+  const setMessage = useCallback((message) => {
+    const text = String(message ?? '').trim();
+    if (!text) {
+      return;
+    }
+
+    const toast = { id: ++nextToastId, message: text };
+    setToasts((current) => [...current.slice(-(MAX_TOASTS - 1)), toast]);
+  }, []);
 
   function getLoginReturnTarget() {
     const params = new URLSearchParams(window.location.search);
@@ -214,15 +256,6 @@ function App() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  useEffect(() => {
-    if (!message) {
-      return undefined;
-    }
-
-    const timer = window.setTimeout(() => setMessage(''), 3000);
-    return () => window.clearTimeout(timer);
-  }, [message]);
-
   return (
     <main className="app-shell">
       <header className="site-header">
@@ -318,9 +351,11 @@ function App() {
           </div>
         </div>
       </header>
-      {message ? (
-        <div className="app-toast" role="status" aria-live="polite">
-          <span>{message}</span>
+      {toasts.length > 0 ? (
+        <div className="app-toast-stack" aria-live="polite" aria-atomic="false">
+          {toasts.map((toast) => (
+            <Toast key={toast.id} toast={toast} onRemove={removeToast} />
+          ))}
         </div>
       ) : null}
       <section className="app-content">
