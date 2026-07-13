@@ -19,6 +19,9 @@ public record ProblemCreateRequest(
 ) {
 
 	public ProblemCreateRequest {
+		if (title != null) {
+			title = title.trim();
+		}
 		difficulty = ProblemDifficulty.orDefault(difficulty);
 		if (inputConstraints != null && inputConstraints.isBlank()) {
 			inputConstraints = null;

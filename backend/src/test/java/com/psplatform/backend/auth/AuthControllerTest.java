@@ -77,6 +77,23 @@ class AuthControllerTest {
 	}
 
 	@Test
+	void loginNormalizesEmailCase() throws Exception {
+		mockMvc.perform(post("/api/auth/login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "provider": "local",
+					  "credentials": {
+					    "email": "Alice@Example.com",
+					    "password": "password1234"
+					  }
+					}
+					"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.user.email").value(EMAIL));
+	}
+
+	@Test
 	void loginFailsWhenCredentialInvalid() throws Exception {
 		mockMvc.perform(post("/api/auth/login")
 				.contentType(MediaType.APPLICATION_JSON)

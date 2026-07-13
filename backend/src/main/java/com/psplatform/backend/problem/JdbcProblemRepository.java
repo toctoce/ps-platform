@@ -7,6 +7,7 @@ import java.util.Optional;
 
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
@@ -57,19 +58,23 @@ public class JdbcProblemRepository implements ProblemRepository {
 			""";
 
 		KeyHolder keyHolder = new GeneratedKeyHolder();
-		jdbcTemplate.update(connection -> {
-			PreparedStatement ps = connection.prepareStatement(sql, new String[] {"id"});
-			ps.setString(1, request.title());
-			ps.setString(2, request.description());
-			ps.setString(3, normalizeSolution(request.solution()));
-			ps.setString(4, request.inputDescription());
-			ps.setString(5, request.inputConstraints());
-			ps.setString(6, request.outputDescription());
-			ps.setInt(7, request.timeLimitMs());
-			ps.setInt(8, request.memoryLimitMb());
-			ps.setString(9, request.difficulty().name());
-			return ps;
-		}, keyHolder);
+		try {
+			jdbcTemplate.update(connection -> {
+				PreparedStatement ps = connection.prepareStatement(sql, new String[] {"id"});
+				ps.setString(1, request.title());
+				ps.setString(2, request.description());
+				ps.setString(3, normalizeSolution(request.solution()));
+				ps.setString(4, request.inputDescription());
+				ps.setString(5, request.inputConstraints());
+				ps.setString(6, request.outputDescription());
+				ps.setInt(7, request.timeLimitMs());
+				ps.setInt(8, request.memoryLimitMb());
+				ps.setString(9, request.difficulty().name());
+				return ps;
+			}, keyHolder);
+		} catch (DuplicateKeyException exception) {
+			throw new DuplicateProblemTitleException(request.title(), exception);
+		}
 
 		Number key = keyHolder.getKey();
 		if (key == null) {
@@ -106,6 +111,16 @@ public class JdbcProblemRepository implements ProblemRepository {
 			id
 		);
 		return problems.stream().findFirst();
+	}
+
+	@Override
+	public boolean existsByTitle(String title) {
+		Integer count = jdbcTemplate.queryForObject(
+			"SELECT COUNT(*) FROM problems WHERE title = ?",
+			Integer.class,
+			title
+		);
+		return count != null && count > 0;
 	}
 
 	@Override

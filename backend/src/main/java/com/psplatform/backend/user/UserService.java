@@ -1,7 +1,9 @@
 package com.psplatform.backend.user;
 
+import java.util.Locale;
 import java.util.regex.Pattern;
 
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -22,7 +24,7 @@ public class UserService {
 	}
 
 	public User signup(UserSignupRequest request) {
-		String email = trimOrThrow(request.email(), "email");
+		String email = trimOrThrow(request.email(), "email").toLowerCase(Locale.ROOT);
 		String username = trimOrThrow(request.username(), "username");
 		String password = trimOrThrow(request.password(), "password");
 
@@ -43,7 +45,17 @@ public class UserService {
 		}
 
 		String passwordHash = passwordEncoder.encode(password);
-		return userRepository.save(email, username, passwordHash, USER_ROLE);
+		try {
+			return userRepository.save(email, username, passwordHash, USER_ROLE);
+		} catch (DuplicateKeyException exception) {
+			if (userRepository.findByEmail(email).isPresent()) {
+				throw new DuplicateUserEmailException(email);
+			}
+			if (userRepository.findByUsername(username).isPresent()) {
+				throw new DuplicateUserUsernameException(username);
+			}
+			throw exception;
+		}
 	}
 
 	public User findById(long id) {

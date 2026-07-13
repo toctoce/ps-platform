@@ -14,6 +14,12 @@ public class ProblemExceptionHandler {
 		return new ErrorResponse(exception.getMessage());
 	}
 
+	@ExceptionHandler(DuplicateProblemTitleException.class)
+	@ResponseStatus(HttpStatus.CONFLICT)
+	public ErrorResponse handleProblemConflict(DuplicateProblemTitleException exception) {
+		return new ErrorResponse(exception.getMessage());
+	}
+
 	public record ErrorResponse(String message) {
 	}
 }

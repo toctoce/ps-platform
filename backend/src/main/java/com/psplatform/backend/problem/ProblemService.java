@@ -28,6 +28,9 @@ public class ProblemService {
 
 	@Transactional
 	public Problem create(ProblemCreateRequest request) {
+		if (problemRepository.existsByTitle(request.title())) {
+			throw new DuplicateProblemTitleException(request.title());
+		}
 		Problem problem = problemRepository.save(request);
 		problemCategoryRepository.addLinks(problem.getId(), request.categories());
 		if (request.testCases() != null) {

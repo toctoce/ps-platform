@@ -79,6 +79,33 @@ class UserControllerTest {
 	}
 
 	@Test
+	void signupNormalizesEmailAndRejectsCaseInsensitiveDuplicate() throws Exception {
+		mockMvc.perform(post("/api/users")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "email": "Dupe@Example.com",
+					  "username": "first",
+					  "password": "password1234"
+					}
+					"""))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.email").value("dupe@example.com"));
+
+		mockMvc.perform(post("/api/users")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "email": "dupe@example.com",
+					  "username": "second",
+					  "password": "password1234"
+					}
+					"""))
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.message").value("Email already exists: dupe@example.com"));
+	}
+
+	@Test
 	void signupRejectsDuplicateUsername() throws Exception {
 		userRepository.save("first@example.com", "same-name", "hashed-password", "USER");
 

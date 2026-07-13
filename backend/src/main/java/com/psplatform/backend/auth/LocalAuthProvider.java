@@ -1,5 +1,6 @@
 package com.psplatform.backend.auth;
 
+import java.util.Locale;
 import java.util.Map;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -34,7 +35,7 @@ public class LocalAuthProvider implements AuthProvider {
 			throw new InvalidCredentialException();
 		}
 
-		User user = userRepository.findByEmail(email.trim())
+		User user = userRepository.findByEmail(email.trim().toLowerCase(Locale.ROOT))
 			.orElseThrow(InvalidCredentialException::new);
 
 		if (user.isDeleted()) {

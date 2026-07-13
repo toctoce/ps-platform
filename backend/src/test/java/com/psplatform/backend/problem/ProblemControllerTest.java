@@ -146,6 +146,37 @@ class ProblemControllerTest {
 	}
 
 	@Test
+	void createProblemRejectsDuplicateTrimmedTitle() throws Exception {
+		problemService.create(new ProblemCreateRequest(
+			"A+B",
+			"두 수를 더하는 문제",
+			"정수 A와 B가 주어진다.",
+			"A+B를 출력한다.",
+			1000,
+			128,
+			ProblemDifficulty.NORMAL,
+			List.of(),
+			List.of()
+		));
+
+		mockMvc.perform(post("/api/problems")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "title": "  A+B  ",
+					  "description": "중복 제목 문제",
+					  "inputDescription": "두 정수가 주어진다.",
+					  "outputDescription": "합을 출력한다.",
+					  "difficulty": "EASY",
+					  "timeLimitMs": 1000,
+					  "memoryLimitMb": 128
+					}
+					"""))
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.message").value("Problem title already exists: A+B"));
+	}
+
+	@Test
 	void findAllProblems() throws Exception {
 		problemRepository.save(new ProblemCreateRequest(
 			"A+B",
