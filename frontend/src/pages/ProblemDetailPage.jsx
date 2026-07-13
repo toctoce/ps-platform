@@ -16,6 +16,8 @@ import {
   LANGUAGE_OPTIONS,
   LANGUAGE_TEMPLATES,
   normalizeTemplateSource,
+  readEditorDraft,
+  writeEditorDraft,
 } from '../editor/config.js';
 import { difficultyClassName, difficultyLabel, problemCategoryNames, problemInputRangeItems } from '../problem/problemUtils.js';
 import { PROBLEM_REPORT_TYPES, problemReportTypeLabel } from '../problem/reportUtils.js';
@@ -223,7 +225,7 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       const current = submissionFormRef.current;
       const draftKey = `${problemKey}:${current.language}`;
-      localStorage.setItem(draftKey, editor.getValue());
+      writeEditorDraft(localStorage, draftKey, editor.getValue(), Date.now(), true);
       setMessage('임시 저장 완료');
     });
   }
@@ -290,14 +292,14 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
 
   function loadSavedSourceCode(language) {
     const draftKey = `${problemKey}:${language}`;
-    const saved = localStorage.getItem(draftKey);
+    const saved = readEditorDraft(localStorage, draftKey);
     if (saved === null) {
       return null;
     }
 
     const normalized = normalizeTemplateSource(language, saved);
     if (normalized !== saved) {
-      localStorage.setItem(draftKey, normalized);
+      writeEditorDraft(localStorage, draftKey, normalized);
     }
     return normalized;
   }
@@ -634,7 +636,7 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
       return;
     }
     const draftKey = `${problemKey}:${submissionForm.language}`;
-    localStorage.setItem(draftKey, submissionForm.sourceCode);
+    writeEditorDraft(localStorage, draftKey, submissionForm.sourceCode);
   }, [submissionForm.sourceCode, submissionForm.language, problemId, problemKey]);
 
   return (

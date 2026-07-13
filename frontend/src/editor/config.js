@@ -1,4 +1,7 @@
 export const editorStorageKeyPrefix = 'ps-platform-editor';
+export const editorDraftTtlMs = 7 * 24 * 60 * 60 * 1000;
+
+const EDITOR_DRAFT_KIND = 'ps-platform-editor-draft';
 
 export const LANGUAGE_TEMPLATES = {
   java: `import java.io.*;
@@ -152,4 +155,55 @@ export function normalizeTemplateSource(language, sourceCode) {
   return isTemplateSource(language, sourceCode)
     ? LANGUAGE_TEMPLATES[language] ?? sourceCode
     : sourceCode;
+}
+
+function parseEditorDraft(rawValue) {
+  if (rawValue === null) {
+    return null;
+  }
+  try {
+    const parsed = JSON.parse(rawValue);
+    if (
+      parsed?.kind === EDITOR_DRAFT_KIND
+      && typeof parsed.sourceCode === 'string'
+      && Number.isFinite(parsed.savedAt)
+      && Number.isFinite(parsed.expiresAt)
+    ) {
+      return parsed;
+    }
+  } catch {
+    // 기존 문자열 형식의 임시저장 코드는 아래에서 새 형식으로 변환합니다.
+  }
+  return { legacySourceCode: rawValue };
+}
+
+export function readEditorDraft(storage, key, now = Date.now()) {
+  const draft = parseEditorDraft(storage.getItem(key));
+  if (draft === null) {
+    return null;
+  }
+  if (draft.legacySourceCode !== undefined) {
+    writeEditorDraft(storage, key, draft.legacySourceCode, now, true);
+    return draft.legacySourceCode;
+  }
+  if (draft.expiresAt <= now) {
+    storage.removeItem(key);
+    return null;
+  }
+  return draft.sourceCode;
+}
+
+export function writeEditorDraft(storage, key, sourceCode, now = Date.now(), renew = false) {
+  const existing = parseEditorDraft(storage.getItem(key));
+  const unchanged = existing?.sourceCode === sourceCode && existing.expiresAt > now;
+  if (unchanged && !renew) {
+    return;
+  }
+
+  storage.setItem(key, JSON.stringify({
+    kind: EDITOR_DRAFT_KIND,
+    sourceCode,
+    savedAt: now,
+    expiresAt: now + editorDraftTtlMs,
+  }));
 }
