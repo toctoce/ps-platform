@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import solarizedLightTheme from '../editor/themes/Solarized-light.json';
 import krTheme from '../editor/themes/krTheme.json';
-import { BookOpen, ChevronDown, ChevronUp, Code2, Moon, Play, Plus, RefreshCw, Send, Siren, Sun, X } from 'lucide-react';
+import { BookOpen, ChevronDown, ChevronUp, Code2, Moon, Play, Plus, Send, Siren, Sun, X } from 'lucide-react';
 import { request } from '../api/client.js';
 import { ConstraintMath } from '../components/ConstraintMath.jsx';
 import { MarkdownContent } from '../components/MarkdownContent.jsx';
@@ -276,14 +276,6 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
       };
     });
     setLanguageMenuOpen(false);
-  }
-
-  function resetEditorCode() {
-    setSubmissionForm((current) => ({
-      ...current,
-      sourceCode: LANGUAGE_TEMPLATES[current.language] ?? current.sourceCode,
-    }));
-    setMessage('템플릿으로 되돌렸습니다.');
   }
 
   function toggleIdeTheme() {
@@ -894,15 +886,6 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
               </span>
             </button>
             <span className="editor-file-name">{editorFileName(submissionForm.language)}</span>
-            <button
-              className="editor-reset-button"
-              type="button"
-              onClick={resetEditorCode}
-              title="초기화"
-              aria-label="초기화"
-            >
-              <RefreshCw size={14} />
-            </button>
           </div>
           <form className="submission-form" onSubmit={submitCode} ref={formRef}>
             <div className="editor-shell">

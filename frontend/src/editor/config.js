@@ -1,19 +1,36 @@
 export const editorStorageKeyPrefix = 'ps-platform-editor';
 
 export const LANGUAGE_TEMPLATES = {
-  java: `public class Main {
-    public static void main(String[] args) throws Exception {
+  java: `import java.io.*;
+import java.util.*;
 
+public class Main {
+    public static void main(String[] args) throws Exception {
+\t\t
     }
 }`,
-  python: '',
-  cpp: `int main() {
+  python: `import sys
+`,
+  cpp: `#include <bits/stdc++.h>
+using namespace std;
+
+int main() {
     return 0;
 }`,
 };
 
 const LEGACY_LANGUAGE_TEMPLATES = {
   java: [
+    `public class Main {
+    public static void main(String[] args) throws Exception {
+\t\t
+    }
+}`,
+    `public class Main {
+    public static void main(String[] args) throws Exception {
+
+    }
+}`,
     `import java.io.*;
 import java.util.*;
 
@@ -28,6 +45,7 @@ public class Main {
 }`,
   ],
   python: [
+    '',
     `import sys
 
 def main():
@@ -53,6 +71,9 @@ if __name__ == "__main__":
 `,
   ],
   cpp: [
+    `int main() {
+    return 0;
+}`,
     `#include <bits/stdc++.h>
 using namespace std;
 

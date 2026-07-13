@@ -2054,27 +2054,6 @@ textarea:focus {
   border-color: #d3cbb8;
 }
 
-.editor-reset-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex: 0 0 auto;
-  width: 30px;
-  height: 30px;
-  padding: 0;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--text-sub);
-}
-
-.editor-reset-button:hover,
-.editor-reset-button:focus-visible {
-  background: rgba(110, 123, 91, 0.1);
-  color: var(--brand);
-  outline: none;
-}
-
 .monaco-editor-frame {
   min-height: 0;
   height: 100%;
