@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import solarizedLightTheme from '../editor/themes/Solarized-light.json';
 import krTheme from '../editor/themes/krTheme.json';
-import { AlignLeft, BookOpen, ChevronDown, ChevronUp, Code2, Moon, Play, Plus, Send, Siren, Sun, X } from 'lucide-react';
+import { BookOpen, ChevronDown, ChevronUp, Code2, Info, Moon, Play, Plus, Send, Siren, Sun, X } from 'lucide-react';
 import { request } from '../api/client.js';
 import { ConstraintMath } from '../components/ConstraintMath.jsx';
 import { MarkdownContent } from '../components/MarkdownContent.jsx';
@@ -46,7 +46,6 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
   const [submissions, setSubmissions] = useState([]);
   const [busy, setBusy] = useState(false);
   const [submissionBusy, setSubmissionBusy] = useState(false);
-  const [formatBusy, setFormatBusy] = useState(false);
   const [submissionForm, setSubmissionForm] = useState(initialSubmissionForm);
   const [exampleCases, setExampleCases] = useState([]);
   const [testCases, setTestCases] = useState([]);
@@ -86,6 +85,14 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
   const currentUsername = auth?.user?.username;
   const selectedReportTypeLabel = problemReportTypeLabel(reportForm.type);
   const editorFormatShortcut = formatShortcutLabel();
+  const commandModifier = /Mac|iPhone|iPad/.test(navigator.platform) ? 'Command' : 'Ctrl';
+  const editorShortcuts = [
+    { action: '코드 정리', shortcut: editorFormatShortcut },
+    { action: '실행', shortcut: `${commandModifier} + '` },
+    { action: '제출', shortcut: `${commandModifier} + Enter` },
+    { action: '임시 저장', shortcut: `${commandModifier} + S` },
+    { action: '테스트케이스', shortcut: `${commandModifier} + J` },
+  ];
 
   function showTooltip(event, text) {
     const rect = event.currentTarget.getBoundingClientRect();
@@ -219,15 +226,12 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
     formatterDisposablesRef.current = ['java', 'python', 'cpp'].map((language) => (
       monaco.languages.registerDocumentFormattingEditProvider(language, {
         async provideDocumentFormattingEdits(model) {
-          setFormatBusy(true);
           try {
             const formattedSource = await formatCode(language, model.getValue());
             return [{ range: model.getFullModelRange(), text: formattedSource }];
           } catch {
             setMessage('코드를 정리할 수 없습니다. 문법을 확인해 주세요.');
             return [];
-          } finally {
-            setFormatBusy(false);
           }
         },
       })
@@ -257,10 +261,6 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
         editor.getAction('editor.action.formatDocument')?.run();
       });
     }
-  }
-
-  function formatEditorCode() {
-    editorRef.current?.getAction('editor.action.formatDocument')?.run();
   }
 
   useEffect(() => () => {
@@ -923,19 +923,22 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
               </span>
             </button>
             <span className="editor-file-name">{editorFileName(submissionForm.language)}</span>
-            <button
-              className="ide-format-button"
-              type="button"
-              onClick={formatEditorCode}
-              disabled={formatBusy}
-              aria-label="코드 정리"
-              onMouseEnter={(event) => showTooltip(event, editorFormatShortcut)}
-              onFocus={(event) => showTooltip(event, editorFormatShortcut)}
-              onMouseLeave={hideTooltip}
-              onBlur={hideTooltip}
-            >
-              <AlignLeft size={16} />
-            </button>
+            <div className="ide-shortcut-help">
+              <button type="button" aria-label="에디터 단축키 보기">
+                <Info size={17} />
+              </button>
+              <div className="ide-shortcut-popover" role="tooltip">
+                <strong>단축키</strong>
+                <dl>
+                  {editorShortcuts.map((item) => (
+                    <div key={item.action}>
+                      <dt>{item.action}</dt>
+                      <dd><kbd>{item.shortcut}</kbd></dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            </div>
           </div>
           <form className="submission-form" onSubmit={submitCode} ref={formRef}>
             <div className="editor-shell">

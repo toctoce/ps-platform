@@ -1874,6 +1874,8 @@ textarea:focus {
 }
 
 .ide-header {
+  position: relative;
+  z-index: 30;
   display: flex;
   align-items: center;
   justify-content: flex-start;
@@ -1937,11 +1939,25 @@ textarea:focus {
   color: #ffffff;
 }
 
-.ide-format-button {
+.ide-shortcut-help {
+  position: relative;
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.ide-shortcut-help::after {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  width: 270px;
+  height: 8px;
+  content: '';
+}
+
+.ide-shortcut-help > button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 auto;
   width: 28px;
   height: 28px;
   padding: 0;
@@ -1950,15 +1966,85 @@ textarea:focus {
   color: var(--text-sub);
 }
 
-.ide-format-button:hover,
-.ide-format-button:focus-visible {
+.ide-shortcut-help > button:hover,
+.ide-shortcut-help > button:focus-visible {
   color: var(--brand);
   outline: none;
 }
 
-.ide-format-button:disabled {
-  cursor: wait;
-  opacity: 0.45;
+.ide-shortcut-popover {
+  position: absolute;
+  z-index: 10000;
+  top: calc(100% + 8px);
+  right: 0;
+  display: none;
+  width: 270px;
+  padding: 12px;
+  border: 1px solid #cfc6b4;
+  border-radius: 6px;
+  background: #fffdf8;
+  box-shadow: 0 12px 28px rgba(40, 43, 36, 0.2);
+  color: var(--text-main);
+}
+
+.ide-shortcut-popover::before {
+  position: absolute;
+  top: -5px;
+  right: 9px;
+  width: 8px;
+  height: 8px;
+  border-top: 1px solid #cfc6b4;
+  border-left: 1px solid #cfc6b4;
+  background: #fffdf8;
+  content: '';
+  transform: rotate(45deg);
+}
+
+.ide-shortcut-help:hover .ide-shortcut-popover,
+.ide-shortcut-help:focus-within .ide-shortcut-popover {
+  display: block;
+}
+
+.ide-shortcut-popover > strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.ide-shortcut-popover dl {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+}
+
+.ide-shortcut-popover dl > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.ide-shortcut-popover dt,
+.ide-shortcut-popover dd {
+  margin: 0;
+  font-size: 12px;
+}
+
+.ide-shortcut-popover dt {
+  color: var(--text-sub);
+}
+
+.ide-shortcut-popover kbd {
+  display: inline-block;
+  padding: 2px 5px;
+  border: 1px solid #d8d0c1;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  background: #f2eee5;
+  color: var(--text-main);
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 11px;
+  white-space: nowrap;
 }
 
 .language-menu-button {
