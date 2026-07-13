@@ -79,7 +79,8 @@ class SubmissionControllerTest {
 			.andExpect(jsonPath("$.language").value("java"))
 			.andExpect(jsonPath("$.sourceCode").value("public class Main {}"))
 			.andExpect(jsonPath("$.status").value("PENDING"))
-			.andExpect(jsonPath("$.verdict").doesNotExist());
+			.andExpect(jsonPath("$.verdict").doesNotExist())
+			.andExpect(jsonPath("$.createdAt", org.hamcrest.Matchers.endsWith("Z")));
 
 		Submission submission = submissionRepository.findByProblemId(problem.getId()).getFirst();
 		org.assertj.core.api.Assertions.assertThat(

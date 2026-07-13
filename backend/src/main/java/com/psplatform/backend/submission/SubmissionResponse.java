@@ -1,6 +1,8 @@
 package com.psplatform.backend.submission;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 
 public record SubmissionResponse(
 	Long id,
@@ -14,8 +16,8 @@ public record SubmissionResponse(
 	String judgeMessage,
 	Integer executionTimeMs,
 	Integer memoryMb,
-	LocalDateTime createdAt,
-	LocalDateTime judgedAt
+	Instant createdAt,
+	Instant judgedAt
 ) {
 
 	public static SubmissionResponse from(Submission submission) {
@@ -31,8 +33,12 @@ public record SubmissionResponse(
 			submission.getJudgeMessage(),
 			submission.getExecutionTimeMs(),
 			submission.getMemoryMb(),
-			submission.getCreatedAt(),
-			submission.getJudgedAt()
+			toUtcInstant(submission.getCreatedAt()),
+			toUtcInstant(submission.getJudgedAt())
 		);
+	}
+
+	private static Instant toUtcInstant(LocalDateTime dateTime) {
+		return dateTime == null ? null : dateTime.toInstant(ZoneOffset.UTC);
 	}
 }
