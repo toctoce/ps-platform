@@ -66,7 +66,10 @@ export function configureAuthSession(handlers) {
 }
 
 export async function request(path, options = {}) {
-  const response = await fetch(path, options);
+  const response = await fetch(path, {
+    credentials: 'include',
+    ...options,
+  });
   if (response.status === 401 && shouldRefresh(path, options)) {
     const nextAuth = await refreshAuth();
     if (nextAuth) {
@@ -95,6 +98,7 @@ async function refreshAuth() {
     const refreshToken = authSession.getAuth()?.refreshToken;
     refreshPromise = fetch('/api/auth/refresh', {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refreshToken }),
     })

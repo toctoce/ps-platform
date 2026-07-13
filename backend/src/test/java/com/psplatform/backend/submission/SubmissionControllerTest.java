@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -53,6 +54,9 @@ class SubmissionControllerTest {
 	@Autowired
 	private JdbcTemplate jdbcTemplate;
 
+	@Autowired
+	private GuestSessionService guestSessionService;
+
 	@BeforeEach
 	void setUp() {
 		submissionRepository.deleteAll();
@@ -82,7 +86,9 @@ class SubmissionControllerTest {
 			.andExpect(jsonPath("$.sourceCode").value("public class Main {}"))
 			.andExpect(jsonPath("$.status").value("PENDING"))
 			.andExpect(jsonPath("$.verdict").doesNotExist())
-			.andExpect(jsonPath("$.createdAt", org.hamcrest.Matchers.endsWith("Z")));
+			.andExpect(jsonPath("$.createdAt", org.hamcrest.Matchers.endsWith("Z")))
+			.andExpect(header().doesNotExist("Set-Cookie"))
+			.andExpect(header().doesNotExist("X-Guest-Submissions-Remaining"));
 
 		Submission submission = submissionRepository.findByProblemId(problem.getId()).getFirst();
 		org.assertj.core.api.Assertions.assertThat(submission.getCreatedAt())
@@ -110,7 +116,7 @@ class SubmissionControllerTest {
 	}
 
 	@Test
-	void createSubmissionRequiresAuthentication() throws Exception {
+	void createGuestSubmissionSetsHttpOnlyCookie() throws Exception {
 		Problem problem = createProblem();
 
 		mockMvc.perform(post("/api/problems/{problemId}/submissions", problem.getId())
@@ -118,11 +124,47 @@ class SubmissionControllerTest {
 				.content("""
 					{
 					  "language": "java",
+				  "sourceCode": "public class Main {}"
+				}
+				"""))
+			.andExpect(status().isAccepted())
+			.andExpect(header().string("Set-Cookie", org.hamcrest.Matchers.allOf(
+				org.hamcrest.Matchers.containsString("ps_guest_id="),
+				org.hamcrest.Matchers.containsString("HttpOnly"),
+				org.hamcrest.Matchers.containsString("SameSite=Lax"),
+				org.hamcrest.Matchers.containsString("Max-Age=604800")
+			)))
+			.andExpect(header().string("X-Guest-Submissions-Remaining", "4"));
+
+		String guestSessionId = jdbcTemplate.queryForObject(
+			"SELECT guest_session_id FROM submissions WHERE problem_id = ?",
+			String.class,
+			problem.getId()
+		);
+		org.assertj.core.api.Assertions.assertThat(guestSessionId).isNotBlank();
+	}
+
+	@Test
+	void createGuestSubmissionRejectsRequestAfterFiveSubmissions() throws Exception {
+		Problem problem = createProblem();
+		GuestSubmissionQuota quota = guestSessionService.consumeSubmission(null);
+		for (int count = 1; count < GuestSessionService.SUBMISSION_LIMIT; count++) {
+			guestSessionService.consumeSubmission(quota.guestSessionId());
+		}
+
+		mockMvc.perform(post("/api/problems/{problemId}/submissions", problem.getId())
+				.cookie(new Cookie("ps_guest_id", quota.guestSessionId()))
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "language": "java",
 					  "sourceCode": "public class Main {}"
 					}
 					"""))
-			.andExpect(status().isUnauthorized())
-			.andExpect(jsonPath("$.message").value("Authorization header is required"));
+			.andExpect(status().isTooManyRequests())
+			.andExpect(jsonPath("$.message").value(
+				"비회원 제출 횟수를 모두 사용했습니다. 로그인 후 계속 제출해 주세요."
+			));
 	}
 
 	@Test

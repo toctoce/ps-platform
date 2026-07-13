@@ -45,16 +45,17 @@ public class JdbcSubmissionRepository implements SubmissionRepository {
 	}
 
 	@Override
-	public Submission save(long problemId, Long userId, SubmissionCreateRequest request) {
+	public Submission save(long problemId, Long userId, String guestSessionId, SubmissionCreateRequest request) {
 		String sql = """
 			INSERT INTO submissions (
 				problem_id,
 				user_id,
+				guest_session_id,
 				language,
 				source_code,
 				status
 			)
-			VALUES (?, ?, ?, ?, ?)
+			VALUES (?, ?, ?, ?, ?, ?)
 			""";
 
 		KeyHolder keyHolder = new GeneratedKeyHolder();
@@ -66,9 +67,10 @@ public class JdbcSubmissionRepository implements SubmissionRepository {
 			} else {
 				ps.setLong(2, userId);
 			}
-			ps.setString(3, request.language());
-			ps.setString(4, request.sourceCode());
-			ps.setString(5, SubmissionStatus.PENDING.name());
+			ps.setString(3, guestSessionId);
+			ps.setString(4, request.language());
+			ps.setString(5, request.sourceCode());
+			ps.setString(6, SubmissionStatus.PENDING.name());
 			return ps;
 		}, keyHolder);
 
@@ -182,5 +184,6 @@ public class JdbcSubmissionRepository implements SubmissionRepository {
 	public void deleteAll() {
 		jdbcTemplate.update("DELETE FROM judge_jobs");
 		jdbcTemplate.update("DELETE FROM submissions");
+		jdbcTemplate.update("DELETE FROM guest_sessions");
 	}
 }

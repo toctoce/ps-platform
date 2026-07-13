@@ -1,9 +1,15 @@
 package com.psplatform.backend.submission;
 
 import java.net.URI;
+import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,6 +23,7 @@ import com.psplatform.backend.user.User;
 
 @RestController
 public class SubmissionController {
+	private static final String GUEST_COOKIE_NAME = "ps_guest_id";
 
 	private final SubmissionService submissionService;
 	private final AuthService authService;
@@ -30,14 +37,40 @@ public class SubmissionController {
 	public ResponseEntity<SubmissionResponse> create(
 		@PathVariable long problemId,
 		@RequestBody SubmissionCreateRequest request,
-		@RequestHeader(value = "Authorization", required = false) String authorization
+		@RequestHeader(value = "Authorization", required = false) String authorization,
+		@CookieValue(value = GUEST_COOKIE_NAME, required = false) String guestSessionId,
+		HttpServletRequest servletRequest
 	) {
-		User user = authService.verifyAccessToken(authorization);
-		Submission submission = submissionService.create(problemId, request, user.getId());
-		return ResponseEntity
+		Optional<User> user = authService.findUserIfAuthenticated(authorization);
+		SubmissionCreationResult result = submissionService.createForRequester(
+			problemId,
+			request,
+			user.map(User::getId).orElse(null),
+			guestSessionId
+		);
+		ResponseEntity.BodyBuilder response = ResponseEntity
 			.accepted()
-			.location(URI.create("/api/submissions/" + submission.getId()))
-			.body(SubmissionResponse.from(submission));
+			.location(URI.create("/api/submissions/" + result.submission().getId()));
+		if (result.guestQuota() != null) {
+			response.header("X-Guest-Submissions-Remaining", String.valueOf(result.guestQuota().remaining()));
+			if (result.guestQuota().newSession()) {
+				response.header(HttpHeaders.SET_COOKIE, guestCookie(result.guestQuota().guestSessionId(), servletRequest));
+			}
+		}
+		return response.body(SubmissionResponse.from(result.submission()));
+	}
+
+	private String guestCookie(String guestSessionId, HttpServletRequest request) {
+		boolean secure = request.isSecure()
+			|| "https".equalsIgnoreCase(request.getHeader("X-Forwarded-Proto"));
+		return ResponseCookie.from(GUEST_COOKIE_NAME, guestSessionId)
+			.httpOnly(true)
+			.secure(secure)
+			.sameSite("Lax")
+			.path("/")
+			.maxAge(Duration.ofDays(7))
+			.build()
+			.toString();
 	}
 
 	@GetMapping("/api/problems/{problemId}/submissions")

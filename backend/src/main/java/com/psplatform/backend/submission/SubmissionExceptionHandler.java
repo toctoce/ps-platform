@@ -14,6 +14,12 @@ public class SubmissionExceptionHandler {
 		return new ErrorResponse(exception.getMessage());
 	}
 
+	@ExceptionHandler(GuestSubmissionLimitExceededException.class)
+	@ResponseStatus(HttpStatus.TOO_MANY_REQUESTS)
+	public ErrorResponse handleGuestSubmissionLimit(GuestSubmissionLimitExceededException exception) {
+		return new ErrorResponse(exception.getMessage());
+	}
+
 	public record ErrorResponse(String message) {
 	}
 }

@@ -581,10 +581,6 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
 
   async function submitCode(event) {
     event.preventDefault();
-    if (!isAuthenticated) {
-      setMessage('로그인 후 제출할 수 있습니다.');
-      return;
-    }
 
     setSubmissionBusy(true);
     try {

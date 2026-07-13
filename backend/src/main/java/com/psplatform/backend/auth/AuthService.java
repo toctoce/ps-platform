@@ -2,6 +2,7 @@ package com.psplatform.backend.auth;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -76,6 +77,13 @@ public class AuthService {
 			throw new InvalidAccessTokenException("User not found");
 		}
 		return user;
+	}
+
+	public Optional<User> findUserIfAuthenticated(String authorizationHeader) {
+		if (authorizationHeader == null || authorizationHeader.isBlank()) {
+			return Optional.empty();
+		}
+		return Optional.of(verifyAccessToken(authorizationHeader));
 	}
 
 	@Transactional

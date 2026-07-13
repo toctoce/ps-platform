@@ -21,31 +21,58 @@ public class SubmissionService {
 	private final SubmissionRepository submissionRepository;
 	private final JudgeJobRepository judgeJobRepository;
 	private final RateLimiter rateLimiter;
+	private final GuestSessionService guestSessionService;
 
 	public SubmissionService(
 		ProblemRepository problemRepository,
 		SubmissionRepository submissionRepository,
 		JudgeJobRepository judgeJobRepository,
-		RateLimiter rateLimiter
+		RateLimiter rateLimiter,
+		GuestSessionService guestSessionService
 	) {
 		this.problemRepository = problemRepository;
 		this.submissionRepository = submissionRepository;
 		this.judgeJobRepository = judgeJobRepository;
 		this.rateLimiter = rateLimiter;
+		this.guestSessionService = guestSessionService;
+	}
+
+	@Transactional
+	public SubmissionCreationResult createForRequester(
+		long problemId,
+		SubmissionCreateRequest request,
+		Long userId,
+		String requestedGuestSessionId
+	) {
+		if (problemRepository.findById(problemId).isEmpty()) {
+			throw new ProblemNotFoundException(problemId);
+		}
+
+		GuestSubmissionQuota guestQuota = null;
+		if (userId != null) {
+			rateLimiter.consume("submit:user:" + userId, 1, SUBMISSION_RATE_LIMIT_WINDOW);
+		} else {
+			guestQuota = guestSessionService.consumeSubmission(requestedGuestSessionId);
+			rateLimiter.consume(
+				"submit:guest:" + guestQuota.guestSessionId(),
+				1,
+				SUBMISSION_RATE_LIMIT_WINDOW
+			);
+		}
+
+		Submission submission = submissionRepository.save(
+			problemId,
+			userId,
+			guestQuota == null ? null : guestQuota.guestSessionId(),
+			request
+		);
+		judgeJobRepository.create(submission.getId());
+		return new SubmissionCreationResult(submission, guestQuota);
 	}
 
 	@Transactional
 	public Submission create(long problemId, SubmissionCreateRequest request, Long userId) {
-		if (problemRepository.findById(problemId).isEmpty()) {
-			throw new ProblemNotFoundException(problemId);
-		}
-		if (userId != null) {
-			rateLimiter.consume("submit:user:" + userId, 1, SUBMISSION_RATE_LIMIT_WINDOW);
-		}
-
-		Submission submission = submissionRepository.save(problemId, userId, request);
-		judgeJobRepository.create(submission.getId());
-		return submission;
+		return createForRequester(problemId, request, userId, null).submission();
 	}
 
 	public Submission create(long problemId, SubmissionCreateRequest request) {
