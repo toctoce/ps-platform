@@ -7,17 +7,18 @@ import { request } from '../api/client.js';
 import { ConstraintContent } from '../components/ConstraintContent.jsx';
 import { MarkdownContent } from '../components/MarkdownContent.jsx';
 import {
+  createInitialSubmissionForm,
   editorFileName,
   editorLanguage,
   editorLanguageLabel,
   editorStorageKeyPrefix,
-  initialSubmissionForm,
   isTemplateSource,
   LANGUAGE_OPTIONS,
   LANGUAGE_TEMPLATES,
   normalizeTemplateSource,
   readEditorDraft,
   writeEditorDraft,
+  writePreferredEditorLanguage,
 } from '../editor/config.js';
 import { formatCode, formatShortcutLabel } from '../editor/formatter.js';
 import { difficultyClassName, difficultyLabel, problemCategoryNames, problemInputRangeItems } from '../problem/problemUtils.js';
@@ -46,7 +47,7 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
   const [submissions, setSubmissions] = useState([]);
   const [busy, setBusy] = useState(false);
   const [submissionBusy, setSubmissionBusy] = useState(false);
-  const [submissionForm, setSubmissionForm] = useState(initialSubmissionForm);
+  const [submissionForm, setSubmissionForm] = useState(() => createInitialSubmissionForm(localStorage));
   const [exampleCases, setExampleCases] = useState([]);
   const [testCases, setTestCases] = useState([]);
   const [activeProblemTab, setActiveProblemTab] = useState('problem');
@@ -308,6 +309,7 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
   }
 
   function changeSubmissionLanguage(nextLanguage) {
+    writePreferredEditorLanguage(localStorage, nextLanguage);
     setSubmissionForm((current) => {
       const isFromTemplate = isTemplateSource(current.language, current.sourceCode);
       return {

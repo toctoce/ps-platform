@@ -1,7 +1,9 @@
 export const editorStorageKeyPrefix = 'ps-platform-editor';
 export const editorDraftTtlMs = 7 * 24 * 60 * 60 * 1000;
+export const editorLanguageStorageKey = `${editorStorageKeyPrefix}:default-language`;
 
 const EDITOR_DRAFT_KIND = 'ps-platform-editor-draft';
+const DEFAULT_EDITOR_LANGUAGE = 'java';
 
 export const LANGUAGE_TEMPLATES = {
   java: `import java.io.*;
@@ -107,16 +109,44 @@ int main() {
   ],
 };
 
-export const initialSubmissionForm = {
-  language: 'java',
-  sourceCode: LANGUAGE_TEMPLATES.java,
-};
-
 export const LANGUAGE_OPTIONS = [
   { value: 'java', label: 'Java' },
   { value: 'python', label: 'Python' },
   { value: 'cpp', label: 'C++' },
 ];
+
+function isSupportedLanguage(language) {
+  return LANGUAGE_OPTIONS.some((option) => option.value === language);
+}
+
+export function readPreferredEditorLanguage(storage) {
+  try {
+    const language = storage.getItem(editorLanguageStorageKey);
+    return isSupportedLanguage(language) ? language : DEFAULT_EDITOR_LANGUAGE;
+  } catch {
+    return DEFAULT_EDITOR_LANGUAGE;
+  }
+}
+
+export function writePreferredEditorLanguage(storage, language) {
+  if (!isSupportedLanguage(language)) {
+    return;
+  }
+
+  try {
+    storage.setItem(editorLanguageStorageKey, language);
+  } catch {
+    // 저장소를 사용할 수 없는 브라우저에서도 현재 언어 변경은 그대로 허용합니다.
+  }
+}
+
+export function createInitialSubmissionForm(storage) {
+  const language = readPreferredEditorLanguage(storage);
+  return {
+    language,
+    sourceCode: LANGUAGE_TEMPLATES[language],
+  };
+}
 
 export function editorLanguageLabel(language) {
   return LANGUAGE_OPTIONS.find((item) => item.value === language)?.label ?? 'Java';
