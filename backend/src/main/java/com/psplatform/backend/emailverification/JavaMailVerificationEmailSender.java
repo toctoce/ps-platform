@@ -1,0 +1,76 @@
+package com.psplatform.backend.emailverification;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.mail.MailException;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.stereotype.Service;
+
+@Service
+public class JavaMailVerificationEmailSender implements VerificationEmailSender {
+
+	private static final Logger log = LoggerFactory.getLogger(JavaMailVerificationEmailSender.class);
+
+	private final JavaMailSender mailSender;
+	private final String fromEmail;
+	private final String smtpUsername;
+
+	public JavaMailVerificationEmailSender(
+		JavaMailSender mailSender,
+		@Value("${app.email-verification.from-email:}") String fromEmail,
+		@Value("${spring.mail.username:}") String smtpUsername
+	) {
+		this.mailSender = mailSender;
+		this.fromEmail = fromEmail;
+		this.smtpUsername = smtpUsername;
+	}
+
+	@Override
+	public void sendSignupCode(String email, String code, long expiresInSeconds) {
+		SimpleMailMessage message = new SimpleMailMessage();
+		message.setTo(email);
+		String resolvedFrom = firstPresent(fromEmail, smtpUsername);
+		if (!resolvedFrom.isBlank()) {
+			message.setFrom(resolvedFrom);
+		}
+		message.setSubject("[빵구리즘] 회원가입 이메일 인증번호");
+		message.setText("""
+			빵구리즘 회원가입 인증번호입니다.
+
+			인증번호: %s
+
+			인증번호는 %d분 동안 유효합니다.
+			본인이 요청하지 않았다면 이 메일을 무시해 주세요.
+			""".formatted(code, Math.max(1, expiresInSeconds / 60)));
+
+		try {
+			mailSender.send(message);
+		} catch (MailException exception) {
+			log.error("회원가입 인증 메일 전송 실패: recipient=" + maskEmail(email), exception);
+			throw new EmailVerificationDeliveryException(exception);
+		}
+	}
+
+	private String maskEmail(String email) {
+		if (email == null || email.isBlank()) {
+			return "-";
+		}
+		int atIndex = email.indexOf('@');
+		if (atIndex <= 0) {
+			return "***";
+		}
+		return email.charAt(0) + "***" + email.substring(atIndex);
+	}
+
+	private String firstPresent(String first, String second) {
+		if (first != null && !first.isBlank()) {
+			return first.trim();
+		}
+		if (second != null && !second.isBlank()) {
+			return second.trim();
+		}
+		return "";
+	}
+}

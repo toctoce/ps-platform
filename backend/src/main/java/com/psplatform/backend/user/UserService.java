@@ -1,36 +1,37 @@
 package com.psplatform.backend.user;
 
-import java.util.Locale;
-import java.util.regex.Pattern;
-
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.psplatform.backend.emailverification.EmailVerificationService;
 
 @Service
 public class UserService {
 
 	private static final String USER_ROLE = "USER";
-	private static final Pattern EMAIL_PATTERN = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
 	private static final int MIN_PASSWORD_LENGTH = 8;
 
 	private final UserRepository userRepository;
+	private final EmailVerificationService emailVerificationService;
 	private final PasswordEncoder passwordEncoder;
 
-	public UserService(UserRepository userRepository) {
+	public UserService(
+		UserRepository userRepository,
+		EmailVerificationService emailVerificationService
+	) {
 		this.userRepository = userRepository;
+		this.emailVerificationService = emailVerificationService;
 		this.passwordEncoder = new BCryptPasswordEncoder();
 	}
 
+	@Transactional
 	public User signup(UserSignupRequest request) {
-		String email = trimOrThrow(request.email(), "email").toLowerCase(Locale.ROOT);
+		String email = UserEmail.normalize(request.email());
 		String username = trimOrThrow(request.username(), "username");
 		String password = trimOrThrow(request.password(), "password");
-
-		if (!EMAIL_PATTERN.matcher(email).matches()) {
-			throw new InvalidUserInputException("Invalid email format");
-		}
 
 		if (password.length() < MIN_PASSWORD_LENGTH) {
 			throw new InvalidUserInputException("Password must be at least 8 characters");
@@ -44,6 +45,7 @@ public class UserService {
 			throw new DuplicateUserUsernameException(username);
 		}
 
+		emailVerificationService.consumeSignupToken(email, request.verificationToken());
 		String passwordHash = passwordEncoder.encode(password);
 		try {
 			return userRepository.save(email, username, passwordHash, USER_ROLE);

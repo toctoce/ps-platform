@@ -15,6 +15,7 @@ SPRING_PROFILES_ACTIVE=local \
 JWT_SECRET=backend-dev-secret-key-for-local-development-change-this \
 JWT_ACCESS_TOKEN_TTL_SECONDS=900 \
 JWT_REFRESH_TOKEN_TTL_SECONDS=1209600 \
+EMAIL_VERIFICATION_CODE_HASH_SECRET=local-email-verification-secret-change-this \
 ./gradlew bootRun
 ```
 
@@ -33,6 +34,7 @@ SPRING_PROFILES_ACTIVE=local \
 JWT_SECRET=local-development-secret-at-least-32-bytes \
 JWT_ACCESS_TOKEN_TTL_SECONDS=900 \
 JWT_REFRESH_TOKEN_TTL_SECONDS=1209600 \
+EMAIL_VERIFICATION_CODE_HASH_SECRET=local-email-verification-secret-change-this \
 SMTP_HOST=smtp.gmail.com \
 SMTP_PORT=587 \
 SMTP_USERNAME=your-email@gmail.com \
@@ -40,6 +42,7 @@ SMTP_PASSWORD=your-app-password \
 SMTP_AUTH=true \
 SMTP_STARTTLS_ENABLE=true \
 SUPPORT_TO_EMAIL=ypungkyu0317@gmail.com \
+EMAIL_VERIFICATION_FROM_EMAIL=your-email@gmail.com \
 ./gradlew bootRun
 ```
 
@@ -55,6 +58,7 @@ DB_PASSWORD=your-db-password \
 JWT_SECRET=replace-with-long-random-secret \
 JWT_ACCESS_TOKEN_TTL_SECONDS=900 \
 JWT_REFRESH_TOKEN_TTL_SECONDS=1209600 \
+EMAIL_VERIFICATION_CODE_HASH_SECRET=replace-with-another-long-random-secret \
 SMTP_HOST=smtp.gmail.com \
 SMTP_PORT=587 \
 SMTP_USERNAME=your-email@gmail.com \
@@ -63,6 +67,7 @@ SMTP_AUTH=true \
 SMTP_STARTTLS_ENABLE=true \
 SUPPORT_TO_EMAIL=ypungkyu0317@gmail.com \
 SUPPORT_FROM_EMAIL=your-email@gmail.com \
+EMAIL_VERIFICATION_FROM_EMAIL=your-email@gmail.com \
 ./gradlew bootRun
 ```
 

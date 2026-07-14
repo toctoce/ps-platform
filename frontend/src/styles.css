@@ -3203,6 +3203,41 @@ dt {
   background: #f8f5ee;
 }
 
+.auth-inline-field {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.auth-inline-field input {
+  min-width: 0;
+}
+
+.auth-field-button {
+  min-width: 76px;
+  padding: 0 12px;
+  border: 1px solid #cbc5b8;
+  border-radius: 6px;
+  background: #efede6;
+  color: var(--text-main);
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.auth-field-button:hover:not(:disabled),
+.auth-field-button:focus-visible {
+  border-color: var(--brand);
+  color: var(--brand);
+  outline: none;
+}
+
+.auth-field-button.is-verified {
+  border-color: #9eb59a;
+  background: #edf5eb;
+  color: #3f6944;
+}
+
 .auth-alert {
   padding: 10px 11px;
   border: 1px solid #e2b8ae;

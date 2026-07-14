@@ -23,6 +23,13 @@ spring:
 
 
 app:
+  email-verification:
+    code-hash-secret: ${EMAIL_VERIFICATION_CODE_HASH_SECRET}
+    code-ttl-seconds: ${EMAIL_VERIFICATION_CODE_TTL_SECONDS:300}
+    token-ttl-seconds: ${EMAIL_VERIFICATION_TOKEN_TTL_SECONDS:1800}
+    resend-cooldown-seconds: ${EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS:60}
+    max-attempts: ${EMAIL_VERIFICATION_MAX_ATTEMPTS:5}
+    from-email: ${EMAIL_VERIFICATION_FROM_EMAIL:}
   auth:
     jwt:
       secret: ${JWT_SECRET:backend-dev-secret-key-for-local-development-change-this}
