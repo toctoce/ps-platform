@@ -21,6 +21,10 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.psplatform.backend.auth.JwtTokenService;
+import com.psplatform.backend.user.User;
+import com.psplatform.backend.user.UserRepository;
+
 @SpringBootTest
 @AutoConfigureMockMvc
 class ProblemControllerTest {
@@ -40,14 +44,22 @@ class ProblemControllerTest {
 	@Autowired
 	private ProblemService problemService;
 
+	@Autowired
+	private UserRepository userRepository;
+
+	@Autowired
+	private JwtTokenService jwtTokenService;
+
 	@BeforeEach
 	void setUp() {
 		problemRepository.deleteAll();
+		userRepository.deleteAll();
 	}
 
 	@Test
 	void createProblemNormalizesPlainSolutionToMarkdown() throws Exception {
 		mockMvc.perform(post("/api/problems")
+				.header("Authorization", adminAuthorization())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 					{
@@ -69,6 +81,7 @@ class ProblemControllerTest {
 	@Test
 	void createProblemDecodesEscapedNewlinesFromRequest() throws Exception {
 		mockMvc.perform(post("/api/problems")
+				.header("Authorization", adminAuthorization())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 					{
@@ -91,6 +104,7 @@ class ProblemControllerTest {
 	@Test
 	void createProblem() throws Exception {
 		mockMvc.perform(post("/api/problems")
+				.header("Authorization", adminAuthorization())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 					{
@@ -160,6 +174,7 @@ class ProblemControllerTest {
 		));
 
 		mockMvc.perform(post("/api/problems")
+				.header("Authorization", adminAuthorization())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 					{
@@ -306,6 +321,7 @@ class ProblemControllerTest {
 		));
 
 		mockMvc.perform(post("/api/problems/{id}/test-cases", problem.getId())
+				.header("Authorization", adminAuthorization())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 					{
@@ -340,6 +356,7 @@ class ProblemControllerTest {
 		));
 
 		mockMvc.perform(post("/api/problems/{id}/examples", problem.getId())
+				.header("Authorization", adminAuthorization())
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 					{
@@ -383,6 +400,10 @@ class ProblemControllerTest {
 		);
 
 		mockMvc.perform(get("/api/problems/{id}/test-cases", problem.getId()))
+			.andExpect(status().isUnauthorized());
+
+		mockMvc.perform(get("/api/problems/{id}/test-cases", problem.getId())
+				.header("Authorization", adminAuthorization()))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$[0].input").value("1 2\n"))
 			.andExpect(jsonPath("$[0].expectedOutput").value("3\n"))
@@ -430,5 +451,11 @@ class ProblemControllerTest {
 		mockMvc.perform(get("/api/problems/{id}", 999))
 			.andExpect(status().isNotFound())
 			.andExpect(jsonPath("$.message").value("Problem not found: 999"));
+	}
+
+	private String adminAuthorization() {
+		User user = userRepository.findByEmail("admin@example.com")
+			.orElseGet(() -> userRepository.save("admin@example.com", "admin", "password", "ADMIN"));
+		return "Bearer " + jwtTokenService.createAccessToken(user);
 	}
 }

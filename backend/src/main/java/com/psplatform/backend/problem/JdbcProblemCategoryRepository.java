@@ -58,7 +58,8 @@ public class JdbcProblemCategoryRepository implements ProblemCategoryRepository 
 			"""
 			SELECT id, name
 			FROM problem_categories
-			ORDER BY name ASC
+			WHERE active = TRUE
+			ORDER BY display_order ASC, name ASC
 			""",
 			(rs, rowNum) -> new ProblemCategory(
 				rs.getLong("id"),
@@ -71,11 +72,13 @@ public class JdbcProblemCategoryRepository implements ProblemCategoryRepository 
 	public List<ProblemCategorySummary> findAllWithProblemCount() {
 		return jdbcTemplate.query(
 			"""
-			SELECT pc.id, pc.name, COUNT(pcl.problem_id) AS problem_count
+			SELECT pc.id, pc.name, COUNT(p.id) AS problem_count
 			FROM problem_categories pc
 			LEFT JOIN problem_category_links pcl ON pcl.category_id = pc.id
+			LEFT JOIN problems p ON p.id = pcl.problem_id AND p.archived_at IS NULL
+			WHERE pc.active = TRUE
 			GROUP BY pc.id, pc.name
-			ORDER BY pc.name ASC
+			ORDER BY MIN(pc.display_order) ASC, pc.name ASC
 			""",
 			(rs, rowNum) -> new ProblemCategorySummary(
 				rs.getLong("id"),
@@ -96,8 +99,8 @@ public class JdbcProblemCategoryRepository implements ProblemCategoryRepository 
 			SELECT pcl.problem_id, pc.id, pc.name
 			FROM problem_category_links pcl
 			JOIN problem_categories pc ON pc.id = pcl.category_id
-			WHERE pcl.problem_id IN (%s)
-			ORDER BY pcl.problem_id, pc.name
+			WHERE pcl.problem_id IN (%s) AND pc.active = TRUE
+			ORDER BY pcl.problem_id, pc.display_order, pc.name
 			""".formatted(placeholders);
 
 		return jdbcTemplate.query(sql, (ResultSetExtractor<Map<Long, List<ProblemCategory>>>) rs -> {

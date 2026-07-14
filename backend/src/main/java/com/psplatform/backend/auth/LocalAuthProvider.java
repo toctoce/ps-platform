@@ -38,7 +38,7 @@ public class LocalAuthProvider implements AuthProvider {
 		User user = userRepository.findByEmail(email.trim().toLowerCase(Locale.ROOT))
 			.orElseThrow(InvalidCredentialException::new);
 
-		if (user.isDeleted()) {
+		if (user.isDeleted() || user.isSuspended()) {
 			throw new InvalidCredentialException();
 		}
 

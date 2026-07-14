@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.psplatform.backend.auth.AuthService;
+import com.psplatform.backend.admin.AdminService;
 import com.psplatform.backend.user.User;
 
 @RestController
@@ -20,10 +21,16 @@ public class ProblemReportController {
 
 	private final ProblemReportService problemReportService;
 	private final AuthService authService;
+	private final AdminService adminService;
 
-	public ProblemReportController(ProblemReportService problemReportService, AuthService authService) {
+	public ProblemReportController(
+		ProblemReportService problemReportService,
+		AuthService authService,
+		AdminService adminService
+	) {
 		this.problemReportService = problemReportService;
 		this.authService = authService;
+		this.adminService = adminService;
 	}
 
 	@PostMapping("/api/problems/{problemId}/reports")
@@ -57,6 +64,8 @@ public class ProblemReportController {
 		@RequestHeader(value = "Authorization", required = false) String authorization
 	) {
 		User user = authService.verifyAccessToken(authorization);
-		return ProblemReportResponse.from(problemReportService.review(reportId, user, request));
+		ProblemReport reviewed = problemReportService.review(reportId, user, request);
+		adminService.audit(user, "REPORT_REVIEW", "PROBLEM_REPORT", Long.toString(reportId), request.status().name());
+		return ProblemReportResponse.from(reviewed);
 	}
 }

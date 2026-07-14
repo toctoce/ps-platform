@@ -92,6 +92,7 @@ public class JdbcProblemRepository implements ProblemRepository {
 			SELECT id, title, description, solution, input_description, input_constraints, output_description,
 			       time_limit_ms, memory_limit_mb, difficulty, created_at
 			FROM problems
+			WHERE archived_at IS NULL
 			ORDER BY id DESC
 			""",
 			rowMapper
@@ -105,7 +106,7 @@ public class JdbcProblemRepository implements ProblemRepository {
 			SELECT id, title, description, solution, input_description, input_constraints, output_description,
 			       time_limit_ms, memory_limit_mb, difficulty, created_at
 			FROM problems
-			WHERE id = ?
+			WHERE id = ? AND archived_at IS NULL
 			""",
 			rowMapper,
 			id
@@ -135,7 +136,7 @@ public class JdbcProblemRepository implements ProblemRepository {
 			FROM problems p
 			INNER JOIN problem_category_links pcl ON p.id = pcl.problem_id
 			INNER JOIN problem_categories pc ON pc.id = pcl.category_id
-			WHERE pc.name = ?
+			WHERE pc.name = ? AND pc.active = TRUE AND p.archived_at IS NULL
 			ORDER BY p.id DESC
 			""",
 			rowMapper,
@@ -153,6 +154,7 @@ public class JdbcProblemRepository implements ProblemRepository {
 			SELECT id, title, description, solution, input_description, input_constraints, output_description,
 			       time_limit_ms, memory_limit_mb, difficulty, created_at
 			FROM problems
+			WHERE archived_at IS NULL
 			ORDER BY RANDOM()
 			LIMIT ?
 			""",

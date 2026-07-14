@@ -26,7 +26,8 @@ public class JdbcUserRepository implements UserRepository {
 		rs.getString("role"),
 		rs.getTimestamp("created_at").toLocalDateTime(),
 		rs.getTimestamp("updated_at").toLocalDateTime(),
-		getTimestampOrNull(rs, "deleted_at")
+		getTimestampOrNull(rs, "deleted_at"),
+		getTimestampOrNull(rs, "suspended_at")
 	);
 
 	public JdbcUserRepository(JdbcTemplate jdbcTemplate) {
@@ -63,7 +64,7 @@ public class JdbcUserRepository implements UserRepository {
 	public Optional<User> findById(long id) {
 		List<User> users = jdbcTemplate.query(
 			"""
-			SELECT id, email, username, password_hash, role, created_at, updated_at, deleted_at
+			SELECT id, email, username, password_hash, role, created_at, updated_at, deleted_at, suspended_at
 			FROM users
 			WHERE id = ?
 			""",
@@ -77,7 +78,7 @@ public class JdbcUserRepository implements UserRepository {
 	public Optional<User> findByEmail(String email) {
 		List<User> users = jdbcTemplate.query(
 			"""
-			SELECT id, email, username, password_hash, role, created_at, updated_at, deleted_at
+			SELECT id, email, username, password_hash, role, created_at, updated_at, deleted_at, suspended_at
 			FROM users
 			WHERE email = ?
 			""",
@@ -91,7 +92,7 @@ public class JdbcUserRepository implements UserRepository {
 	public Optional<User> findByUsername(String username) {
 		List<User> users = jdbcTemplate.query(
 			"""
-			SELECT id, email, username, password_hash, role, created_at, updated_at, deleted_at
+			SELECT id, email, username, password_hash, role, created_at, updated_at, deleted_at, suspended_at
 			FROM users
 			WHERE username = ?
 			""",
@@ -126,6 +127,7 @@ public class JdbcUserRepository implements UserRepository {
 
 	@Override
 	public void deleteAll() {
+		jdbcTemplate.update("DELETE FROM admin_audit_logs");
 		jdbcTemplate.update("DELETE FROM refresh_tokens");
 		jdbcTemplate.update("DELETE FROM users");
 	}

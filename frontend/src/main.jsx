@@ -5,7 +5,7 @@ import 'katex/dist/katex.min.css';
 import './styles.css';
 import { configureAuthSession, request } from './api/client.js';
 import { clearStoredAuth, getStoredAuth, saveStoredAuth } from './auth/storage.js';
-import { AdminPage } from './pages/AdminPage.jsx';
+import { ADMIN_TABS, AdminPage } from './pages/AdminPage.jsx';
 import { CategoryPage } from './pages/CategoryPage.jsx';
 import { HomePage } from './pages/HomePage.jsx';
 import { LoginPage } from './pages/LoginPage.jsx';
@@ -58,6 +58,7 @@ function App() {
   const [auth, setAuth] = useState(() => getStoredAuth());
   const [toasts, setToasts] = useState([]);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [adminTab, setAdminTab] = useState('overview');
   const [supportInquiryOpen, setSupportInquiryOpen] = useState(false);
   const [supportInquiryBusy, setSupportInquiryBusy] = useState(false);
   const [supportInquiryForm, setSupportInquiryForm] = useState({
@@ -258,7 +259,7 @@ function App() {
 
   return (
     <main className="app-shell">
-      <header className="site-header">
+      <header className={`site-header ${route.name === 'admin' ? 'is-admin' : ''}`}>
         <button className="site-logo" type="button" onClick={() => navigate('/')}>
           <span className="site-logo-mark">
             <img src={SITE_LOGO_SRC} alt="" />
@@ -266,7 +267,31 @@ function App() {
           <strong>빵구리즘</strong>
         </button>
 
+        {route.name === 'admin' && isAdmin ? (
+          <div className="admin-site-navigation">
+            <strong className="admin-site-title">관리자 페이지</strong>
+            <nav className="admin-tabs" aria-label="관리자 메뉴">
+              {ADMIN_TABS.map(({ id, label, icon: Icon }) => (
+                <button
+                  className={adminTab === id ? 'is-active' : ''}
+                  key={id}
+                  type="button"
+                  onClick={() => setAdminTab(id)}
+                >
+                  <Icon size={15} /> {label}
+                </button>
+              ))}
+            </nav>
+          </div>
+        ) : null}
+
         <div className="site-actions">
+          {route.name === 'home' && isAdmin ? (
+            <button className="home-admin-button" type="button" onClick={() => navigate('/admin')}>
+              <ShieldCheck size={16} />
+              관리자 페이지
+            </button>
+          ) : null}
           <div className="user-menu">
             <button
               className={isAuthenticated ? 'icon-action' : 'user-menu-trigger'}
@@ -295,12 +320,6 @@ function App() {
                     <UserRound size={16} />
                     마이페이지
                   </button>
-                  {isAdmin ? (
-                    <button type="button" onClick={() => navigate('/admin')}>
-                      <ShieldCheck size={16} />
-                      관리자 페이지
-                    </button>
-                  ) : null}
                   <button
                     type="button"
                     onClick={() => {
@@ -401,6 +420,7 @@ function App() {
             auth={auth}
             setMessage={setMessage}
             navigate={navigate}
+            activeTab={adminTab}
           />
         ) : route.name === 'problem-detail' ? (
           <ProblemDetailPage

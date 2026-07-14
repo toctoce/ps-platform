@@ -55,6 +55,7 @@ public class AuthService {
 		TokenPair newRefreshToken = refreshTokenService.rotateForRefresh(refreshToken);
 		User user = userRepository.findById(token.getUserId())
 			.orElseThrow(() -> new AuthException("User not found"));
+		assertActive(user);
 
 		return new AuthTokenPayload(
 			jwtTokenService.createAccessToken(user),
@@ -73,9 +74,7 @@ public class AuthService {
 		JwtClaims claims = jwtTokenService.parseAccessToken(accessToken);
 		User user = userRepository.findById(claims.userId())
 			.orElseThrow(() -> new AuthException("User not found"));
-		if (user.isDeleted()) {
-			throw new InvalidAccessTokenException("User not found");
-		}
+		assertActive(user);
 		return user;
 	}
 
@@ -100,5 +99,14 @@ public class AuthService {
 			throw new InvalidAccessTokenException("Authorization header must start with Bearer");
 		}
 		return authorizationHeader.substring("Bearer ".length()).trim();
+	}
+
+	private void assertActive(User user) {
+		if (user.isDeleted()) {
+			throw new InvalidAccessTokenException("User not found");
+		}
+		if (user.isSuspended()) {
+			throw new InvalidAccessTokenException("User account is suspended");
+		}
 	}
 }

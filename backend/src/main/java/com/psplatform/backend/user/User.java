@@ -12,6 +12,7 @@ public class User {
 	private final LocalDateTime createdAt;
 	private final LocalDateTime updatedAt;
 	private final LocalDateTime deletedAt;
+	private final LocalDateTime suspendedAt;
 
 	public User(
 		Long id,
@@ -21,7 +22,8 @@ public class User {
 		String role,
 		LocalDateTime createdAt,
 		LocalDateTime updatedAt,
-		LocalDateTime deletedAt
+		LocalDateTime deletedAt,
+		LocalDateTime suspendedAt
 	) {
 		this.id = id;
 		this.email = email;
@@ -31,6 +33,7 @@ public class User {
 		this.createdAt = createdAt;
 		this.updatedAt = updatedAt;
 		this.deletedAt = deletedAt;
+		this.suspendedAt = suspendedAt;
 	}
 
 	public Long getId() {
@@ -67,5 +70,13 @@ public class User {
 
 	public boolean isDeleted() {
 		return deletedAt != null;
+	}
+
+	public LocalDateTime getSuspendedAt() {
+		return suspendedAt;
+	}
+
+	public boolean isSuspended() {
+		return suspendedAt != null;
 	}
 }

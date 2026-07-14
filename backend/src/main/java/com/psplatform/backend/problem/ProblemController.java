@@ -8,23 +8,39 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import com.psplatform.backend.admin.AdminAccessService;
+import com.psplatform.backend.admin.AdminService;
+import com.psplatform.backend.user.User;
 
 @RestController
 @RequestMapping("/api/problems")
 public class ProblemController {
 
 	private final ProblemService problemService;
+	private final AdminAccessService adminAccessService;
+	private final AdminService adminService;
 
-	public ProblemController(ProblemService problemService) {
+	public ProblemController(
+		ProblemService problemService,
+		AdminAccessService adminAccessService,
+		AdminService adminService
+	) {
 		this.problemService = problemService;
+		this.adminAccessService = adminAccessService;
+		this.adminService = adminService;
 	}
 
 	@PostMapping
-	public ResponseEntity<ProblemResponse> create(@RequestBody ProblemCreateRequest request) {
-		Problem problem = problemService.create(request);
+	public ResponseEntity<ProblemResponse> create(
+		@RequestBody ProblemCreateRequest request,
+		@RequestHeader(value = "Authorization", required = false) String authorization
+	) {
+		Problem problem = adminService.createProblem(requireAdmin(authorization), request);
 		return ResponseEntity
 			.created(URI.create("/api/problems/" + problem.getId()))
 			.body(ProblemResponse.from(problem));
@@ -44,7 +60,11 @@ public class ProblemController {
 	}
 
 	@GetMapping("/{id}/test-cases")
-	public List<ProblemTestCaseResponse> findTestCases(@PathVariable long id) {
+	public List<ProblemTestCaseResponse> findTestCases(
+		@PathVariable long id,
+		@RequestHeader(value = "Authorization", required = false) String authorization
+	) {
+		requireAdmin(authorization);
 		return problemService.findTestCasesByProblemId(id)
 			.stream()
 			.map(ProblemTestCaseResponse::from)
@@ -70,22 +90,32 @@ public class ProblemController {
 	@PostMapping("/{id}/test-cases")
 	public ResponseEntity<ProblemTestCaseResponse> addTestCase(
 		@PathVariable long id,
-		@RequestBody ProblemTestCaseCreateRequest request
+		@RequestBody ProblemTestCaseCreateRequest request,
+		@RequestHeader(value = "Authorization", required = false) String authorization
 	) {
-		ProblemTestCase testCase = problemService.addTestCase(id, request);
+		User admin = requireAdmin(authorization);
+		var saved = adminService.addTestCase(admin, id, request);
 		return ResponseEntity
-			.created(URI.create("/api/problems/" + id + "/test-cases/" + testCase.getId()))
-			.body(ProblemTestCaseResponse.from(testCase));
+			.created(URI.create("/api/problems/" + id + "/test-cases/" + saved.id()))
+			.body(new ProblemTestCaseResponse(saved.id(), id, saved.input(), saved.expectedOutput(), saved.sortOrder()));
 	}
 
 	@PostMapping("/{id}/examples")
 	public ResponseEntity<ProblemExampleResponse> addExample(
 		@PathVariable long id,
-		@RequestBody ProblemExampleCreateRequest request
+		@RequestBody ProblemExampleCreateRequest request,
+		@RequestHeader(value = "Authorization", required = false) String authorization
 	) {
-		ProblemExample example = problemService.addExample(id, request);
+		User admin = requireAdmin(authorization);
+		var saved = adminService.addExample(admin, id, request);
 		return ResponseEntity
-			.created(URI.create("/api/problems/" + id + "/examples/" + example.getId()))
-			.body(ProblemExampleResponse.from(example));
+			.created(URI.create("/api/problems/" + id + "/examples/" + saved.id()))
+			.body(new ProblemExampleResponse(
+				saved.id(), id, saved.input(), saved.expectedOutput(), saved.description(), saved.sortOrder()
+			));
+	}
+
+	private User requireAdmin(String authorization) {
+		return adminAccessService.requireAdmin(authorization);
 	}
 }
