@@ -30,6 +30,10 @@ func main() {
 		cfg.JavaDockerImage,
 		cfg.PythonDockerImage,
 		cfg.CppDockerImage,
+		sandbox.CompileLimits{
+			MemoryMb: cfg.CppCompileMemoryMb,
+			Timeout:  cfg.CppCompileTimeout,
+		},
 	)
 	judgeWorker := worker.NewWorker(
 		client,
@@ -45,6 +49,8 @@ func main() {
 		"javaDockerImage", cfg.JavaDockerImage,
 		"pythonDockerImage", cfg.PythonDockerImage,
 		"cppDockerImage", cfg.CppDockerImage,
+		"cppCompileMemoryMb", cfg.CppCompileMemoryMb,
+		"cppCompileTimeout", cfg.CppCompileTimeout,
 	)
 
 	if err := judgeWorker.Run(ctx); err != nil && err != context.Canceled {

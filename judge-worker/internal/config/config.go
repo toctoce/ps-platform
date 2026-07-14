@@ -10,21 +10,25 @@ import (
 
 // Config는 judge-worker 실행 시 필요한 환경설정 값입니다.
 type Config struct {
-	BackendBaseURL    string
-	PollInterval      time.Duration
-	JavaDockerImage   string
-	PythonDockerImage string
-	CppDockerImage    string
-	StaleAfterSeconds int64
+	BackendBaseURL     string
+	PollInterval       time.Duration
+	JavaDockerImage    string
+	PythonDockerImage  string
+	CppDockerImage     string
+	CppCompileMemoryMb int
+	CppCompileTimeout  time.Duration
+	StaleAfterSeconds  int64
 }
 
 const (
-	backendBaseURLKey    = "BACKEND_BASE_URL"
-	pollIntervalMsKey    = "JUDGE_WORKER_POLL_INTERVAL_MS"
-	javaDockerImageKey   = "JAVA_DOCKER_IMAGE"
-	pythonDockerImageKey = "PYTHON_DOCKER_IMAGE"
-	cppDockerImageKey    = "CPP_DOCKER_IMAGE"
-	staleAfterSecondsKey = "JUDGE_WORKER_STALE_AFTER_SECONDS"
+	backendBaseURLKey      = "BACKEND_BASE_URL"
+	pollIntervalMsKey      = "JUDGE_WORKER_POLL_INTERVAL_MS"
+	javaDockerImageKey     = "JAVA_DOCKER_IMAGE"
+	pythonDockerImageKey   = "PYTHON_DOCKER_IMAGE"
+	cppDockerImageKey      = "CPP_DOCKER_IMAGE"
+	cppCompileMemoryMbKey  = "CPP_COMPILE_MEMORY_MB"
+	cppCompileTimeoutMsKey = "CPP_COMPILE_TIMEOUT_MS"
+	staleAfterSecondsKey   = "JUDGE_WORKER_STALE_AFTER_SECONDS"
 )
 
 // Load는 운영에서 필요한 모든 값을 환경변수에서 로드합니다.
@@ -53,6 +57,18 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	cfg.PollInterval = time.Duration(pollIntervalMs) * time.Millisecond
+
+	cppCompileMemoryMb, err := parsePositiveInt(cppCompileMemoryMbKey, os.Getenv(cppCompileMemoryMbKey))
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.CppCompileMemoryMb = int(cppCompileMemoryMb)
+
+	cppCompileTimeoutMs, err := parsePositiveInt(cppCompileTimeoutMsKey, os.Getenv(cppCompileTimeoutMsKey))
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.CppCompileTimeout = time.Duration(cppCompileTimeoutMs) * time.Millisecond
 
 	staleAfterSeconds, err := parsePositiveInt(staleAfterSecondsKey, os.Getenv(staleAfterSecondsKey))
 	if err != nil {

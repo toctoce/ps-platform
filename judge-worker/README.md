@@ -16,6 +16,13 @@
   - Python 채점용 Docker 이미지 (예: `ps-platform/judge-python:3.12`)
 - `CPP_DOCKER_IMAGE`
   - C++ 채점용 Docker 이미지 (예: `ps-platform/judge-cpp:17`)
+- `CPP_COMPILE_MEMORY_MB`
+  - C++ 컴파일 컨테이너에 적용할 메모리 제한(MB)
+- `CPP_COMPILE_TIMEOUT_MS`
+  - C++ 컴파일에 적용할 제한 시간(밀리초)
+
+C++ 컴파일 제한은 문제의 실행 제한과 독립적입니다. 컴파일에는 위 환경변수를,
+컴파일된 프로그램 실행에는 문제의 시간·메모리 제한을 적용합니다.
 
 ## 채점 이미지 빌드
 
@@ -45,6 +52,8 @@ JUDGE_WORKER_STALE_AFTER_SECONDS=60 \
 JAVA_DOCKER_IMAGE=ps-platform/judge-java:17 \
 PYTHON_DOCKER_IMAGE=ps-platform/judge-python:3.12 \
 CPP_DOCKER_IMAGE=ps-platform/judge-cpp:17 \
+CPP_COMPILE_MEMORY_MB=512 \
+CPP_COMPILE_TIMEOUT_MS=30000 \
 go run ./cmd/judge-worker
 ```
 
@@ -57,6 +66,8 @@ export JUDGE_WORKER_STALE_AFTER_SECONDS=60
 export JAVA_DOCKER_IMAGE=ps-platform/judge-java:17
 export PYTHON_DOCKER_IMAGE=ps-platform/judge-python:3.12
 export CPP_DOCKER_IMAGE=ps-platform/judge-cpp:17
+export CPP_COMPILE_MEMORY_MB=512
+export CPP_COMPILE_TIMEOUT_MS=30000
 go run ./cmd/judge-worker
 ```
 

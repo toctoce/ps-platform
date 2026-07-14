@@ -51,6 +51,12 @@ type Executor interface {
 	Execute(ctx context.Context, job backend.JudgeJobAssignment) (ExecutionResult, error)
 }
 
+// CompileLimits는 문제 실행 제한과 독립적으로 적용할 컴파일 리소스 제한입니다.
+type CompileLimits struct {
+	MemoryMb int
+	Timeout  time.Duration
+}
+
 // commandResult는 sandbox 내부 명령 실행 결과를 담는 값입니다.
 type commandResult struct {
 	stdout          string
@@ -66,14 +72,15 @@ type commandRunner interface {
 }
 
 type languageSpec struct {
-	name           string
-	aliases        []string
-	image          string
-	sourceFile     string
-	tempDirPrefix  string
-	compileTimeout time.Duration
-	compileCommand []string
-	runCommand     string
+	name            string
+	aliases         []string
+	image           string
+	sourceFile      string
+	tempDirPrefix   string
+	compileTimeout  time.Duration
+	compileMemoryMb int
+	compileCommand  []string
+	runCommand      string
 }
 
 // dockerLanguageExecutor는 언어별 spec에 따라 Docker 컨테이너에서 코드를 실행합니다.
@@ -107,13 +114,13 @@ func NewPythonExecutorWithRunner(runner commandRunner, image string) *PythonExec
 }
 
 // NewCppExecutor는 운영 환경에서 C++ 실행기를 생성합니다.
-func NewCppExecutor(cppImage string) *CppExecutor {
-	return NewCppExecutorWithRunner(&dockerCommandRunner{}, cppImage)
+func NewCppExecutor(cppImage string, compileLimits CompileLimits) *CppExecutor {
+	return NewCppExecutorWithRunner(&dockerCommandRunner{}, cppImage, compileLimits)
 }
 
 // NewCppExecutorWithRunner는 테스트에서 fake runner를 주입하기 위한 생성자입니다.
-func NewCppExecutorWithRunner(runner commandRunner, image string) *CppExecutor {
-	return newDockerLanguageExecutor(runner, cppSpec(image))
+func NewCppExecutorWithRunner(runner commandRunner, image string, compileLimits CompileLimits) *CppExecutor {
+	return newDockerLanguageExecutor(runner, cppSpec(image, compileLimits))
 }
 
 func newDockerLanguageExecutor(runner commandRunner, spec languageSpec) *dockerLanguageExecutor {
@@ -153,16 +160,17 @@ func pythonSpec(image string) languageSpec {
 	}
 }
 
-func cppSpec(image string) languageSpec {
+func cppSpec(image string, compileLimits CompileLimits) languageSpec {
 	return languageSpec{
-		name:           "cpp",
-		aliases:        []string{"c++"},
-		image:          image,
-		sourceFile:     "main.cpp",
-		tempDirPrefix:  "judge-worker-cpp-*",
-		compileTimeout: defaultCompileTimeout,
-		compileCommand: []string{"g++", "-std=c++17", "-O2", "-pipe", "-o", "main", "main.cpp"},
-		runCommand:     "./main",
+		name:            "cpp",
+		aliases:         []string{"c++"},
+		image:           image,
+		sourceFile:      "main.cpp",
+		tempDirPrefix:   "judge-worker-cpp-*",
+		compileTimeout:  compileLimits.Timeout,
+		compileMemoryMb: compileLimits.MemoryMb,
+		compileCommand:  []string{"g++", "-std=c++17", "-O2", "-pipe", "-o", "main", "main.cpp"},
+		runCommand:      "./main",
 	}
 }
 
@@ -185,16 +193,16 @@ type LanguageExecutor struct {
 }
 
 // NewLanguageExecutor는 운영 환경에서 지원 언어 전체를 처리하는 실행기를 생성합니다.
-func NewLanguageExecutor(javaImage string, pythonImage string, cppImage string) *LanguageExecutor {
-	return NewLanguageExecutorWithRunner(&dockerCommandRunner{}, javaImage, pythonImage, cppImage)
+func NewLanguageExecutor(javaImage string, pythonImage string, cppImage string, cppCompileLimits CompileLimits) *LanguageExecutor {
+	return NewLanguageExecutorWithRunner(&dockerCommandRunner{}, javaImage, pythonImage, cppImage, cppCompileLimits)
 }
 
 // NewLanguageExecutorWithRunner는 테스트에서 fake runner를 주입하기 위한 생성자입니다.
-func NewLanguageExecutorWithRunner(runner commandRunner, javaImage string, pythonImage string, cppImage string) *LanguageExecutor {
+func NewLanguageExecutorWithRunner(runner commandRunner, javaImage string, pythonImage string, cppImage string, cppCompileLimits CompileLimits) *LanguageExecutor {
 	executor := &LanguageExecutor{executors: map[string]*dockerLanguageExecutor{}}
 	executor.register(NewJavaExecutorWithRunner(runner, javaImage))
 	executor.register(NewPythonExecutorWithRunner(runner, pythonImage))
-	executor.register(NewCppExecutorWithRunner(runner, cppImage))
+	executor.register(NewCppExecutorWithRunner(runner, cppImage, cppCompileLimits))
 	return executor
 }
 
@@ -292,7 +300,11 @@ func (e *dockerLanguageExecutor) compile(ctx context.Context, tempDir string, me
 	compileCtx, cancel := context.WithTimeout(ctx, e.spec.compileTimeout)
 	defer cancel()
 
-	memoryLimit := memoryLimitArgument(memoryLimitMb)
+	compileMemoryLimitMb := memoryLimitMb
+	if e.spec.compileMemoryMb > 0 {
+		compileMemoryLimitMb = e.spec.compileMemoryMb
+	}
+	memoryLimit := memoryLimitArgument(compileMemoryLimitMb)
 	containerName := dockerContainerName(e.spec.name + "-compile")
 	args := []string{
 		"run", "--rm", "-i",

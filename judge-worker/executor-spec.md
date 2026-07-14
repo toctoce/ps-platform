@@ -35,6 +35,10 @@ sandbox.NewLanguageExecutor(
     cfg.JavaDockerImage,
     cfg.PythonDockerImage,
     cfg.CppDockerImage,
+    sandbox.CompileLimits{
+        MemoryMb: cfg.CppCompileMemoryMb,
+        Timeout: cfg.CppCompileTimeout,
+    },
 )
 ```
 
@@ -77,6 +81,12 @@ type Executor interface {
 - `containerWorkspaceDir = "/workspace"`
 - `judgeMessageMaxBytes = 1024`
 
+C++은 컴파일러가 문제 실행 프로그램보다 많은 메모리를 사용할 수 있으므로 다음 환경변수로
+컴파일 제한을 별도 설정합니다.
+
+- `CPP_COMPILE_MEMORY_MB`: C++ 컴파일 컨테이너 메모리 제한
+- `CPP_COMPILE_TIMEOUT_MS`: C++ 컴파일 제한 시간
+
 ## 5. 실행 순서
 
 1. `LanguageExecutor`가 `job.Language`에 맞는 executor 선택
@@ -86,14 +96,16 @@ type Executor interface {
    - 지원하지 않는 언어: `error("unsupported language: ...")`
 4. 임시 폴더 생성 후 언어별 source file 저장
    - 파일 권한: `0o600`
-5. 시간/메모리 기본값 보정
+5. 실행 시간/메모리 기본값 보정
 6. 컴파일 또는 문법 검사
    - `docker run --rm -i --network=none --memory <X>m --memory-swap <X>m -v <tmp>:/workspace -w /workspace <image> <compile command>`
-   - 실행 컨텍스트: `context.WithTimeout(ctx, 10s)`
+   - C++의 `<X>`와 실행 컨텍스트는 각각 `CPP_COMPILE_MEMORY_MB`, `CPP_COMPILE_TIMEOUT_MS` 사용
+   - Java/Python은 기존 언어 spec과 문제 메모리 제한 사용
 7. 테스트케이스 실행
    - `docker run ... <image> sh -c "<metric wrapper> <run command>"`
    - 표준입력으로 `JudgeTestCase.Input` 전달
    - 실행 컨텍스트는 문제별 `TimeLimitMs`
+   - 실행 컨테이너 메모리는 문제별 `MemoryLimitMb`
    - `SUBMISSION`: 첫 실패 시 즉시 중단
    - `CODE_RUN`: 중간 실패가 있어도 모든 케이스 실행
 8. 출력 비교

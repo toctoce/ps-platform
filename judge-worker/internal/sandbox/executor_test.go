@@ -14,6 +14,8 @@ const testJavaDockerImage = "eclipse-temurin:17-jdk"
 const testPythonDockerImage = "python:3.12-slim"
 const testCppDockerImage = "gcc:14-bookworm"
 
+var testCppCompileLimits = CompileLimits{MemoryMb: 512, Timeout: 30 * time.Second}
+
 func TestJavaExecutorAcceptsWhenAllTestCasesPass(t *testing.T) {
 	executor := NewJavaExecutorWithRunner(&fakeCommandRunner{
 		responses: []commandResponse{
@@ -138,11 +140,11 @@ func TestCppExecutorAcceptsWhenAllTestCasesPass(t *testing.T) {
 			{result: commandResult{exitCode: 0}},
 			{result: commandResult{exitCode: 0, stdout: "3\n"}},
 		},
-	}, testCppDockerImage)
+	}, testCppDockerImage, testCppCompileLimits)
 
 	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
 		Language: "cpp",
-		SourceCode: "#include <iostream>\n" +
+		SourceCode: "#include <bits/stdc++.h>\n" +
 			"int main() { int a, b; std::cin >> a >> b; std::cout << a + b << '\\n'; }\n",
 		MemoryLimitMb: 64,
 		TestCases: []backend.JudgeTestCase{
@@ -161,11 +163,29 @@ func TestCppExecutorAcceptsWhenAllTestCasesPass(t *testing.T) {
 	if !containsSequence(calls[0].args, "g++", "-std=c++17", "-O2", "-pipe", "-o", "main", "main.cpp") {
 		t.Fatalf("compile command should run g++, got args: %v", calls[0].args)
 	}
-	if !containsArg(calls[0].args, "--memory", "64m") {
-		t.Fatalf("compile command should use configured memory limit, got args: %v", calls[0].args)
+	if !containsArg(calls[0].args, "--memory", "512m") {
+		t.Fatalf("compile command should use compile memory limit, got args: %v", calls[0].args)
+	}
+	if !containsArg(calls[1].args, "--memory", "64m") {
+		t.Fatalf("run command should use problem memory limit, got args: %v", calls[1].args)
 	}
 	if !strings.Contains(strings.Join(calls[1].args, " "), "./main") {
 		t.Fatalf("run command should execute compiled binary, got args: %v", calls[1].args)
+	}
+}
+
+func TestCppExecutorUsesConfiguredCompileTimeout(t *testing.T) {
+	executor := NewCppExecutorWithRunner(
+		&fakeCommandRunner{},
+		testCppDockerImage,
+		CompileLimits{MemoryMb: 384, Timeout: 27 * time.Second},
+	)
+
+	if executor.spec.compileTimeout != 27*time.Second {
+		t.Fatalf("compileTimeout = %s, want %s", executor.spec.compileTimeout, 27*time.Second)
+	}
+	if executor.spec.compileMemoryMb != 384 {
+		t.Fatalf("compileMemoryMb = %d, want %d", executor.spec.compileMemoryMb, 384)
 	}
 }
 
@@ -175,7 +195,7 @@ func TestLanguageExecutorRoutesByLanguage(t *testing.T) {
 			{result: commandResult{exitCode: 0}},
 			{result: commandResult{exitCode: 0, stdout: "ok\n"}},
 		},
-	}, testJavaDockerImage, testPythonDockerImage, testCppDockerImage)
+	}, testJavaDockerImage, testPythonDockerImage, testCppDockerImage, testCppCompileLimits)
 
 	result, err := executor.Execute(context.Background(), backend.JudgeJobAssignment{
 		Language:   "python3",
