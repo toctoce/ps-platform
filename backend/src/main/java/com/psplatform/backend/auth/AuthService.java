@@ -75,6 +75,9 @@ public class AuthService {
 		User user = userRepository.findById(claims.userId())
 			.orElseThrow(() -> new AuthException("User not found"));
 		assertActive(user);
+		if (claims.authVersion() != user.getAuthVersion()) {
+			throw new InvalidAccessTokenException("Access token has been invalidated");
+		}
 		return user;
 	}
 

@@ -23,6 +23,7 @@ import com.psplatform.backend.user.UserRepository;
 public class EmailVerificationService {
 
 	private static final EmailVerificationPurpose SIGNUP = EmailVerificationPurpose.SIGNUP;
+	private static final EmailVerificationPurpose PASSWORD_RESET = EmailVerificationPurpose.PASSWORD_RESET;
 	private static final String HMAC_ALGORITHM = "HmacSHA256";
 	private static final int VERIFICATION_CODE_BOUND = 1_000_000;
 	private static final int TOKEN_BYTE_LENGTH = 32;
@@ -50,33 +51,60 @@ public class EmailVerificationService {
 		if (userRepository.findByEmail(email).isPresent()) {
 			throw new DuplicateUserEmailException(email);
 		}
+		return requestCode(email, SIGNUP, true);
+	}
 
+	public long requestPasswordResetCode(String rawEmail) {
+		String email = UserEmail.normalize(rawEmail);
+		boolean shouldDeliver = userRepository.findByEmail(email).isPresent();
+		return requestCode(email, PASSWORD_RESET, shouldDeliver);
+	}
+
+	private long requestCode(
+		String email,
+		EmailVerificationPurpose purpose,
+		boolean shouldDeliver
+	) {
 		OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-		verificationRepository.findByEmailAndPurpose(email, SIGNUP)
+		verificationRepository.findByEmailAndPurpose(email, purpose)
 			.filter(current -> current.requestedAt().plusSeconds(config.getResendCooldownSeconds()).isAfter(now))
 			.ifPresent(current -> {
 				throw new EmailVerificationRequestLimitException();
 			});
 
 		String code = String.format(Locale.ROOT, "%06d", secureRandom.nextInt(VERIFICATION_CODE_BOUND));
-		String codeHash = hashCode(email, SIGNUP, code);
+		String codeHash = hashCode(email, purpose, code);
 		OffsetDateTime expiresAt = now.plusSeconds(config.getCodeTtlSeconds());
-		verificationRepository.saveOrReplace(email, SIGNUP, codeHash, expiresAt, now);
+		verificationRepository.saveOrReplace(email, purpose, codeHash, expiresAt, now);
 
-		try {
-			emailSender.sendSignupCode(email, code, config.getCodeTtlSeconds());
-		} catch (RuntimeException exception) {
-			verificationRepository.deleteByEmailAndPurposeAndCodeHash(email, SIGNUP, codeHash);
-			throw exception;
+		if (shouldDeliver) {
+			try {
+				emailSender.sendCode(email, code, purpose, config.getCodeTtlSeconds());
+			} catch (RuntimeException exception) {
+				verificationRepository.deleteByEmailAndPurposeAndCodeHash(email, purpose, codeHash);
+				throw exception;
+			}
 		}
 		return config.getCodeTtlSeconds();
 	}
 
 	public VerificationToken confirmSignupCode(String rawEmail, String rawCode) {
+		return confirmCode(rawEmail, rawCode, SIGNUP);
+	}
+
+	public VerificationToken confirmPasswordResetCode(String rawEmail, String rawCode) {
+		return confirmCode(rawEmail, rawCode, PASSWORD_RESET);
+	}
+
+	private VerificationToken confirmCode(
+		String rawEmail,
+		String rawCode,
+		EmailVerificationPurpose purpose
+	) {
 		String email = UserEmail.normalize(rawEmail);
 		String code = normalizeCode(rawCode);
 		OffsetDateTime now = OffsetDateTime.now(ZoneOffset.UTC);
-		EmailVerification current = verificationRepository.findByEmailAndPurpose(email, SIGNUP)
+		EmailVerification current = verificationRepository.findByEmailAndPurpose(email, purpose)
 			.orElseThrow(() -> new InvalidEmailVerificationException("먼저 인증번호를 요청해 주세요."));
 
 		assertCodeCanBeVerified(current, now);
@@ -85,8 +113,8 @@ public class EmailVerificationService {
 		OffsetDateTime tokenExpiresAt = now.plusSeconds(config.getTokenTtlSeconds());
 		boolean verified = verificationRepository.verify(
 			email,
-			SIGNUP,
-			hashCode(email, SIGNUP, code),
+			purpose,
+			hashCode(email, purpose, code),
 			tokenHash,
 			tokenExpiresAt,
 			now,
@@ -100,12 +128,20 @@ public class EmailVerificationService {
 	}
 
 	public void consumeSignupToken(String email, String token) {
+		consumeToken(email, token, SIGNUP);
+	}
+
+	public void consumePasswordResetToken(String email, String token) {
+		consumeToken(email, token, PASSWORD_RESET);
+	}
+
+	private void consumeToken(String email, String token, EmailVerificationPurpose purpose) {
 		if (token == null || token.isBlank()) {
 			throw new InvalidEmailVerificationException("이메일 인증이 필요합니다.");
 		}
 		boolean consumed = verificationRepository.consumeToken(
 			email,
-			SIGNUP,
+			purpose,
 			hashToken(token.trim()),
 			OffsetDateTime.now(ZoneOffset.UTC)
 		);

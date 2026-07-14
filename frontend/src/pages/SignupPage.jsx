@@ -1,67 +1,17 @@
 import { useState } from 'react';
 import { Code2 } from 'lucide-react';
 import { request } from '../api/client.js';
+import { EmailVerificationFields } from '../components/EmailVerificationFields.jsx';
 
 export function SignupPage({ setMessage, navigate }) {
   const [busy, setBusy] = useState(false);
-  const [verificationBusy, setVerificationBusy] = useState(false);
-  const [verificationRequested, setVerificationRequested] = useState(false);
   const [verificationToken, setVerificationToken] = useState('');
   const [form, setForm] = useState({
     email: '',
-    verificationCode: '',
     username: '',
     password: '',
     confirmPassword: '',
   });
-
-  async function requestVerificationCode() {
-    const email = form.email.trim();
-    if (!email) {
-      setMessage('이메일을 입력해 주세요.');
-      return;
-    }
-
-    setVerificationBusy(true);
-    try {
-      const response = await request('/api/email-verifications', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
-      });
-      setVerificationRequested(true);
-      setVerificationToken('');
-      setForm((current) => ({ ...current, verificationCode: '' }));
-      setMessage(response?.message ?? '인증번호를 전송했습니다.');
-    } catch (error) {
-      setMessage(error.message);
-    } finally {
-      setVerificationBusy(false);
-    }
-  }
-
-  async function confirmVerificationCode() {
-    const code = form.verificationCode.trim();
-    if (!/^\d{6}$/.test(code)) {
-      setMessage('6자리 인증번호를 입력해 주세요.');
-      return;
-    }
-
-    setVerificationBusy(true);
-    try {
-      const response = await request('/api/email-verifications/confirm', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: form.email.trim(), code }),
-      });
-      setVerificationToken(response.verificationToken);
-      setMessage('이메일 인증이 완료되었습니다.');
-    } catch (error) {
-      setMessage(error.message);
-    } finally {
-      setVerificationBusy(false);
-    }
-  }
 
   async function signup(event) {
     event.preventDefault();
@@ -104,12 +54,6 @@ export function SignupPage({ setMessage, navigate }) {
   }
 
   function update(field, value) {
-    if (field === 'email') {
-      setVerificationRequested(false);
-      setVerificationToken('');
-      setForm((current) => ({ ...current, email: value, verificationCode: '' }));
-      return;
-    }
     setForm((current) => ({ ...current, [field]: value }));
   }
 
@@ -128,60 +72,14 @@ export function SignupPage({ setMessage, navigate }) {
           <h2>회원가입</h2>
         </div>
 
-        <label>
-          이메일
-          <span className="auth-inline-field">
-            <input
-              type="email"
-              value={form.email}
-              onChange={(event) => update('email', event.target.value)}
-              autoComplete="email"
-              disabled={Boolean(verificationToken)}
-            />
-            {verificationToken ? (
-              <button
-                className="auth-field-button"
-                type="button"
-                onClick={() => update('email', form.email)}
-              >
-                변경
-              </button>
-            ) : (
-              <button
-                className="auth-field-button"
-                type="button"
-                onClick={requestVerificationCode}
-                disabled={verificationBusy}
-              >
-                {verificationRequested ? '재전송' : '인증번호 받기'}
-              </button>
-            )}
-          </span>
-        </label>
-        {verificationRequested ? (
-          <label>
-            인증번호
-            <span className="auth-inline-field">
-              <input
-                type="text"
-                value={form.verificationCode}
-                onChange={(event) => update('verificationCode', event.target.value.replace(/\D/g, '').slice(0, 6))}
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                maxLength={6}
-                disabled={Boolean(verificationToken)}
-              />
-              <button
-                className={`auth-field-button ${verificationToken ? 'is-verified' : ''}`}
-                type="button"
-                onClick={confirmVerificationCode}
-                disabled={verificationBusy || Boolean(verificationToken)}
-              >
-                {verificationToken ? '인증 완료' : '확인'}
-              </button>
-            </span>
-          </label>
-        ) : null}
+        <EmailVerificationFields
+          email={form.email}
+          onEmailChange={(email) => update('email', email)}
+          onVerificationTokenChange={setVerificationToken}
+          requestPath="/api/email-verifications"
+          confirmPath="/api/email-verifications/confirm"
+          setMessage={setMessage}
+        />
         <label>
           닉네임
           <input

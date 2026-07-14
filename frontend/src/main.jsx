@@ -10,6 +10,7 @@ import { CategoryPage } from './pages/CategoryPage.jsx';
 import { HomePage } from './pages/HomePage.jsx';
 import { LoginPage } from './pages/LoginPage.jsx';
 import { MyPage } from './pages/MyPage.jsx';
+import { PasswordRecoveryPage } from './pages/PasswordRecoveryPage.jsx';
 import { ProblemDetailPage } from './pages/ProblemDetailPage.jsx';
 import { ProblemListPage } from './pages/ProblemListPage.jsx';
 import { RandomProblemPage } from './pages/RandomProblemPage.jsx';
@@ -27,6 +28,7 @@ const SITE_LOGO_SRC = '/assets/logo-home.png';
 const TOAST_VISIBLE_MS = 2600;
 const TOAST_FADE_MS = 400;
 const MAX_TOASTS = 5;
+const GUEST_ONLY_ROUTES = new Set(['login', 'signup', 'password-recovery']);
 
 let nextToastId = 0;
 
@@ -56,6 +58,7 @@ function Toast({ toast, onRemove }) {
 function App() {
   const [route, setRoute] = useState(parseRoute);
   const [auth, setAuth] = useState(() => getStoredAuth());
+  const [authChecked, setAuthChecked] = useState(() => !getStoredAuth()?.accessToken);
   const [toasts, setToasts] = useState([]);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [adminTab, setAdminTab] = useState('overview');
@@ -70,6 +73,8 @@ function App() {
 
   const isAuthenticated = Boolean(auth?.accessToken);
   const isAdmin = auth?.user?.role === 'ADMIN';
+  const shouldHideGuestRoute = isAuthenticated && GUEST_ONLY_ROUTES.has(route.name);
+  const shouldRedirectGuestRoute = authChecked && shouldHideGuestRoute;
 
   const removeToast = useCallback((toastId) => {
     setToasts((current) => current.filter((toast) => toast.id !== toastId));
@@ -167,8 +172,9 @@ function App() {
     }
   }
 
-  function navigate(path) {
-    window.history.pushState(null, '', path);
+  function navigate(path, options = {}) {
+    const historyMethod = options.replace ? 'replaceState' : 'pushState';
+    window.history[historyMethod](null, '', path);
     setUserMenuOpen(false);
     setRoute(parseRoute());
   }
@@ -185,6 +191,7 @@ function App() {
 
   async function checkCurrentUser() {
     if (!auth?.accessToken) {
+      setAuthChecked(true);
       return;
     }
 
@@ -196,6 +203,8 @@ function App() {
     } catch (error) {
       clearAuth();
       setMessage('자동 로그인 세션이 만료되어 로그아웃됩니다.');
+    } finally {
+      setAuthChecked(true);
     }
   }
 
@@ -256,6 +265,13 @@ function App() {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
+
+  useEffect(() => {
+    if (!shouldRedirectGuestRoute) {
+      return;
+    }
+    navigate(getLoginReturnTarget(), { replace: true });
+  }, [shouldRedirectGuestRoute]);
 
   return (
     <main className="app-shell">
@@ -378,15 +394,19 @@ function App() {
         </div>
       ) : null}
       <section className="app-content">
-        {route.name === 'login' ? (
+        {shouldHideGuestRoute ? null : route.name === 'login' ? (
           <LoginPage
             onLoginSuccess={handleLoginSuccess}
             setMessage={setMessage}
-            isAuthenticated={isAuthenticated}
             navigate={navigate}
           />
         ) : route.name === 'signup' ? (
           <SignupPage
+            setMessage={setMessage}
+            navigate={navigate}
+          />
+        ) : route.name === 'password-recovery' ? (
+          <PasswordRecoveryPage
             setMessage={setMessage}
             navigate={navigate}
           />

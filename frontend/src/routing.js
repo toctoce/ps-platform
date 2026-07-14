@@ -6,6 +6,9 @@ export function parseRoute() {
   if (path === '/signup') {
     return { name: 'signup' };
   }
+  if (path === '/password-recovery') {
+    return { name: 'password-recovery' };
+  }
   if (path === '/categories') {
     return { name: 'category-list' };
   }

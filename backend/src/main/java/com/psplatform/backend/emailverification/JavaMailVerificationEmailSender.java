@@ -28,29 +28,48 @@ public class JavaMailVerificationEmailSender implements VerificationEmailSender 
 	}
 
 	@Override
-	public void sendSignupCode(String email, String code, long expiresInSeconds) {
+	public void sendCode(
+		String email,
+		String code,
+		EmailVerificationPurpose purpose,
+		long expiresInSeconds
+	) {
 		SimpleMailMessage message = new SimpleMailMessage();
 		message.setTo(email);
 		String resolvedFrom = firstPresent(fromEmail, smtpUsername);
 		if (!resolvedFrom.isBlank()) {
 			message.setFrom(resolvedFrom);
 		}
-		message.setSubject("[빵구리즘] 회원가입 이메일 인증번호");
+		message.setSubject(subject(purpose));
 		message.setText("""
-			빵구리즘 회원가입 인증번호입니다.
+			빵구리즘 %s 인증번호입니다.
 
 			인증번호: %s
 
 			인증번호는 %d분 동안 유효합니다.
 			본인이 요청하지 않았다면 이 메일을 무시해 주세요.
-			""".formatted(code, Math.max(1, expiresInSeconds / 60)));
+			""".formatted(purposeLabel(purpose), code, Math.max(1, expiresInSeconds / 60)));
 
 		try {
 			mailSender.send(message);
 		} catch (MailException exception) {
-			log.error("회원가입 인증 메일 전송 실패: recipient=" + maskEmail(email), exception);
+			log.error(
+				"이메일 인증 메일 전송 실패: purpose=" + purpose + ", recipient=" + maskEmail(email),
+				exception
+			);
 			throw new EmailVerificationDeliveryException(exception);
 		}
+	}
+
+	private String subject(EmailVerificationPurpose purpose) {
+		return "[빵구리즘] " + purposeLabel(purpose) + " 이메일 인증번호";
+	}
+
+	private String purposeLabel(EmailVerificationPurpose purpose) {
+		return switch (purpose) {
+			case SIGNUP -> "회원가입";
+			case PASSWORD_RESET -> "비밀번호 찾기";
+		};
 	}
 
 	private String maskEmail(String email) {

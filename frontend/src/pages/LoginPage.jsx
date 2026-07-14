@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Code2 } from 'lucide-react';
 import { request } from '../api/client.js';
 
-export function LoginPage({ onLoginSuccess, setMessage, isAuthenticated, navigate }) {
+export function LoginPage({ onLoginSuccess, setMessage, navigate }) {
   const [busy, setBusy] = useState(false);
   const [form, setForm] = useState({ email: '', password: '' });
   const [loginError, setLoginError] = useState('');
@@ -72,38 +72,32 @@ export function LoginPage({ onLoginSuccess, setMessage, isAuthenticated, navigat
           <h2>로그인</h2>
         </div>
 
-        {isAuthenticated ? (
-          <p className="empty">이미 로그인되어 있습니다.</p>
-        ) : (
-          <>
-            {loginError ? (
-              <div className="auth-alert" role="alert">
-                {loginError}
-              </div>
-            ) : null}
-            <label>
-              이메일
-              <input
-                type="email"
-                value={form.email}
-                onChange={(event) => update('email', event.target.value)}
-                autoComplete="username"
-              />
-            </label>
-            <label>
-              비밀번호
-              <input
-                type="password"
-                value={form.password}
-                onChange={(event) => update('password', event.target.value)}
-                autoComplete="current-password"
-              />
-            </label>
-            <button className="primary-button" type="submit" disabled={busy}>
-              로그인
-            </button>
-          </>
-        )}
+        {loginError ? (
+          <div className="auth-alert" role="alert">
+            {loginError}
+          </div>
+        ) : null}
+        <label>
+          이메일
+          <input
+            type="email"
+            value={form.email}
+            onChange={(event) => update('email', event.target.value)}
+            autoComplete="username"
+          />
+        </label>
+        <label>
+          비밀번호
+          <input
+            type="password"
+            value={form.password}
+            onChange={(event) => update('password', event.target.value)}
+            autoComplete="current-password"
+          />
+        </label>
+        <button className="primary-button" type="submit" disabled={busy}>
+          로그인
+        </button>
 
         <p className="auth-switch">
           아직 계정이 없으신가요?
@@ -112,8 +106,8 @@ export function LoginPage({ onLoginSuccess, setMessage, isAuthenticated, navigat
           </button>
         </p>
       </form>
-      <button className="auth-back-link" type="button" onClick={() => navigate('/')}>
-        ← 홈으로 돌아가기
+      <button className="auth-back-link" type="button" onClick={() => navigate('/password-recovery')}>
+        비밀번호 찾기
       </button>
     </section>
   );

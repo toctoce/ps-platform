@@ -24,6 +24,7 @@ public class JdbcUserRepository implements UserRepository {
 		rs.getString("username"),
 		rs.getString("password_hash"),
 		rs.getString("role"),
+		rs.getInt("auth_version"),
 		rs.getTimestamp("created_at").toLocalDateTime(),
 		rs.getTimestamp("updated_at").toLocalDateTime(),
 		getTimestampOrNull(rs, "deleted_at"),
@@ -64,7 +65,8 @@ public class JdbcUserRepository implements UserRepository {
 	public Optional<User> findById(long id) {
 		List<User> users = jdbcTemplate.query(
 			"""
-			SELECT id, email, username, password_hash, role, created_at, updated_at, deleted_at, suspended_at
+			SELECT id, email, username, password_hash, role, auth_version,
+			       created_at, updated_at, deleted_at, suspended_at
 			FROM users
 			WHERE id = ?
 			""",
@@ -78,7 +80,8 @@ public class JdbcUserRepository implements UserRepository {
 	public Optional<User> findByEmail(String email) {
 		List<User> users = jdbcTemplate.query(
 			"""
-			SELECT id, email, username, password_hash, role, created_at, updated_at, deleted_at, suspended_at
+			SELECT id, email, username, password_hash, role, auth_version,
+			       created_at, updated_at, deleted_at, suspended_at
 			FROM users
 			WHERE email = ?
 			""",
@@ -92,7 +95,8 @@ public class JdbcUserRepository implements UserRepository {
 	public Optional<User> findByUsername(String username) {
 		List<User> users = jdbcTemplate.query(
 			"""
-			SELECT id, email, username, password_hash, role, created_at, updated_at, deleted_at, suspended_at
+			SELECT id, email, username, password_hash, role, auth_version,
+			       created_at, updated_at, deleted_at, suspended_at
 			FROM users
 			WHERE username = ?
 			""",
@@ -100,6 +104,19 @@ public class JdbcUserRepository implements UserRepository {
 			username
 		);
 		return users.stream().findFirst();
+	}
+
+	@Override
+	public boolean updatePasswordHash(long id, String passwordHash) {
+		return jdbcTemplate.update(
+			"""
+			UPDATE users
+			SET password_hash = ?, auth_version = auth_version + 1, updated_at = CURRENT_TIMESTAMP
+			WHERE id = ? AND deleted_at IS NULL
+			""",
+			passwordHash,
+			id
+		) == 1;
 	}
 
 	@Override

@@ -40,7 +40,8 @@ public class JwtTokenService {
 		return Jwts.builder()
 			.setClaims(Map.of(
 				"email", user.getEmail(),
-				"role", user.getRole()
+				"role", user.getRole(),
+				"authVersion", user.getAuthVersion()
 			))
 			.setSubject(String.valueOf(user.getId()))
 			.setIssuedAt(Date.from(now))
@@ -61,10 +62,12 @@ public class JwtTokenService {
 				.parseClaimsJws(token);
 
 			Claims body = claims.getBody();
+			Integer authVersion = body.get("authVersion", Integer.class);
 			return new JwtClaims(
 				Long.parseLong(body.getSubject()),
 				body.get("email", String.class),
-				body.get("role", String.class)
+				body.get("role", String.class),
+				authVersion == null ? 0 : authVersion
 			);
 		} catch (ExpiredJwtException e) {
 			throw new InvalidAccessTokenException("Access token expired");

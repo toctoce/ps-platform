@@ -9,6 +9,7 @@ public class User {
 	private final String username;
 	private final String passwordHash;
 	private final String role;
+	private final int authVersion;
 	private final LocalDateTime createdAt;
 	private final LocalDateTime updatedAt;
 	private final LocalDateTime deletedAt;
@@ -20,6 +21,7 @@ public class User {
 		String username,
 		String passwordHash,
 		String role,
+		int authVersion,
 		LocalDateTime createdAt,
 		LocalDateTime updatedAt,
 		LocalDateTime deletedAt,
@@ -30,6 +32,7 @@ public class User {
 		this.username = username;
 		this.passwordHash = passwordHash;
 		this.role = role;
+		this.authVersion = authVersion;
 		this.createdAt = createdAt;
 		this.updatedAt = updatedAt;
 		this.deletedAt = deletedAt;
@@ -54,6 +57,10 @@ public class User {
 
 	public String getRole() {
 		return role;
+	}
+
+	public int getAuthVersion() {
+		return authVersion;
 	}
 
 	public LocalDateTime getCreatedAt() {
