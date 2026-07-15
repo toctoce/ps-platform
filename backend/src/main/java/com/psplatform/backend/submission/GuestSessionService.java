@@ -10,7 +10,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class GuestSessionService {
 
-	public static final int SUBMISSION_LIMIT = 5;
+	// 비회원 제출 제한 정책이 확정되기 전까지 사실상 무제한으로 허용한다.
+	public static final int SUBMISSION_LIMIT = Integer.MAX_VALUE;
 	public static final Duration SESSION_TTL = Duration.ofDays(7);
 
 	private final GuestSessionRepository guestSessionRepository;

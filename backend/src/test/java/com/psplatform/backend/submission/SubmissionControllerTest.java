@@ -134,7 +134,10 @@ class SubmissionControllerTest {
 				org.hamcrest.Matchers.containsString("SameSite=Lax"),
 				org.hamcrest.Matchers.containsString("Max-Age=604800")
 			)))
-			.andExpect(header().string("X-Guest-Submissions-Remaining", "4"));
+			.andExpect(header().string(
+				"X-Guest-Submissions-Remaining",
+				String.valueOf(GuestSessionService.SUBMISSION_LIMIT - 1)
+			));
 
 		String guestSessionId = jdbcTemplate.queryForObject(
 			"SELECT guest_session_id FROM submissions WHERE problem_id = ?",
@@ -145,10 +148,10 @@ class SubmissionControllerTest {
 	}
 
 	@Test
-	void createGuestSubmissionRejectsRequestAfterFiveSubmissions() throws Exception {
+	void createGuestSubmissionAllowsMoreThanFiveSubmissions() throws Exception {
 		Problem problem = createProblem();
 		GuestSubmissionQuota quota = guestSessionService.consumeSubmission(null);
-		for (int count = 1; count < GuestSessionService.SUBMISSION_LIMIT; count++) {
+		for (int count = 1; count < 5; count++) {
 			guestSessionService.consumeSubmission(quota.guestSessionId());
 		}
 
@@ -161,9 +164,10 @@ class SubmissionControllerTest {
 					  "sourceCode": "public class Main {}"
 					}
 					"""))
-			.andExpect(status().isTooManyRequests())
-			.andExpect(jsonPath("$.message").value(
-				"비회원 제출 횟수를 모두 사용했습니다. 로그인 후 계속 제출해 주세요."
+			.andExpect(status().isAccepted())
+			.andExpect(header().string(
+				"X-Guest-Submissions-Remaining",
+				String.valueOf(GuestSessionService.SUBMISSION_LIMIT - 6)
 			));
 	}
 
