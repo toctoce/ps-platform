@@ -53,7 +53,7 @@ export function CategoryPage({ category, navigate, setMessage }) {
   }, [category]);
 
   return (
-    <section className="open-page category-page">
+    <section className={`open-page category-page${category ? ' category-detail-page' : ''}`}>
       <header className="open-page-header">
         <h1>{category ? category : '카테고리 목록'}</h1>
         {category ? (

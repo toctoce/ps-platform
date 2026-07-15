@@ -766,6 +766,26 @@ button:disabled {
   gap: 10px;
 }
 
+.category-detail-page {
+  grid-template-rows: auto minmax(0, 1fr);
+  align-content: stretch;
+  overflow: hidden;
+}
+
+.category-detail-page .landing-problem-table {
+  min-height: 0;
+  align-content: start;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.category-detail-page .problem-table-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
 .problem-table-head,
 .problem-table-row {
   display: grid;
