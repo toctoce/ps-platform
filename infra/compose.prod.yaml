@@ -1,0 +1,84 @@
+name: ps-platform
+
+x-logging: &default-logging
+    driver: json-file
+    options:
+        max-size: "10m"
+        max-file: "3"
+          
+services:
+    ps-backend:
+        image: ps-backend:latest
+        restart: unless-stopped
+        depends_on:
+            ps-postgres:
+                condition: service_healthy
+        networks:
+            - app
+            - database
+        env_file:
+            - /etc/ps-platform/backend.env
+        logging: *default-logging
+        
+    ps-web:
+        image: ps-web:latest
+        restart: unless-stopped
+        depends_on:
+            - ps-backend
+        networks:
+            - app
+        ports:
+            - 80:80
+            - 443:443
+        volumes:
+            - /etc/letsencrypt:/etc/letsencrypt:ro
+        logging: *default-logging
+        
+    ps-judge-worker:
+        image: ps-judge-worker:latest
+        restart: unless-stopped
+        depends_on:
+            - ps-backend
+        networks:
+            - app
+        env_file:
+            - /etc/ps-platform/judge-worker.env
+        environment:
+            - TMPDIR=/var/lib/ps-platform/judge-work
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock
+            - /var/lib/ps-platform/judge-work:/var/lib/ps-platform/judge-work
+        logging: *default-logging
+        
+    ps-postgres:
+        restart: unless-stopped
+        networks:
+            - database
+        environment:
+            - POSTGRES_DB=ps_platform
+            - POSTGRES_USER=ps_user
+            - POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password
+        volumes:
+            - /etc/ps-platform/postgres-password:/run/secrets/postgres_password:ro,Z
+            - infra_ps-postgres-data:/var/lib/postgresql/data
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready -U ps_user -d ps_platform"]
+            interval: 10s
+            timeout: 5s
+            retries: 5
+        image: postgres:16
+        command: ["postgres", "-c", "timezone=UTC"]
+        logging: *default-logging
+
+networks:
+    app:
+        driver: bridge
+    database:
+        driver: bridge
+        internal: true
+
+volumes:
+    infra_ps-postgres-data:
+        external: true
+        name: infra_ps-postgres-data
+

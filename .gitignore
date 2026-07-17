@@ -36,3 +36,6 @@ judge-worker/.gocache
 
 # Local task notes
 harness/task.md
+
+# Judge worker local binary
+judge-worker/judge-worker
