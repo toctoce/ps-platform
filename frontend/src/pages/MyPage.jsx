@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { request } from '../api/client.js';
+import { SolvedProblemList } from '../components/SolvedProblemList.jsx';
+import { SolvedProblemSummary } from '../components/SolvedProblemSummary.jsx';
 
 function formatJoinedAt(value) {
   if (!value) {
@@ -33,6 +35,7 @@ export function MyPage({
   const [passwords, setPasswords] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [passwordBusy, setPasswordBusy] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [solvedCategories, setSolvedCategories] = useState([]);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -222,6 +225,15 @@ export function MyPage({
           </button>
         </div>
       </section>
+      <SolvedProblemSummary
+        accessToken={auth.accessToken}
+        onCategoriesLoaded={setSolvedCategories}
+      />
+      <SolvedProblemList
+        accessToken={auth.accessToken}
+        categories={solvedCategories}
+        navigate={navigate}
+      />
     </section>
   );
 }

@@ -2,7 +2,10 @@ package com.psplatform.backend.submission;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+
+import com.psplatform.backend.problem.ProblemDifficulty;
 
 public interface SubmissionRepository {
 
@@ -21,6 +24,14 @@ public interface SubmissionRepository {
 	List<Submission> findByProblemId(long problemId);
 
 	List<Long> findAcceptedProblemIdsByUserId(long userId);
+
+	List<SolvedProblemRecord> findSolvedProblems(long userId, SolvedProblemSearch search);
+
+	long countSolvedProblems(long userId, SolvedProblemSearch search);
+
+	Map<ProblemDifficulty, Long> countSolvedProblemsByDifficulty(long userId);
+
+	Map<String, Long> countSolvedProblemsByCategory(long userId);
 
 	long countCreatedOn(LocalDate date);
 

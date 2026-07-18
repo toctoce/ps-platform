@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.psplatform.backend.auth.AuthService;
+import com.psplatform.backend.problem.ProblemDifficulty;
 import com.psplatform.backend.user.User;
 
 @RestController
@@ -92,6 +93,38 @@ public class SubmissionController {
 	) {
 		User user = authService.verifyAccessToken(authorization);
 		return submissionService.findAcceptedProblemIdsByUserId(user.getId());
+	}
+
+	@GetMapping("/api/me/solved-summary")
+	public SolvedProblemSummaryResponse findMySolvedProblemSummary(
+		@RequestHeader(value = "Authorization", required = false) String authorization
+	) {
+		User user = authService.verifyAccessToken(authorization);
+		return submissionService.findSolvedProblemSummary(user.getId());
+	}
+
+	@GetMapping("/api/me/solved-problem-details")
+	public SolvedProblemListResponse findMySolvedProblems(
+		@RequestHeader(value = "Authorization", required = false) String authorization,
+		@org.springframework.web.bind.annotation.RequestParam(defaultValue = "") String query,
+		@org.springframework.web.bind.annotation.RequestParam(required = false) ProblemDifficulty difficulty,
+		@org.springframework.web.bind.annotation.RequestParam(defaultValue = "") String category,
+		@org.springframework.web.bind.annotation.RequestParam(
+			defaultValue = "SOLVED_AT_DESC"
+		) SolvedProblemSearch.Sort sort,
+		@org.springframework.web.bind.annotation.RequestParam(defaultValue = "0") int page,
+		@org.springframework.web.bind.annotation.RequestParam(defaultValue = "20") int size
+	) {
+		User user = authService.verifyAccessToken(authorization);
+		SolvedProblemSearch search = new SolvedProblemSearch(
+			query,
+			difficulty,
+			category,
+			sort,
+			Math.max(0, page),
+			Math.max(1, Math.min(size, 100))
+		);
+		return submissionService.findSolvedProblems(user.getId(), search);
 	}
 
 	@GetMapping("/api/submissions/stats/today")

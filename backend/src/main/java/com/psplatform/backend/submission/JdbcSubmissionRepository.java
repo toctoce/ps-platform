@@ -5,7 +5,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -13,6 +16,8 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
+
+import com.psplatform.backend.problem.ProblemDifficulty;
 
 @Repository
 public class JdbcSubmissionRepository implements SubmissionRepository {
@@ -138,6 +143,167 @@ public class JdbcSubmissionRepository implements SubmissionRepository {
 			userId,
 			SubmissionVerdict.ACCEPTED.name()
 		);
+	}
+
+	@Override
+	public List<SolvedProblemRecord> findSolvedProblems(long userId, SolvedProblemSearch search) {
+		List<Object> arguments = new ArrayList<>();
+		String filters = solvedProblemFilters(userId, search, arguments);
+		arguments.add(search.size());
+		arguments.add(search.offset());
+
+		String sql = """
+			WITH solved AS (
+				SELECT s.problem_id, MAX(s.created_at) AS solved_at
+				FROM submissions s
+				JOIN users u ON u.id = s.user_id
+				WHERE s.user_id = ?
+				  AND s.verdict = ?
+				  AND u.role <> ?
+				GROUP BY s.problem_id
+			)
+			SELECT p.id AS problem_id, p.title, p.difficulty, solved.solved_at
+			FROM solved
+			JOIN problems p ON p.id = solved.problem_id
+			WHERE p.archived_at IS NULL
+			%s
+			ORDER BY %s
+			LIMIT ? OFFSET ?
+			""".formatted(filters, solvedProblemOrder(search.sort()));
+
+		return jdbcTemplate.query(
+			sql,
+			(rs, rowNum) -> new SolvedProblemRecord(
+				rs.getLong("problem_id"),
+				rs.getString("title"),
+				ProblemDifficulty.valueOf(rs.getString("difficulty")),
+				rs.getTimestamp("solved_at").toInstant()
+			),
+			arguments.toArray()
+		);
+	}
+
+	@Override
+	public long countSolvedProblems(long userId, SolvedProblemSearch search) {
+		List<Object> arguments = new ArrayList<>();
+		String filters = solvedProblemFilters(userId, search, arguments);
+		String sql = """
+			WITH solved AS (
+				SELECT s.problem_id
+				FROM submissions s
+				JOIN users u ON u.id = s.user_id
+				WHERE s.user_id = ?
+				  AND s.verdict = ?
+				  AND u.role <> ?
+				GROUP BY s.problem_id
+			)
+			SELECT COUNT(*)
+			FROM solved
+			JOIN problems p ON p.id = solved.problem_id
+			WHERE p.archived_at IS NULL
+			%s
+			""".formatted(filters);
+		Long count = jdbcTemplate.queryForObject(sql, Long.class, arguments.toArray());
+		return count == null ? 0 : count;
+	}
+
+	@Override
+	public Map<ProblemDifficulty, Long> countSolvedProblemsByDifficulty(long userId) {
+		Map<ProblemDifficulty, Long> result = new LinkedHashMap<>();
+		jdbcTemplate.query(
+			"""
+			WITH solved AS (
+				SELECT DISTINCT s.problem_id
+				FROM submissions s
+				JOIN users u ON u.id = s.user_id
+				WHERE s.user_id = ?
+				  AND s.verdict = ?
+				  AND u.role <> ?
+			)
+			SELECT p.difficulty, COUNT(*) AS solved_count
+			FROM solved
+			JOIN problems p ON p.id = solved.problem_id
+			WHERE p.archived_at IS NULL
+			GROUP BY p.difficulty
+			""",
+			(rs, rowNum) -> Map.entry(
+				ProblemDifficulty.valueOf(rs.getString("difficulty")),
+				rs.getLong("solved_count")
+			),
+			userId,
+			SubmissionVerdict.ACCEPTED.name(),
+			ADMIN_ROLE
+		).forEach(entry -> result.put(entry.getKey(), entry.getValue()));
+		return result;
+	}
+
+	@Override
+	public Map<String, Long> countSolvedProblemsByCategory(long userId) {
+		Map<String, Long> result = new LinkedHashMap<>();
+		jdbcTemplate.query(
+			"""
+			WITH solved AS (
+				SELECT DISTINCT s.problem_id
+				FROM submissions s
+				JOIN users u ON u.id = s.user_id
+				WHERE s.user_id = ?
+				  AND s.verdict = ?
+				  AND u.role <> ?
+			)
+			SELECT pc.name, COUNT(*) AS solved_count
+			FROM solved
+			JOIN problems p ON p.id = solved.problem_id
+			JOIN problem_category_links pcl ON pcl.problem_id = p.id
+			JOIN problem_categories pc ON pc.id = pcl.category_id
+			WHERE p.archived_at IS NULL
+			  AND pc.active = TRUE
+			GROUP BY pc.id, pc.name, pc.display_order
+			ORDER BY pc.display_order, pc.name
+			""",
+			(rs, rowNum) -> Map.entry(rs.getString("name"), rs.getLong("solved_count")),
+			userId,
+			SubmissionVerdict.ACCEPTED.name(),
+			ADMIN_ROLE
+		).forEach(entry -> result.put(entry.getKey(), entry.getValue()));
+		return result;
+	}
+
+	private String solvedProblemFilters(long userId, SolvedProblemSearch search, List<Object> arguments) {
+		arguments.add(userId);
+		arguments.add(SubmissionVerdict.ACCEPTED.name());
+		arguments.add(ADMIN_ROLE);
+		StringBuilder filters = new StringBuilder();
+		if (search.query() != null && !search.query().isBlank()) {
+			filters.append(" AND LOWER(p.title) LIKE ?");
+			arguments.add("%" + search.query().trim().toLowerCase(java.util.Locale.ROOT) + "%");
+		}
+		if (search.difficulty() != null) {
+			filters.append(" AND p.difficulty = ?");
+			arguments.add(search.difficulty().name());
+		}
+		if (search.category() != null && !search.category().isBlank()) {
+			filters.append("""
+				 AND EXISTS (
+					SELECT 1
+					FROM problem_category_links pcl
+					JOIN problem_categories pc ON pc.id = pcl.category_id
+					WHERE pcl.problem_id = p.id
+					  AND pc.active = TRUE
+					  AND pc.name = ?
+				 )
+				""");
+			arguments.add(search.category().trim());
+		}
+		return filters.toString();
+	}
+
+	private String solvedProblemOrder(SolvedProblemSearch.Sort sort) {
+		return switch (sort) {
+			case PROBLEM_ID_ASC -> "p.id ASC";
+			case PROBLEM_ID_DESC -> "p.id DESC";
+			case SOLVED_AT_ASC -> "solved.solved_at ASC, p.id ASC";
+			case SOLVED_AT_DESC -> "solved.solved_at DESC, p.id DESC";
+		};
 	}
 
 	@Override

@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.psplatform.backend.auth.JwtTokenService;
 import com.psplatform.backend.problem.Problem;
 import com.psplatform.backend.problem.ProblemCreateRequest;
+import com.psplatform.backend.problem.ProblemCategoryRepository;
 import com.psplatform.backend.problem.ProblemDifficulty;
 import com.psplatform.backend.problem.ProblemRepository;
 import com.psplatform.backend.judge.JudgeJobRepository;
@@ -38,6 +39,9 @@ class SubmissionControllerTest {
 
 	@Autowired
 	private ProblemRepository problemRepository;
+
+	@Autowired
+	private ProblemCategoryRepository problemCategoryRepository;
 
 	@Autowired
 	private SubmissionRepository submissionRepository;
@@ -312,6 +316,89 @@ class SubmissionControllerTest {
 	}
 
 	@Test
+	void solvedSummaryCountsDistinctAcceptedProblemsByDifficultyAndCategory() throws Exception {
+		Problem easy = createProblem("쉬운 합", ProblemDifficulty.EASY, List.of("수학"));
+		Problem hard = createProblem("어려운 점화식", ProblemDifficulty.HARD, List.of("수학", "동적 계획법"));
+		Problem wrong = createProblem("틀린 문제", ProblemDifficulty.NORMAL, List.of("구현"));
+		User alice = userRepository.save("alice@example.com", "alice", "hashed-password", "USER");
+		String authorization = "Bearer " + jwtTokenService.createAccessToken(alice);
+
+		markAccepted(easy.getId(), alice.getId());
+		markAccepted(easy.getId(), alice.getId());
+		markAccepted(hard.getId(), alice.getId());
+		Submission wrongSubmission = submissionRepository.save(
+			wrong.getId(),
+			alice.getId(),
+			new SubmissionCreateRequest("java", "public class Main {}")
+		);
+		markJudged(wrongSubmission.getId(), SubmissionVerdict.WRONG_ANSWER);
+
+		mockMvc.perform(get("/api/me/solved-summary").header("Authorization", authorization))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.totalSolved").value(2))
+			.andExpect(jsonPath("$.difficulties[0].difficulty").value("EASY"))
+			.andExpect(jsonPath("$.difficulties[0].count").value(1))
+			.andExpect(jsonPath("$.difficulties[1].difficulty").value("NORMAL"))
+			.andExpect(jsonPath("$.difficulties[1].count").value(0))
+			.andExpect(jsonPath("$.difficulties[2].difficulty").value("HARD"))
+			.andExpect(jsonPath("$.difficulties[2].count").value(1))
+			.andExpect(jsonPath("$.categories[?(@.category == '수학')].count").value(
+				org.hamcrest.Matchers.hasItem(2)
+			))
+			.andExpect(jsonPath("$.categories[?(@.category == '동적 계획법')].count").value(
+				org.hamcrest.Matchers.hasItem(1)
+			));
+	}
+
+	@Test
+	void solvedProblemDetailsApplySearchFiltersSortAndPagination() throws Exception {
+		Problem easy = createProblem("기초 점화식", ProblemDifficulty.EASY, List.of("동적 계획법"));
+		Problem hard = createProblem("최장 증가 부분 수열", ProblemDifficulty.HARD, List.of("동적 계획법"));
+		Problem graph = createProblem("최장 경로", ProblemDifficulty.HARD, List.of("그래프"));
+		Problem archived = createProblem("보관된 최장 문제", ProblemDifficulty.HARD, List.of("동적 계획법"));
+		User alice = userRepository.save("alice@example.com", "alice", "hashed-password", "USER");
+		User bob = userRepository.save("bob@example.com", "bob", "hashed-password", "USER");
+		String authorization = "Bearer " + jwtTokenService.createAccessToken(alice);
+
+		markAccepted(easy.getId(), alice.getId());
+		markAccepted(hard.getId(), alice.getId());
+		markAccepted(hard.getId(), alice.getId());
+		markAccepted(graph.getId(), alice.getId());
+		markAccepted(archived.getId(), alice.getId());
+		markAccepted(createProblem("다른 사용자 문제").getId(), bob.getId());
+		jdbcTemplate.update("UPDATE problems SET archived_at = CURRENT_TIMESTAMP WHERE id = ?", archived.getId());
+
+		mockMvc.perform(get("/api/me/solved-problem-details")
+				.header("Authorization", authorization)
+				.param("query", "최장")
+				.param("difficulty", "HARD")
+				.param("category", "동적 계획법")
+				.param("sort", "PROBLEM_ID_ASC")
+				.param("page", "0")
+				.param("size", "1"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.totalElements").value(1))
+			.andExpect(jsonPath("$.totalPages").value(1))
+			.andExpect(jsonPath("$.problems[0].problemId").value(hard.getId()))
+			.andExpect(jsonPath("$.problems[0].title").value("최장 증가 부분 수열"))
+			.andExpect(jsonPath("$.problems[0].difficulty").value("HARD"))
+			.andExpect(jsonPath("$.problems[0].categories[0]").value("동적 계획법"))
+			.andExpect(jsonPath("$.problems[0].solvedAt", org.hamcrest.Matchers.endsWith("Z")));
+	}
+
+	@Test
+	void administratorSubmissionsAreExcludedFromSolvedSummary() throws Exception {
+		Problem problem = createProblem("관리자 정답");
+		User admin = userRepository.save("admin@example.com", "admin", "hashed-password", "ADMIN");
+		markAccepted(problem.getId(), admin.getId());
+
+		mockMvc.perform(get("/api/me/solved-summary")
+				.header("Authorization", "Bearer " + jwtTokenService.createAccessToken(admin)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.totalSolved").value(0));
+	}
+
+	@Test
 	void todayStatsReturnsTodaySubmissionCount() throws Exception {
 		Problem problem = createProblem();
 		User alice = userRepository.save("alice@example.com", "alice", "hashed-password", "USER");
@@ -362,17 +449,23 @@ class SubmissionControllerTest {
 	}
 
 	private Problem createProblem(String title) {
-		return problemRepository.save(new ProblemCreateRequest(
+		return createProblem(title, ProblemDifficulty.NORMAL, List.of());
+	}
+
+	private Problem createProblem(String title, ProblemDifficulty difficulty, List<String> categories) {
+		Problem problem = problemRepository.save(new ProblemCreateRequest(
 			title,
-			"두 수를 더하는 문제",
-			"정수 A와 B가 주어진다.",
-			"A+B를 출력한다.",
+			"문제 설명",
+			"입력 설명",
+			"출력 설명",
 			1000,
 			128,
-			ProblemDifficulty.NORMAL,
-			List.of(),
+			difficulty,
+			categories,
 			List.of()
 		));
+		problemCategoryRepository.addLinks(problem.getId(), categories);
+		return problem;
 	}
 
 	private String authorizationFor(String email, String username) {
@@ -387,5 +480,14 @@ class SubmissionControllerTest {
 			verdict.name(),
 			submissionId
 		);
+	}
+
+	private void markAccepted(long problemId, long userId) {
+		Submission submission = submissionRepository.save(
+			problemId,
+			userId,
+			new SubmissionCreateRequest("java", "public class Main {}")
+		);
+		markJudged(submission.getId(), SubmissionVerdict.ACCEPTED);
 	}
 }
