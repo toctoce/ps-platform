@@ -35,7 +35,7 @@ public class EmailSupportInquiryNotifier implements SupportInquiryNotifier {
 			message.setFrom(resolvedFrom);
 		}
 		message.setReplyTo(inquiry.email());
-		message.setSubject("[빵구리즘 문의] [%s] %s".formatted(inquiry.type().label(), inquiry.subject()));
+		message.setSubject("[알뿌 문의] [%s] %s".formatted(inquiry.type().label(), inquiry.subject()));
 		message.setText(body(inquiry));
 
 		try {

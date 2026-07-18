@@ -42,7 +42,7 @@ public class JavaMailVerificationEmailSender implements VerificationEmailSender 
 		}
 		message.setSubject(subject(purpose));
 		message.setText("""
-			빵구리즘 %s 인증번호입니다.
+			알뿌 %s 인증번호입니다.
 
 			인증번호: %s
 
@@ -62,7 +62,7 @@ public class JavaMailVerificationEmailSender implements VerificationEmailSender 
 	}
 
 	private String subject(EmailVerificationPurpose purpose) {
-		return "[빵구리즘] " + purposeLabel(purpose) + " 이메일 인증번호";
+		return "[알뿌] " + purposeLabel(purpose) + " 이메일 인증번호";
 	}
 
 	private String purposeLabel(EmailVerificationPurpose purpose) {

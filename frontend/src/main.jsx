@@ -5,6 +5,7 @@ import 'katex/dist/katex.min.css';
 import './styles.css';
 import { configureAuthSession, request } from './api/client.js';
 import { clearStoredAuth, getStoredAuth, saveStoredAuth } from './auth/storage.js';
+import { BRAND_LOGO_SRC, BRAND_NAME } from './brand.js';
 import { ADMIN_TABS, AdminPage } from './pages/AdminPage.jsx';
 import { CategoryPage } from './pages/CategoryPage.jsx';
 import { HomePage } from './pages/HomePage.jsx';
@@ -24,7 +25,6 @@ const SUPPORT_INQUIRY_TYPES = [
   { value: 'OTHER', label: '기타' },
 ];
 
-const SITE_LOGO_SRC = '/assets/logo-home.png';
 const TOAST_VISIBLE_MS = 2600;
 const TOAST_FADE_MS = 400;
 const MAX_TOASTS = 5;
@@ -278,9 +278,9 @@ function App() {
       <header className={`site-header ${route.name === 'admin' ? 'is-admin' : ''}`}>
         <button className="site-logo" type="button" onClick={() => navigate('/')}>
           <span className="site-logo-mark">
-            <img src={SITE_LOGO_SRC} alt="" />
+            <img src={BRAND_LOGO_SRC} alt="" />
           </span>
-          <strong>빵구리즘</strong>
+          <strong>{BRAND_NAME}</strong>
         </button>
 
         {route.name === 'admin' && isAdmin ? (

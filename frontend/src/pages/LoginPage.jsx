@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Code2 } from 'lucide-react';
 import { request } from '../api/client.js';
+import { BRAND_LOGO_SRC, BRAND_NAME } from '../brand.js';
 
 export function LoginPage({ onLoginSuccess, setMessage, navigate }) {
   const [busy, setBusy] = useState(false);
@@ -62,9 +62,9 @@ export function LoginPage({ onLoginSuccess, setMessage, navigate }) {
     <section className="auth-page">
       <div className="auth-brand">
         <span className="site-logo-mark">
-          <Code2 size={18} />
+          <img src={BRAND_LOGO_SRC} alt="" />
         </span>
-        <strong>빵구리즘</strong>
+        <strong>{BRAND_NAME}</strong>
         <p>다시 만나서 반가워요</p>
       </div>
       <form className="panel form-panel auth-form" onSubmit={login}>

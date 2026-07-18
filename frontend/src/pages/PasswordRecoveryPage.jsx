@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Code2 } from 'lucide-react';
 import { request } from '../api/client.js';
+import { BRAND_LOGO_SRC, BRAND_NAME } from '../brand.js';
 import { EmailVerificationFields } from '../components/EmailVerificationFields.jsx';
 
 export function PasswordRecoveryPage({ setMessage, navigate }) {
@@ -51,9 +51,9 @@ export function PasswordRecoveryPage({ setMessage, navigate }) {
     <section className="auth-page">
       <div className="auth-brand">
         <span className="site-logo-mark">
-          <Code2 size={18} />
+          <img src={BRAND_LOGO_SRC} alt="" />
         </span>
-        <strong>빵구리즘</strong>
+        <strong>{BRAND_NAME}</strong>
         <p>가입한 이메일로 비밀번호를 다시 설정하세요</p>
       </div>
       <form className="panel form-panel auth-form" onSubmit={resetPassword}>
