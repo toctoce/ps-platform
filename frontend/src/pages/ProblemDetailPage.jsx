@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import solarizedLightTheme from '../editor/themes/Solarized-light.json';
 import krTheme from '../editor/themes/krTheme.json';
-import { BookOpen, ChevronDown, ChevronUp, Code2, Info, Moon, Play, Plus, Send, Siren, Sun, X } from 'lucide-react';
+import { BookOpen, ChevronDown, ChevronUp, Code2, Copy, Info, Moon, Play, Plus, Send, Siren, Sun, X } from 'lucide-react';
 import { request } from '../api/client.js';
 import { ConstraintContent } from '../components/ConstraintContent.jsx';
 import { MarkdownContent } from '../components/MarkdownContent.jsx';
@@ -104,6 +104,32 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
 
   function hideTooltip() {
     setActiveTooltip(null);
+  }
+
+  async function copyExampleInput(input) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(input);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = input;
+        textarea.setAttribute('readonly', '');
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+          if (!document.execCommand('copy')) {
+            throw new Error('Clipboard copy failed');
+          }
+        } finally {
+          textarea.remove();
+        }
+      }
+      setMessage('예제 입력을 복사했습니다.');
+    } catch {
+      setMessage('예제 입력을 복사하지 못했습니다.');
+    }
   }
 
   useEffect(() => {
@@ -793,7 +819,18 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
                           <div className="example-title">예제 {index + 1}</div>
                           <div className="example-cells">
                             <div className="example-cell">
-                              <strong>입력</strong>
+                              <div className="example-cell-header">
+                                <strong>입력</strong>
+                                <button
+                                  className="example-copy-button"
+                                  type="button"
+                                  title="입력 복사"
+                                  aria-label={`예제 ${index + 1} 입력 복사`}
+                                  onClick={() => copyExampleInput(testCase.input)}
+                                >
+                                  <Copy size={14} />
+                                </button>
+                              </div>
                               <pre>{testCase.input}</pre>
                             </div>
                             <div className="example-cell">

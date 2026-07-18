@@ -2236,6 +2236,39 @@ textarea:focus {
   font-size: 13px;
 }
 
+.example-cell-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 26px;
+  margin-bottom: 6px;
+}
+
+.example-cell-header strong {
+  margin-bottom: 0;
+}
+
+.example-copy-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-sub);
+}
+
+.example-copy-button:hover,
+.example-copy-button:focus-visible {
+  background: var(--brand-soft);
+  color: var(--brand-hover);
+  outline: none;
+}
+
 .example-cell pre {
   margin: 0;
   padding: 0;
