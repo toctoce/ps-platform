@@ -19,9 +19,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.psplatform.backend.auth.JwtTokenService;
+import com.psplatform.backend.submission.Submission;
+import com.psplatform.backend.submission.SubmissionCreateRequest;
+import com.psplatform.backend.submission.SubmissionRepository;
+import com.psplatform.backend.submission.SubmissionStatus;
+import com.psplatform.backend.submission.SubmissionVerdict;
 import com.psplatform.backend.user.User;
 import com.psplatform.backend.user.UserRepository;
 
@@ -49,6 +55,12 @@ class ProblemControllerTest {
 
 	@Autowired
 	private JwtTokenService jwtTokenService;
+
+	@Autowired
+	private SubmissionRepository submissionRepository;
+
+	@Autowired
+	private JdbcTemplate jdbcTemplate;
 
 	@BeforeEach
 	void setUp() {
@@ -307,6 +319,56 @@ class ProblemControllerTest {
 	}
 
 	@Test
+	void mockTestReturnsAtMostOneProblemForEachDifficulty() throws Exception {
+		Problem easy = saveProblem("쉬운 문제", ProblemDifficulty.EASY);
+		Problem normal = saveProblem("보통 문제", ProblemDifficulty.NORMAL);
+		Problem hard = saveProblem("어려운 문제", ProblemDifficulty.HARD);
+		Problem veryHard = saveProblem("매우 어려운 문제", ProblemDifficulty.VERY_HARD);
+		Problem archived = saveProblem("보관된 쉬운 문제", ProblemDifficulty.EASY);
+		jdbcTemplate.update("UPDATE problems SET archived_at = CURRENT_TIMESTAMP WHERE id = ?", archived.getId());
+
+		mockMvc.perform(get("/api/problems/mock-test"))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.problems.length()").value(4))
+			.andExpect(jsonPath("$.problems[?(@.difficulty == 'EASY')].id").value(hasItem(easy.getId().intValue())))
+			.andExpect(jsonPath("$.problems[?(@.difficulty == 'NORMAL')].id").value(hasItem(normal.getId().intValue())))
+			.andExpect(jsonPath("$.problems[?(@.difficulty == 'HARD')].id").value(hasItem(hard.getId().intValue())))
+			.andExpect(jsonPath("$.problems[?(@.difficulty == 'VERY_HARD')].id").value(
+				hasItem(veryHard.getId().intValue())
+			))
+			.andExpect(jsonPath("$.problems[*].id", not(hasItem(archived.getId().intValue()))))
+			.andExpect(jsonPath("$.unavailableDifficulties").isEmpty());
+	}
+
+	@Test
+	void mockTestExcludesProblemsAlreadyAcceptedByCurrentUser() throws Exception {
+		Problem solvedEasy = saveProblem("푼 쉬운 문제", ProblemDifficulty.EASY);
+		Problem unsolvedEasy = saveProblem("안 푼 쉬운 문제", ProblemDifficulty.EASY);
+		User user = userRepository.save("member@example.com", "member", "password", "USER");
+		markAccepted(solvedEasy.getId(), user.getId());
+
+		mockMvc.perform(get("/api/problems/mock-test")
+				.header("Authorization", "Bearer " + jwtTokenService.createAccessToken(user)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.problems.length()").value(1))
+			.andExpect(jsonPath("$.problems[0].id").value(unsolvedEasy.getId()))
+			.andExpect(jsonPath("$.problems[*].id", not(hasItem(solvedEasy.getId().intValue()))))
+			.andExpect(jsonPath("$.unavailableDifficulties", hasItems("NORMAL", "HARD", "VERY_HARD")));
+	}
+
+	@Test
+	void mockTestDoesNotTreatAdministratorSubmissionsAsSolved() throws Exception {
+		Problem easy = saveProblem("관리자가 푼 문제", ProblemDifficulty.EASY);
+		User admin = userRepository.save("admin2@example.com", "admin2", "password", "ADMIN");
+		markAccepted(easy.getId(), admin.getId());
+
+		mockMvc.perform(get("/api/problems/mock-test")
+				.header("Authorization", "Bearer " + jwtTokenService.createAccessToken(admin)))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.problems[0].id").value(easy.getId()));
+	}
+
+	@Test
 	void addTestCaseToProblem() throws Exception {
 		Problem problem = problemRepository.save(new ProblemCreateRequest(
 			"A+B",
@@ -457,5 +519,33 @@ class ProblemControllerTest {
 		User user = userRepository.findByEmail("admin@example.com")
 			.orElseGet(() -> userRepository.save("admin@example.com", "admin", "password", "ADMIN"));
 		return "Bearer " + jwtTokenService.createAccessToken(user);
+	}
+
+	private Problem saveProblem(String title, ProblemDifficulty difficulty) {
+		return problemRepository.save(new ProblemCreateRequest(
+			title,
+			"문제 설명",
+			"입력 설명",
+			"출력 설명",
+			1000,
+			128,
+			difficulty,
+			List.of(),
+			List.of()
+		));
+	}
+
+	private void markAccepted(long problemId, long userId) {
+		Submission submission = submissionRepository.save(
+			problemId,
+			userId,
+			new SubmissionCreateRequest("java", "public class Main {}")
+		);
+		jdbcTemplate.update(
+			"UPDATE submissions SET status = ?, verdict = ? WHERE id = ?",
+			SubmissionStatus.JUDGED.name(),
+			SubmissionVerdict.ACCEPTED.name(),
+			submission.getId()
+		);
 	}
 }

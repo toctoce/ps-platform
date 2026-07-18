@@ -14,6 +14,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class JdbcProblemRepository implements ProblemRepository {
+	private static final String ADMIN_ROLE = "ADMIN";
 
 	private final JdbcTemplate jdbcTemplate;
 
@@ -161,6 +162,34 @@ public class JdbcProblemRepository implements ProblemRepository {
 			rowMapper,
 			count
 		);
+	}
+
+	@Override
+	public List<Problem> findMockTestCandidates(ProblemDifficulty difficulty, Long userId) {
+		String userExclusion = userId == null ? "" : """
+			  AND NOT EXISTS (
+				SELECT 1
+				FROM submissions s
+				JOIN users u ON u.id = s.user_id
+				WHERE s.problem_id = p.id
+				  AND s.user_id = ?
+				  AND s.verdict = 'ACCEPTED'
+				  AND u.role <> ?
+			  )
+			""";
+		String sql = """
+			SELECT p.id, p.title, p.description, p.solution, p.input_description, p.input_constraints,
+			       p.output_description, p.time_limit_ms, p.memory_limit_mb, p.difficulty, p.created_at
+			FROM problems p
+			WHERE p.archived_at IS NULL
+			  AND p.difficulty = ?
+			%s
+			ORDER BY p.id
+			""".formatted(userExclusion);
+		if (userId == null) {
+			return jdbcTemplate.query(sql, rowMapper, difficulty.name());
+		}
+		return jdbcTemplate.query(sql, rowMapper, difficulty.name(), userId, ADMIN_ROLE);
 	}
 
 	@Override

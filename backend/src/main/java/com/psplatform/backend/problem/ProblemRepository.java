@@ -13,6 +13,8 @@ public interface ProblemRepository {
 
 	List<Problem> findRandom(int count);
 
+	List<Problem> findMockTestCandidates(ProblemDifficulty difficulty, Long userId);
+
 	Optional<Problem> findById(long id);
 
 	boolean existsByTitle(String title);

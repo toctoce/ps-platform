@@ -2,9 +2,13 @@ package com.psplatform.backend.problem;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ThreadLocalRandom;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.psplatform.backend.user.User;
 
 @Service
 public class ProblemService {
@@ -56,6 +60,27 @@ public class ProblemService {
 	public List<Problem> findRandomProblems(int count) {
 		int safeCount = Math.max(0, Math.min(count, 100));
 		return hydrateCategories(problemRepository.findRandom(safeCount));
+	}
+
+	public MockTestResponse createMockTest(Optional<User> requester) {
+		Long userId = requester
+			.filter(user -> !"ADMIN".equals(user.getRole()))
+			.map(User::getId)
+			.orElse(null);
+		List<Problem> selected = new java.util.ArrayList<>();
+		List<ProblemDifficulty> unavailable = new java.util.ArrayList<>();
+		for (ProblemDifficulty difficulty : ProblemDifficulty.values()) {
+			List<Problem> candidates = problemRepository.findMockTestCandidates(difficulty, userId);
+			if (candidates.isEmpty()) {
+				unavailable.add(difficulty);
+				continue;
+			}
+			selected.add(candidates.get(ThreadLocalRandom.current().nextInt(candidates.size())));
+		}
+		return new MockTestResponse(
+			hydrateCategories(selected).stream().map(ProblemResponse::from).toList(),
+			List.copyOf(unavailable)
+		);
 	}
 
 	public List<ProblemCategorySummary> findCategories() {

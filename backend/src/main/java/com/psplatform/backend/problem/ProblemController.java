@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.psplatform.backend.admin.AdminAccessService;
 import com.psplatform.backend.admin.AdminService;
+import com.psplatform.backend.auth.AuthService;
 import com.psplatform.backend.user.User;
 
 @RestController
@@ -24,15 +25,18 @@ public class ProblemController {
 	private final ProblemService problemService;
 	private final AdminAccessService adminAccessService;
 	private final AdminService adminService;
+	private final AuthService authService;
 
 	public ProblemController(
 		ProblemService problemService,
 		AdminAccessService adminAccessService,
-		AdminService adminService
+		AdminService adminService,
+		AuthService authService
 	) {
 		this.problemService = problemService;
 		this.adminAccessService = adminAccessService;
 		this.adminService = adminService;
+		this.authService = authService;
 	}
 
 	@PostMapping
@@ -85,6 +89,13 @@ public class ProblemController {
 			.stream()
 			.map(ProblemResponse::from)
 			.toList();
+	}
+
+	@GetMapping("/mock-test")
+	public MockTestResponse createMockTest(
+		@RequestHeader(value = "Authorization", required = false) String authorization
+	) {
+		return problemService.createMockTest(authService.findUserIfAuthenticated(authorization));
 	}
 
 	@PostMapping("/{id}/test-cases")
