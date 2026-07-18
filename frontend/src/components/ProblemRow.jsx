@@ -1,6 +1,6 @@
 import { difficultyClassName, difficultyLabel, problemCategoryNames } from '../problem/problemUtils.js';
 
-export function ProblemRow({ problem, navigate, showCategories = true }) {
+export function ProblemRow({ problem, navigate, showCategories = true, showNumber = false }) {
   const categories = problemCategoryNames(problem);
   return (
     <button className="problem-row" type="button" onClick={() => navigate(`/problems/${problem.id}`)}>
@@ -14,7 +14,7 @@ export function ProblemRow({ problem, navigate, showCategories = true }) {
         </div>
       ) : null}
       <div className="problem-title-row">
-        <strong>{problem.title}</strong>
+        <strong>{showNumber ? `${problem.id}. ` : ''}{problem.title}</strong>
         <span className={difficultyClassName(problem.difficulty)}>{difficultyLabel(problem.difficulty)}</span>
       </div>
     </button>

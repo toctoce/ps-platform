@@ -436,7 +436,7 @@ function App() {
         ) : route.name === 'random' ? (
           <RandomProblemPage
             navigate={navigate}
-            setMessage={setMessage}
+            auth={auth}
           />
         ) : route.name === 'my-page' ? (
           <MyPage

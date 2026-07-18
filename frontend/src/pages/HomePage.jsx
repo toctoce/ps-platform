@@ -63,7 +63,7 @@ export function HomePage({ navigate, setMessage }) {
           <div className="hero-actions">
             <button className="primary-button" type="button" onClick={() => navigate('/random')}>
               <Play size={17} />
-              바로 문제 풀기
+              모의 코딩테스트
             </button>
             <button className="ghost-button" type="button" onClick={() => navigate('/problems')}>
               <List size={17} />
