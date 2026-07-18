@@ -25,6 +25,9 @@ export function parseRoute() {
   if (path === '/mypage' || path === '/my') {
     return { name: 'my-page' };
   }
+  if (path === '/account') {
+    return { name: 'account' };
+  }
   if (path === '/admin') {
     return { name: 'admin' };
   }

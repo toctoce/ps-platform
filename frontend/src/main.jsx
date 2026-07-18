@@ -7,6 +7,7 @@ import { configureAuthSession, request } from './api/client.js';
 import { clearStoredAuth, getStoredAuth, saveStoredAuth } from './auth/storage.js';
 import { BRAND_LOGO_SRC, BRAND_NAME } from './brand.js';
 import { ADMIN_TABS, AdminPage } from './pages/AdminPage.jsx';
+import { AccountPage } from './pages/AccountPage.jsx';
 import { CategoryPage } from './pages/CategoryPage.jsx';
 import { HomePage } from './pages/HomePage.jsx';
 import { LoginPage } from './pages/LoginPage.jsx';
@@ -251,7 +252,7 @@ function App() {
     clearAuth();
     setUserMenuOpen(false);
     setMessage('비밀번호를 변경했습니다. 다시 로그인해 주세요.');
-    navigate('/login?returnTo=%2Fmypage');
+    navigate('/login?returnTo=%2Faccount');
   }
 
   useEffect(() => {
@@ -347,15 +348,9 @@ function App() {
                     <UserRound size={16} />
                     마이페이지
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setUserMenuOpen(false);
-                      setMessage('설정 화면은 추가 개발 예정입니다.');
-                    }}
-                  >
+                  <button type="button" onClick={() => navigate('/account')}>
                     <Settings size={16} />
-                    설정
+                    계정 정보
                   </button>
                   <button type="button" onClick={openSupportInquiry}>
                     <MessageCircle size={16} />
@@ -440,6 +435,12 @@ function App() {
           />
         ) : route.name === 'my-page' ? (
           <MyPage
+            auth={auth}
+            isAuthenticated={isAuthenticated}
+            navigate={navigate}
+          />
+        ) : route.name === 'account' ? (
+          <AccountPage
             auth={auth}
             isAuthenticated={isAuthenticated}
             setMessage={setMessage}
