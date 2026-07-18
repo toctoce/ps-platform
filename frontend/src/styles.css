@@ -1483,10 +1483,86 @@ button:disabled {
   overflow-wrap: anywhere;
 }
 
-.account-danger-actions {
+.my-page {
+  max-width: 960px;
+}
+
+.my-page-section {
+  padding: 8px 0 26px;
+  border-bottom: 1px solid var(--line);
+}
+
+.my-page-section h2 {
+  margin: 0 0 16px;
+  font-size: 18px;
+}
+
+.profile-value-actions,
+.profile-inline-form {
   display: flex;
-  justify-content: flex-end;
-  margin-top: 14px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.profile-inline-form input {
+  width: min(280px, 100%);
+  min-height: 36px;
+}
+
+.text-button {
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--brand);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.text-button:hover,
+.text-button:focus-visible {
+  text-decoration: underline;
+  outline: none;
+}
+
+.compact-button {
+  min-height: 36px;
+  padding: 7px 14px;
+  font-size: 13px;
+}
+
+.password-change-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  align-items: end;
+  gap: 10px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.password-change-form label {
+  display: grid;
+  gap: 7px;
+}
+
+.password-change-form label span {
+  color: var(--text-sub);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.password-change-form input {
+  width: 100%;
+  min-height: 38px;
+}
+
+.account-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 18px;
 }
 
 .danger-link-button {
@@ -3481,6 +3557,18 @@ dt {
     align-items: start;
     min-height: auto;
     padding: 12px;
+  }
+
+  .profile-row {
+    grid-template-columns: 88px minmax(0, 1fr);
+  }
+
+  .profile-inline-form {
+    flex-wrap: wrap;
+  }
+
+  .password-change-form {
+    grid-template-columns: 1fr;
   }
 
   .home-title h1 {

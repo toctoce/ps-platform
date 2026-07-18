@@ -65,6 +65,40 @@ public class UserService {
 			.orElseThrow(() -> new UserNotFoundException(id));
 	}
 
+	@Transactional
+	public User updateUsername(User user, UsernameUpdateRequest request) {
+		String username = trimOrThrow(request.username(), "username");
+		userRepository.findByUsername(username)
+			.filter(existing -> !existing.getId().equals(user.getId()))
+			.ifPresent(existing -> {
+				throw new DuplicateUserUsernameException(username);
+			});
+
+		try {
+			if (!userRepository.updateUsername(user.getId(), username)) {
+				throw new UserNotFoundException(user.getId());
+			}
+		} catch (DuplicateKeyException exception) {
+			throw new DuplicateUserUsernameException(username);
+		}
+		return findById(user.getId());
+	}
+
+	@Transactional
+	public void changePassword(User user, PasswordChangeRequest request) {
+		String currentPassword = trimOrThrow(request.currentPassword(), "currentPassword");
+		String newPassword = trimOrThrow(request.newPassword(), "newPassword");
+		if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+			throw new InvalidUserInputException("현재 비밀번호가 올바르지 않습니다.");
+		}
+		if (newPassword.length() < MIN_PASSWORD_LENGTH) {
+			throw new InvalidUserInputException("Password must be at least 8 characters");
+		}
+		if (!userRepository.updatePasswordHash(user.getId(), passwordEncoder.encode(newPassword))) {
+			throw new UserNotFoundException(user.getId());
+		}
+	}
+
 	private String trimOrThrow(String value, String fieldName) {
 		if (value == null || value.isBlank()) {
 			throw new InvalidUserInputException(fieldName + " is required");

@@ -3,6 +3,7 @@ package com.psplatform.backend.auth;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -266,5 +267,113 @@ class AuthControllerTest {
 		mockMvc.perform(delete("/api/auth/me"))
 			.andExpect(status().isUnauthorized())
 			.andExpect(jsonPath("$.message").value("Authorization header is required"));
+	}
+
+	@Test
+	void updateUsernameChangesCurrentUser() throws Exception {
+		String accessToken = loginAndRead("$.accessToken");
+
+		mockMvc.perform(patch("/api/auth/me/username")
+				.header("Authorization", "Bearer " + accessToken)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{"username": "next-alice"}
+					"""))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$.username").value("next-alice"))
+			.andExpect(jsonPath("$.email").value(EMAIL));
+
+		Assertions.assertThat(userRepository.findByEmail(EMAIL))
+			.hasValueSatisfying(user -> Assertions.assertThat(user.getUsername()).isEqualTo("next-alice"));
+	}
+
+	@Test
+	void updateUsernameRejectsDuplicateUsername() throws Exception {
+		userRepository.save("bob@example.com", "bob", passwordEncoder.encode(PASSWORD), "USER");
+		String accessToken = loginAndRead("$.accessToken");
+
+		mockMvc.perform(patch("/api/auth/me/username")
+				.header("Authorization", "Bearer " + accessToken)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{"username": "bob"}
+					"""))
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.message").value("Username already exists: bob"));
+	}
+
+	@Test
+	void changePasswordRevokesCurrentTokensAndAcceptsNewPassword() throws Exception {
+		String loginResponse = login();
+		String accessToken = JsonPath.read(loginResponse, "$.accessToken");
+		String refreshToken = JsonPath.read(loginResponse, "$.refreshToken");
+
+		mockMvc.perform(patch("/api/auth/me/password")
+				.header("Authorization", "Bearer " + accessToken)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "currentPassword": "password1234",
+					  "newPassword": "changed-password"
+					}
+					"""))
+			.andExpect(status().isNoContent());
+
+		mockMvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + accessToken))
+			.andExpect(status().isUnauthorized());
+		mockMvc.perform(post("/api/auth/refresh")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"refreshToken\": \"%s\"}".formatted(refreshToken)))
+			.andExpect(status().isUnauthorized());
+		mockMvc.perform(post("/api/auth/login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "provider": "local",
+					  "credentials": {
+					    "email": "alice@example.com",
+					    "password": "changed-password"
+					  }
+					}
+					"""))
+			.andExpect(status().isOk());
+	}
+
+	@Test
+	void changePasswordRejectsIncorrectCurrentPassword() throws Exception {
+		String accessToken = loginAndRead("$.accessToken");
+
+		mockMvc.perform(patch("/api/auth/me/password")
+				.header("Authorization", "Bearer " + accessToken)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "currentPassword": "incorrect",
+					  "newPassword": "changed-password"
+					}
+					"""))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.message").value("현재 비밀번호가 올바르지 않습니다."));
+	}
+
+	private String loginAndRead(String path) throws Exception {
+		return JsonPath.read(login(), path);
+	}
+
+	private String login() throws Exception {
+		return mockMvc.perform(post("/api/auth/login")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "provider": "local",
+					  "credentials": {
+					    "email": "alice@example.com",
+					    "password": "password1234"
+					  }
+					}
+					"""))
+			.andReturn()
+			.getResponse()
+			.getContentAsString();
 	}
 }

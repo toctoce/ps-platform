@@ -9,7 +9,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.psplatform.backend.user.User;
+import com.psplatform.backend.user.PasswordChangeRequest;
 import com.psplatform.backend.user.UserRepository;
+import com.psplatform.backend.user.UserService;
+import com.psplatform.backend.user.UsernameUpdateRequest;
 
 @Service
 public class AuthService {
@@ -18,18 +21,24 @@ public class AuthService {
 	private final RefreshTokenService refreshTokenService;
 	private final JwtTokenService jwtTokenService;
 	private final UserRepository userRepository;
+	private final UserService userService;
+	private final RefreshTokenRepository refreshTokenRepository;
 
 	public AuthService(
 		List<AuthProvider> providers,
 		RefreshTokenService refreshTokenService,
 		JwtTokenService jwtTokenService,
-		UserRepository userRepository
+		UserRepository userRepository,
+		UserService userService,
+		RefreshTokenRepository refreshTokenRepository
 	) {
 		this.providers = providers.stream()
 			.collect(Collectors.toMap(AuthProvider::provider, provider -> provider));
 		this.refreshTokenService = refreshTokenService;
 		this.jwtTokenService = jwtTokenService;
 		this.userRepository = userRepository;
+		this.userService = userService;
+		this.refreshTokenRepository = refreshTokenRepository;
 	}
 
 	public AuthTokenPayload login(AuthLoginRequest request) {
@@ -86,6 +95,17 @@ public class AuthService {
 			return Optional.empty();
 		}
 		return Optional.of(verifyAccessToken(authorizationHeader));
+	}
+
+	public User updateCurrentUsername(String authorizationHeader, UsernameUpdateRequest request) {
+		return userService.updateUsername(verifyAccessToken(authorizationHeader), request);
+	}
+
+	@Transactional
+	public void changeCurrentPassword(String authorizationHeader, PasswordChangeRequest request) {
+		User user = verifyAccessToken(authorizationHeader);
+		userService.changePassword(user, request);
+		refreshTokenRepository.revokeAllByUserId(user.getId());
 	}
 
 	@Transactional

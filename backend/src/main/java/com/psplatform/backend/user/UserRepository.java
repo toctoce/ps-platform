@@ -12,6 +12,8 @@ public interface UserRepository {
 
 	Optional<User> findByUsername(String username);
 
+	boolean updateUsername(long id, String username);
+
 	boolean updatePasswordHash(long id, String passwordHash);
 
 	void deleteById(long id);

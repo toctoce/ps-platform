@@ -243,6 +243,17 @@ function App() {
     navigate('/');
   }
 
+  function updateCurrentAuthUser(user) {
+    applyAuth({ ...auth, user });
+  }
+
+  function handlePasswordChanged() {
+    clearAuth();
+    setUserMenuOpen(false);
+    setMessage('비밀번호를 변경했습니다. 다시 로그인해 주세요.');
+    navigate('/login?returnTo=%2Fmypage');
+  }
+
   useEffect(() => {
     configureAuthSession({
       getAuth: () => getStoredAuth(),
@@ -433,6 +444,9 @@ function App() {
             isAuthenticated={isAuthenticated}
             setMessage={setMessage}
             navigate={navigate}
+            onAuthUserChange={updateCurrentAuthUser}
+            onLogout={logout}
+            onPasswordChanged={handlePasswordChanged}
             onDeleteAccount={deleteCurrentAccount}
           />
         ) : route.name === 'admin' ? (

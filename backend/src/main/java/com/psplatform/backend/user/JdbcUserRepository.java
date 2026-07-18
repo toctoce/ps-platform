@@ -107,6 +107,19 @@ public class JdbcUserRepository implements UserRepository {
 	}
 
 	@Override
+	public boolean updateUsername(long id, String username) {
+		return jdbcTemplate.update(
+			"""
+			UPDATE users
+			SET username = ?, updated_at = CURRENT_TIMESTAMP
+			WHERE id = ? AND deleted_at IS NULL
+			""",
+			username,
+			id
+		) == 1;
+	}
+
+	@Override
 	public boolean updatePasswordHash(long id, String passwordHash) {
 		return jdbcTemplate.update(
 			"""
