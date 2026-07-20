@@ -1,14 +1,14 @@
 package com.psplatform.backend.user;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record UserResponse(
 	Long id,
 	String email,
 	String username,
 	String role,
-	LocalDateTime createdAt,
-	LocalDateTime updatedAt
+	Instant createdAt,
+	Instant updatedAt
 ) {
 
 	public static UserResponse from(User user) {

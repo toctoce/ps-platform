@@ -25,8 +25,8 @@ public class JdbcUserRepository implements UserRepository {
 		rs.getString("password_hash"),
 		rs.getString("role"),
 		rs.getInt("auth_version"),
-		rs.getTimestamp("created_at").toLocalDateTime(),
-		rs.getTimestamp("updated_at").toLocalDateTime(),
+		rs.getTimestamp("created_at").toInstant(),
+		rs.getTimestamp("updated_at").toInstant(),
 		getTimestampOrNull(rs, "deleted_at"),
 		getTimestampOrNull(rs, "suspended_at")
 	);
@@ -150,9 +150,9 @@ public class JdbcUserRepository implements UserRepository {
 		);
 	}
 
-	private static java.time.LocalDateTime getTimestampOrNull(ResultSet rs, String column) throws SQLException {
+	private static java.time.Instant getTimestampOrNull(ResultSet rs, String column) throws SQLException {
 		Timestamp timestamp = rs.getTimestamp(column);
-		return timestamp == null ? null : timestamp.toLocalDateTime();
+		return timestamp == null ? null : timestamp.toInstant();
 	}
 
 	@Override

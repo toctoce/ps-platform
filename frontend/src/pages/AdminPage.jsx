@@ -8,6 +8,7 @@ import {
   FolderCog,
   Gauge,
   History,
+  ListChecks,
   Plus,
   RotateCcw,
   Save,
@@ -27,7 +28,8 @@ export const ADMIN_TABS = [
   { id: 'overview', label: '개요', icon: Gauge },
   { id: 'problems', label: '문제', icon: BookOpen },
   { id: 'users', label: '회원', icon: Users },
-  { id: 'operations', label: '제출 · 채점', icon: Activity },
+  { id: 'submissions', label: '제출', icon: ListChecks },
+  { id: 'judge-jobs', label: '채점', icon: Activity },
   { id: 'reports', label: '신고', icon: AlertTriangle },
   { id: 'categories', label: '카테고리', icon: FolderCog },
   { id: 'audit', label: '감사 로그', icon: History },
@@ -56,7 +58,11 @@ function authHeaders(auth, json = false) {
 }
 
 function formatDate(value) {
-  return value ? new Intl.DateTimeFormat('ko-KR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value)) : '-';
+  return value ? new Intl.DateTimeFormat('ko-KR', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+    timeZone: 'Asia/Seoul',
+  }).format(new Date(value)) : '-';
 }
 
 function mapProblemToForm(problem) {
@@ -109,7 +115,8 @@ export function AdminPage({ auth, setMessage, navigate, activeTab }) {
         {activeTab === 'overview' && <OverviewPanel auth={auth} setMessage={setMessage} />}
         {activeTab === 'problems' && <ProblemsPanel auth={auth} setMessage={setMessage} />}
         {activeTab === 'users' && <UsersPanel auth={auth} setMessage={setMessage} />}
-        {activeTab === 'operations' && <OperationsPanel auth={auth} setMessage={setMessage} />}
+        {activeTab === 'submissions' && <SubmissionsPanel auth={auth} setMessage={setMessage} />}
+        {activeTab === 'judge-jobs' && <JudgeJobsPanel auth={auth} setMessage={setMessage} />}
         {activeTab === 'reports' && <ReportsPanel auth={auth} setMessage={setMessage} />}
         {activeTab === 'categories' && <CategoriesPanel auth={auth} setMessage={setMessage} />}
         {activeTab === 'audit' && <AuditPanel auth={auth} setMessage={setMessage} />}
@@ -462,17 +469,30 @@ function UsersPanel({ auth, setMessage }) {
   );
 }
 
-function OperationsPanel({ auth, setMessage }) {
+function SubmissionsPanel({ auth, setMessage }) {
   const [submissions, setSubmissions] = useState([]);
+  useEffect(() => {
+    request('/api/admin/submissions', { headers: authHeaders(auth) })
+      .then(setSubmissions)
+      .catch((error) => setMessage(error.message));
+  }, [auth, setMessage]);
+
+  return (
+    <section>
+      <AdminSectionTitle title="최근 제출" description="최근 500건의 제출과 측정 결과입니다." />
+      <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>ID</th><th>회원</th><th>문제</th><th>언어</th><th>결과</th><th>시간</th><th>메모리</th><th>제출일</th></tr></thead>
+        <tbody>{submissions.map((submission) => <tr key={submission.id}><td>#{submission.id}</td><td>{submission.username ?? '비회원'}</td><td>{submission.problemId}. {submission.problemTitle}</td><td>{submission.language}</td><td>{submission.verdict ?? submission.status}</td><td>{submission.executionTimeMs == null ? '-' : `${submission.executionTimeMs}ms`}</td><td>{submission.memoryMb == null ? '-' : `${submission.memoryMb}MB`}</td><td>{formatDate(submission.createdAt)}</td></tr>)}</tbody>
+      </table></div>
+    </section>
+  );
+}
+
+function JudgeJobsPanel({ auth, setMessage }) {
   const [jobs, setJobs] = useState([]);
   const hasActiveJobs = jobs.some((job) => job.status === 'QUEUED' || job.status === 'RUNNING');
   const load = useCallback(async ({ silent = false } = {}) => {
     try {
-      const [nextSubmissions, nextJobs] = await Promise.all([
-        request('/api/admin/submissions', { headers: authHeaders(auth) }),
-        request('/api/admin/judge-jobs', { headers: authHeaders(auth) }),
-      ]);
-      setSubmissions(nextSubmissions);
+      const nextJobs = await request('/api/admin/judge-jobs', { headers: authHeaders(auth) });
       setJobs(nextJobs);
     } catch (error) {
       if (!silent) {
@@ -502,15 +522,11 @@ function OperationsPanel({ auth, setMessage }) {
   }
 
   return (
-    <section className="admin-stack">
-      <div><AdminSectionTitle title="채점 작업" description="최근 작업 상태를 확인하고 종료된 작업을 다시 대기시킬 수 있습니다." />
-        <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>ID</th><th>종류</th><th>문제</th><th>제출</th><th>상태</th><th>결과</th><th>생성</th><th /></tr></thead>
-          <tbody>{jobs.map((job) => <tr key={job.id}><td>#{job.id}</td><td>{job.jobKind}</td><td>{job.problemId ?? '-'}</td><td>{job.submissionId ?? '-'}</td><td>{job.status}</td><td>{job.verdict ?? '-'}</td><td>{formatDate(job.createdAt)}</td><td>{job.status !== 'RUNNING' && <button className="ghost-button" type="button" title="다시 채점" onClick={() => requeue(job.id)}><RotateCcw size={14} /></button>}</td></tr>)}</tbody>
-        </table></div></div>
-      <div><AdminSectionTitle title="최근 제출" description="최근 500건의 제출과 측정 결과입니다." />
-        <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>ID</th><th>회원</th><th>문제</th><th>언어</th><th>결과</th><th>시간</th><th>메모리</th><th>제출일</th></tr></thead>
-          <tbody>{submissions.map((submission) => <tr key={submission.id}><td>#{submission.id}</td><td>{submission.username ?? '비회원'}</td><td>{submission.problemId}. {submission.problemTitle}</td><td>{submission.language}</td><td>{submission.verdict ?? submission.status}</td><td>{submission.executionTimeMs == null ? '-' : `${submission.executionTimeMs}ms`}</td><td>{submission.memoryMb == null ? '-' : `${submission.memoryMb}MB`}</td><td>{formatDate(submission.createdAt)}</td></tr>)}</tbody>
-        </table></div></div>
+    <section>
+      <AdminSectionTitle title="채점 작업" description="최근 작업 상태를 확인하고 종료된 작업을 다시 대기시킬 수 있습니다." />
+      <div className="admin-table-wrap"><table className="admin-table"><thead><tr><th>ID</th><th>종류</th><th>문제</th><th>제출</th><th>상태</th><th>결과</th><th>생성</th><th /></tr></thead>
+        <tbody>{jobs.map((job) => <tr key={job.id}><td>#{job.id}</td><td>{job.jobKind}</td><td>{job.problemId ?? '-'}</td><td>{job.submissionId ?? '-'}</td><td>{job.status}</td><td>{job.verdict ?? '-'}</td><td>{formatDate(job.createdAt)}</td><td>{job.status !== 'RUNNING' && <button className="ghost-button" type="button" title="다시 채점" onClick={() => requeue(job.id)}><RotateCcw size={14} /></button>}</td></tr>)}</tbody>
+      </table></div>
     </section>
   );
 }

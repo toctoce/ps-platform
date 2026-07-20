@@ -1,6 +1,6 @@
 package com.psplatform.backend.user;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public class User {
 
@@ -10,10 +10,10 @@ public class User {
 	private final String passwordHash;
 	private final String role;
 	private final int authVersion;
-	private final LocalDateTime createdAt;
-	private final LocalDateTime updatedAt;
-	private final LocalDateTime deletedAt;
-	private final LocalDateTime suspendedAt;
+	private final Instant createdAt;
+	private final Instant updatedAt;
+	private final Instant deletedAt;
+	private final Instant suspendedAt;
 
 	public User(
 		Long id,
@@ -22,10 +22,10 @@ public class User {
 		String passwordHash,
 		String role,
 		int authVersion,
-		LocalDateTime createdAt,
-		LocalDateTime updatedAt,
-		LocalDateTime deletedAt,
-		LocalDateTime suspendedAt
+		Instant createdAt,
+		Instant updatedAt,
+		Instant deletedAt,
+		Instant suspendedAt
 	) {
 		this.id = id;
 		this.email = email;
@@ -63,15 +63,15 @@ public class User {
 		return authVersion;
 	}
 
-	public LocalDateTime getCreatedAt() {
+	public Instant getCreatedAt() {
 		return createdAt;
 	}
 
-	public LocalDateTime getUpdatedAt() {
+	public Instant getUpdatedAt() {
 		return updatedAt;
 	}
 
-	public LocalDateTime getDeletedAt() {
+	public Instant getDeletedAt() {
 		return deletedAt;
 	}
 
@@ -79,7 +79,7 @@ public class User {
 		return deletedAt != null;
 	}
 
-	public LocalDateTime getSuspendedAt() {
+	public Instant getSuspendedAt() {
 		return suspendedAt;
 	}
 

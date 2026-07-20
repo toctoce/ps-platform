@@ -254,7 +254,7 @@ public class AdminService {
 			(rs, rowNum) -> new UserSummary(
 				rs.getLong("id"), rs.getString("email"), rs.getString("username"), rs.getString("role"),
 				rs.getLong("solved_count"), rs.getLong("submission_count"), rs.getLong("accepted_count"),
-				localDateTime(rs, "created_at"), localDateTime(rs, "suspended_at"), localDateTime(rs, "deleted_at")
+				instant(rs, "created_at"), instant(rs, "suspended_at"), instant(rs, "deleted_at")
 			)
 		);
 	}
@@ -316,7 +316,7 @@ public class AdminService {
 			(rs, rowNum) -> new JudgeJobSummary(
 				rs.getLong("id"), rs.getString("job_kind"), longValue(rs, "submission_id"),
 				longValue(rs, "problem_id"), rs.getString("status"), rs.getString("verdict"),
-				localDateTime(rs, "created_at"), localDateTime(rs, "picked_at"), localDateTime(rs, "finished_at")
+				instant(rs, "created_at"), instant(rs, "picked_at"), instant(rs, "finished_at")
 			)
 		);
 	}

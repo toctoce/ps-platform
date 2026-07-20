@@ -4,7 +4,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -233,7 +233,7 @@ public class JdbcJudgeJobRepository implements JudgeJobRepository {
 
 	@Override
 	public int requeueStale(long staleAfterSeconds) {
-		LocalDateTime staleBefore = LocalDateTime.now().minusSeconds(staleAfterSeconds);
+		Instant staleBefore = Instant.now().minusSeconds(staleAfterSeconds);
 
 		jdbcTemplate.update(
 			"""
@@ -248,7 +248,7 @@ public class JdbcJudgeJobRepository implements JudgeJobRepository {
 			SubmissionStatus.PENDING.name(),
 			JudgeJobKind.SUBMISSION.name(),
 			JudgeJobStatus.RUNNING.name(),
-			Timestamp.valueOf(staleBefore)
+			Timestamp.from(staleBefore)
 		);
 
 		return jdbcTemplate.update(
@@ -259,7 +259,7 @@ public class JdbcJudgeJobRepository implements JudgeJobRepository {
 			""",
 			JudgeJobStatus.QUEUED.name(),
 			JudgeJobStatus.RUNNING.name(),
-			Timestamp.valueOf(staleBefore)
+			Timestamp.from(staleBefore)
 		);
 	}
 

@@ -80,9 +80,9 @@ public final class AdminModels {
 		long solvedProblemCount,
 		long submissionCount,
 		long acceptedSubmissionCount,
-		LocalDateTime createdAt,
-		LocalDateTime suspendedAt,
-		LocalDateTime deletedAt
+		Instant createdAt,
+		Instant suspendedAt,
+		Instant deletedAt
 	) {
 	}
 
@@ -112,9 +112,9 @@ public final class AdminModels {
 		Long problemId,
 		String status,
 		String verdict,
-		LocalDateTime createdAt,
-		LocalDateTime pickedAt,
-		LocalDateTime finishedAt
+		Instant createdAt,
+		Instant pickedAt,
+		Instant finishedAt
 	) {
 	}
 

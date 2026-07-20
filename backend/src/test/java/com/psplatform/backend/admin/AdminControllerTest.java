@@ -1,5 +1,8 @@
 package com.psplatform.backend.admin;
 
+import java.sql.Timestamp;
+import java.time.Instant;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -146,6 +149,27 @@ class AdminControllerTest {
 		mockMvc.perform(get("/api/admin/users").header("Authorization", adminAuthorization))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$[?(@.id == %s)].suspendedAt".formatted(user.getId())).exists());
+	}
+
+	@Test
+	void adminTimeResponsesIncludeUtcOffset() throws Exception {
+		String adminAuthorization = authorizationFor("admin@example.com", "admin", "ADMIN");
+		jdbcTemplate.update(
+			"UPDATE users SET created_at = ? WHERE email = 'admin@example.com'",
+			Timestamp.from(Instant.parse("2026-07-20T01:02:03Z"))
+		);
+		jdbcTemplate.update(
+			"INSERT INTO judge_jobs (job_kind, status, created_at) VALUES ('CODE_RUN', 'QUEUED', ?)",
+			Timestamp.from(Instant.parse("2026-07-20T04:05:06Z"))
+		);
+
+		mockMvc.perform(get("/api/admin/users").header("Authorization", adminAuthorization))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$[0].createdAt").value("2026-07-20T01:02:03Z"));
+
+		mockMvc.perform(get("/api/admin/judge-jobs").header("Authorization", adminAuthorization))
+			.andExpect(status().isOk())
+			.andExpect(jsonPath("$[0].createdAt").value("2026-07-20T04:05:06Z"));
 	}
 
 	private String authorizationFor(String email, String username, String role) {
