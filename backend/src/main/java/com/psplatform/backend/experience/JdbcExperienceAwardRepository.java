@@ -2,6 +2,7 @@ package com.psplatform.backend.experience;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.List;
 
 import javax.sql.DataSource;
 
@@ -63,6 +64,27 @@ public class JdbcExperienceAwardRepository implements ExperienceAwardRepository 
 			userId
 		);
 		return total == null ? 0 : total;
+	}
+
+	@Override
+	public List<UserExperienceRankingCandidate> findTopUsers(int limit) {
+		return jdbcTemplate.query(
+			"""
+			SELECT u.username, SUM(award.experience) AS total_experience
+			FROM users u
+			INNER JOIN user_experience_awards award ON award.user_id = u.id
+			WHERE u.deleted_at IS NULL
+			  AND u.role <> 'ADMIN'
+			GROUP BY u.id, u.username
+			ORDER BY total_experience DESC, u.id ASC
+			LIMIT ?
+			""",
+			(rs, rowNum) -> new UserExperienceRankingCandidate(
+				rs.getString("username"),
+				rs.getLong("total_experience")
+			),
+			limit
+		);
 	}
 
 	private boolean isPostgresql(DataSource dataSource) {

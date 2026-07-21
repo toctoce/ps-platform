@@ -188,6 +188,10 @@ button:disabled {
   outline: none;
 }
 
+.header-ranking-button.is-active {
+  color: var(--brand);
+}
+
 .header-user-trigger {
   display: inline-flex;
   align-items: center;
@@ -497,6 +501,115 @@ button:disabled {
   color: var(--text-main);
   font-size: 26px;
   line-height: 1.15;
+}
+
+.ranking-page {
+  width: min(840px, calc(100vw - 48px));
+}
+
+.ranking-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  background: rgba(255, 255, 255, 0.34);
+}
+
+.ranking-table th,
+.ranking-table td {
+  height: 56px;
+  padding: 0 18px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.ranking-table th {
+  height: 42px;
+  color: var(--text-sub);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.ranking-table th:first-child,
+.ranking-table td:first-child {
+  width: 82px;
+  text-align: center;
+}
+
+.ranking-table th:nth-child(3),
+.ranking-table td:nth-child(3) {
+  width: 110px;
+}
+
+.ranking-table th:last-child,
+.ranking-table td:last-child {
+  width: 150px;
+  text-align: right;
+}
+
+.ranking-position,
+.ranking-level {
+  color: var(--brand);
+  font-weight: 900;
+}
+
+.ranking-username {
+  overflow: hidden;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ranking-experience {
+  color: var(--text-sub);
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.ranking-table tr.is-top-1 .ranking-position {
+  color: #a36b12;
+  font-size: 18px;
+}
+
+.ranking-table tr.is-top-2 .ranking-position {
+  color: #68717b;
+}
+
+.ranking-table tr.is-top-3 .ranking-position {
+  color: #9a5d3c;
+}
+
+.ranking-state {
+  display: grid;
+  place-items: center;
+  min-height: 220px;
+  margin: 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  color: var(--text-sub);
+}
+
+@media (max-width: 620px) {
+  .ranking-table th,
+  .ranking-table td {
+    padding: 0 8px;
+  }
+
+  .ranking-table th:first-child,
+  .ranking-table td:first-child {
+    width: 44px;
+  }
+
+  .ranking-table th:nth-child(3),
+  .ranking-table td:nth-child(3) {
+    width: 70px;
+  }
+
+  .ranking-table th:last-child,
+  .ranking-table td:last-child {
+    width: 90px;
+    font-size: 12px;
+  }
 }
 
 .landing-page {

@@ -22,6 +22,9 @@ export function parseRoute() {
   if (path === '/random') {
     return { name: 'random' };
   }
+  if (path === '/rankings') {
+    return { name: 'ranking' };
+  }
   if (path === '/mypage' || path === '/my') {
     return { name: 'my-page' };
   }

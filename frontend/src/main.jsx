@@ -1,6 +1,6 @@
 import { StrictMode, useCallback, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { LogIn, LogOut, MessageCircle, Settings, ShieldCheck, UserPlus, UserRound, X } from 'lucide-react';
+import { LogIn, LogOut, MessageCircle, Settings, ShieldCheck, Trophy, UserPlus, UserRound, X } from 'lucide-react';
 import 'katex/dist/katex.min.css';
 import './styles.css';
 import { configureAuthSession, request } from './api/client.js';
@@ -16,6 +16,7 @@ import { PasswordRecoveryPage } from './pages/PasswordRecoveryPage.jsx';
 import { ProblemDetailPage } from './pages/ProblemDetailPage.jsx';
 import { ProblemListPage } from './pages/ProblemListPage.jsx';
 import { RandomProblemPage } from './pages/RandomProblemPage.jsx';
+import { RankingPage } from './pages/RankingPage.jsx';
 import { SignupPage } from './pages/SignupPage.jsx';
 import { parseRoute } from './routing.js';
 
@@ -320,6 +321,15 @@ function App() {
               관리자 페이지
             </button>
           ) : null}
+          <button
+            className={`icon-action header-ranking-button ${route.name === 'ranking' ? 'is-active' : ''}`}
+            type="button"
+            onClick={() => navigate('/rankings')}
+            title="랭킹"
+            aria-label="랭킹"
+          >
+            <Trophy size={19} />
+          </button>
           <div className="user-menu">
             <button
               className={isAuthenticated ? 'header-user-trigger' : 'user-menu-trigger'}
@@ -438,6 +448,8 @@ function App() {
             navigate={navigate}
             auth={auth}
           />
+        ) : route.name === 'ranking' ? (
+          <RankingPage />
         ) : route.name === 'my-page' ? (
           <MyPage
             auth={auth}
