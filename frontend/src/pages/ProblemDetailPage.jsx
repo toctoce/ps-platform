@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import solarizedLightTheme from '../editor/themes/Solarized-light.json';
 import krTheme from '../editor/themes/krTheme.json';
-import { BookOpen, ChevronDown, ChevronUp, Code2, Copy, Info, Moon, Play, Plus, Send, Siren, Sun, X } from 'lucide-react';
+import { BookOpen, Check, ChevronDown, ChevronUp, Code2, Copy, Info, Moon, Play, Plus, Send, Siren, Sun, X } from 'lucide-react';
 import { request } from '../api/client.js';
 import { ConstraintContent } from '../components/ConstraintContent.jsx';
 import { MarkdownContent } from '../components/MarkdownContent.jsx';
@@ -56,6 +56,7 @@ export function ProblemDetailPage({
   const [submissionBusy, setSubmissionBusy] = useState(false);
   const [submissionForm, setSubmissionForm] = useState(() => createInitialSubmissionForm(localStorage));
   const [exampleCases, setExampleCases] = useState([]);
+  const [copiedExampleKey, setCopiedExampleKey] = useState(null);
   const [testCases, setTestCases] = useState([]);
   const [activeProblemTab, setActiveProblemTab] = useState('problem');
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
@@ -113,7 +114,7 @@ export function ProblemDetailPage({
     setActiveTooltip(null);
   }
 
-  async function copyExampleInput(input) {
+  async function copyExampleInput(input, exampleKey) {
     try {
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(input);
@@ -133,6 +134,7 @@ export function ProblemDetailPage({
           textarea.remove();
         }
       }
+      setCopiedExampleKey(exampleKey);
       setMessage('예제 입력을 복사했습니다.');
     } catch {
       setMessage('예제 입력을 복사하지 못했습니다.');
@@ -628,6 +630,7 @@ export function ProblemDetailPage({
 
       setProblem(problemData);
       const fetchedExamples = Array.isArray(exampleData) ? exampleData : [];
+      setCopiedExampleKey(null);
       setExampleCases(fetchedExamples);
       setTestCases(fetchedExamples);
       setActiveIdeTestCaseIndex(0);
@@ -824,42 +827,47 @@ export function ProblemDetailPage({
                     <p className="empty">등록된 예제가 없습니다.</p>
                   ) : (
                     <div className="example-list">
-                      {exampleCases.map((testCase, index) => (
-                        <div className="example-block" key={testCase.id ?? index}>
-                          <div className="example-title">예제 {index + 1}</div>
-                          <div className="example-cells">
-                            <div className="example-cell">
-                              <div className="example-cell-header">
-                                <strong>입력</strong>
-                                <button
-                                  className="example-copy-button"
-                                  type="button"
-                                  title="입력 복사"
-                                  aria-label={`예제 ${index + 1} 입력 복사`}
-                                  onClick={() => copyExampleInput(testCase.input)}
-                                >
-                                  <Copy size={14} />
-                                </button>
+                      {exampleCases.map((testCase, index) => {
+                        const exampleKey = testCase.id ?? index;
+                        const isCopied = copiedExampleKey === exampleKey;
+
+                        return (
+                          <div className="example-block" key={exampleKey}>
+                            <div className="example-title">예제 {index + 1}</div>
+                            <div className="example-cells">
+                              <div className="example-cell">
+                                <div className="example-cell-header">
+                                  <strong>입력</strong>
+                                  <button
+                                    className={`example-copy-button${isCopied ? ' is-copied' : ''}`}
+                                    type="button"
+                                    title={isCopied ? '복사됨' : '입력 복사'}
+                                    aria-label={isCopied ? `예제 ${index + 1} 입력 복사됨` : `예제 ${index + 1} 입력 복사`}
+                                    onClick={() => copyExampleInput(testCase.input, exampleKey)}
+                                  >
+                                    {isCopied ? <Check size={14} /> : <Copy size={14} />}
+                                  </button>
+                                </div>
+                                <pre>{testCase.input}</pre>
                               </div>
-                              <pre>{testCase.input}</pre>
+                              <div className="example-cell">
+                                <strong>출력</strong>
+                                <pre>{testCase.expectedOutput}</pre>
+                              </div>
                             </div>
-                            <div className="example-cell">
-                              <strong>출력</strong>
-                              <pre>{testCase.expectedOutput}</pre>
-                            </div>
+                            {testCase.description ? (
+                              <details className="example-description">
+                                <summary>설명</summary>
+                                <MarkdownContent
+                                  source={testCase.description}
+                                  emptyMessage={null}
+                                  className="example-description-markdown"
+                                />
+                              </details>
+                            ) : null}
                           </div>
-                          {testCase.description ? (
-                            <details className="example-description">
-                              <summary>설명</summary>
-                              <MarkdownContent
-                                source={testCase.description}
-                                emptyMessage={null}
-                                className="example-description-markdown"
-                              />
-                            </details>
-                          ) : null}
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </section>

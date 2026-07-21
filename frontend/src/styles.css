@@ -2692,6 +2692,10 @@ textarea:focus {
   outline: none;
 }
 
+.example-copy-button.is-copied {
+  color: var(--brand);
+}
+
 .example-cell pre {
   margin: 0;
   padding: 0;
