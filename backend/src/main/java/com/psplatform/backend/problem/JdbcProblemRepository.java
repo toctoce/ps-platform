@@ -116,6 +116,16 @@ public class JdbcProblemRepository implements ProblemRepository {
 	}
 
 	@Override
+	public Optional<ProblemDifficulty> findDifficultyById(long id) {
+		List<ProblemDifficulty> difficulties = jdbcTemplate.query(
+			"SELECT difficulty FROM problems WHERE id = ?",
+			(rs, rowNum) -> ProblemDifficulty.valueOf(rs.getString("difficulty")),
+			id
+		);
+		return difficulties.stream().findFirst();
+	}
+
+	@Override
 	public boolean existsByTitle(String title) {
 		Integer count = jdbcTemplate.queryForObject(
 			"SELECT COUNT(*) FROM problems WHERE title = ?",
@@ -194,6 +204,7 @@ public class JdbcProblemRepository implements ProblemRepository {
 
 	@Override
 	public void deleteAll() {
+		jdbcTemplate.update("DELETE FROM user_experience_awards");
 		jdbcTemplate.update("DELETE FROM judge_jobs");
 		jdbcTemplate.update("DELETE FROM submissions");
 		jdbcTemplate.update("DELETE FROM problem_examples");

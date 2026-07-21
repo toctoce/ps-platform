@@ -17,6 +17,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.psplatform.backend.auth.JwtTokenService;
+import com.psplatform.backend.experience.ExperienceAwardRepository;
 import com.psplatform.backend.problem.Problem;
 import com.psplatform.backend.problem.ProblemCreateRequest;
 import com.psplatform.backend.problem.ProblemDifficulty;
@@ -55,6 +56,9 @@ class JudgeJobControllerTest {
 
 	@Autowired
 	private JwtTokenService jwtTokenService;
+
+	@Autowired
+	private ExperienceAwardRepository experienceAwardRepository;
 
 	@BeforeEach
 	void setUp() {
@@ -127,6 +131,37 @@ class JudgeJobControllerTest {
 		assertThat(judgedSubmission.getExecutionTimeMs()).isEqualTo(17);
 		assertThat(judgedSubmission.getMemoryMb()).isEqualTo(42);
 		assertThat(judgedSubmission.getJudgedAt()).isNotNull();
+	}
+
+	@Test
+	void acceptedSubmissionAwardsExperienceOnlyOncePerUserAndProblem() throws Exception {
+		User user = userRepository.save("level@example.com", "level-user", "hashed-password", "USER");
+		Problem problem = createProblem("레벨 테스트", ProblemDifficulty.HARD);
+
+		completeAcceptedSubmission(problem, user);
+		completeAcceptedSubmission(problem, user);
+
+		assertThat(experienceAwardRepository.sumByUserId(user.getId())).isEqualTo(60);
+	}
+
+	@Test
+	void wrongAnswerAndAdminSubmissionDoNotAwardExperience() throws Exception {
+		User user = userRepository.save("wrong@example.com", "wrong-user", "hashed-password", "USER");
+		User admin = userRepository.save("admin@example.com", "admin-user", "hashed-password", "ADMIN");
+		Problem problem = createProblem("경험치 제외 테스트", ProblemDifficulty.VERY_HARD);
+
+		Submission wrongSubmission = submissionRepository.save(
+			problem.getId(),
+			user.getId(),
+			new SubmissionCreateRequest("java", "public class Main {}")
+		);
+		judgeJobRepository.create(wrongSubmission.getId());
+		JudgeJobAssignment wrongAssignment = judgeJobRepository.findNextAndMarkRunning().orElseThrow();
+		completeJob(wrongAssignment.jobId(), "WRONG_ANSWER");
+		completeAcceptedSubmission(problem, admin);
+
+		assertThat(experienceAwardRepository.sumByUserId(user.getId())).isZero();
+		assertThat(experienceAwardRepository.sumByUserId(admin.getId())).isZero();
 	}
 
 	@Test
@@ -339,17 +374,44 @@ class JudgeJobControllerTest {
 	}
 
 	private Problem createProblem() {
+		return createProblem("A+B", ProblemDifficulty.NORMAL);
+	}
+
+	private Problem createProblem(String title, ProblemDifficulty difficulty) {
 		return problemRepository.save(new ProblemCreateRequest(
-			"A+B",
+			title,
 			"두 수를 더하는 문제",
 			"정수 A와 B가 주어진다.",
 			"A+B를 출력한다.",
 			1000,
 			128,
-			ProblemDifficulty.NORMAL,
+			difficulty,
 			List.of(),
 			List.of()
 		));
+	}
+
+	private void completeAcceptedSubmission(Problem problem, User user) throws Exception {
+		Submission submission = submissionRepository.save(
+			problem.getId(),
+			user.getId(),
+			new SubmissionCreateRequest("java", "public class Main {}")
+		);
+		judgeJobRepository.create(submission.getId());
+		JudgeJobAssignment assignment = judgeJobRepository.findNextAndMarkRunning().orElseThrow();
+		completeJob(assignment.jobId(), "ACCEPTED");
+	}
+
+	private void completeJob(long jobId, String verdict) throws Exception {
+		mockMvc.perform(post("/api/judge-jobs/{jobId}/complete", jobId)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "verdict": "%s",
+					  "judgeMessage": ""
+					}
+					""".formatted(verdict)))
+			.andExpect(status().isOk());
 	}
 
 	private String authorizationFor(String email, String username) {

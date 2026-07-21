@@ -17,6 +17,8 @@ public interface ProblemRepository {
 
 	Optional<Problem> findById(long id);
 
+	Optional<ProblemDifficulty> findDifficultyById(long id);
+
 	boolean existsByTitle(String title);
 
 	void deleteAll();

@@ -5,13 +5,17 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.psplatform.backend.experience.ExperienceService;
+
 @Service
 public class JudgeJobService {
 
 	private final JudgeJobRepository judgeJobRepository;
+	private final ExperienceService experienceService;
 
-	public JudgeJobService(JudgeJobRepository judgeJobRepository) {
+	public JudgeJobService(JudgeJobRepository judgeJobRepository, ExperienceService experienceService) {
 		this.judgeJobRepository = judgeJobRepository;
+		this.experienceService = experienceService;
 	}
 
 	@Transactional
@@ -21,7 +25,16 @@ public class JudgeJobService {
 
 	@Transactional
 	public JudgeJobCompleteResult complete(long jobId, JudgeJobCompleteRequest request) {
-		return judgeJobRepository.complete(jobId, request.verdict(), request.judgeMessage(), request.caseResults());
+		JudgeJobCompleteResult result = judgeJobRepository.complete(
+			jobId,
+			request.verdict(),
+			request.judgeMessage(),
+			request.caseResults()
+		);
+		if (result.jobKind() == JudgeJobKind.SUBMISSION) {
+			experienceService.awardForAcceptedSubmission(result.submission());
+		}
+		return result;
 	}
 
 	@Transactional

@@ -188,6 +188,40 @@ button:disabled {
   outline: none;
 }
 
+.header-user-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  height: 36px;
+  padding: 0 6px;
+  border: 0;
+  background: transparent;
+  color: var(--text-main);
+  white-space: nowrap;
+}
+
+.header-user-trigger:hover,
+.header-user-trigger:focus-visible {
+  color: var(--brand);
+  outline: none;
+}
+
+.header-user-level {
+  padding: 2px 0 1px;
+  border-bottom: 2px solid var(--brand);
+  color: var(--brand);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.header-username {
+  max-width: 120px;
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+}
+
 .user-menu {
   position: relative;
 }

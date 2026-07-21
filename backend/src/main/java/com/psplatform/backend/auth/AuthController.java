@@ -13,25 +13,37 @@ import org.springframework.web.bind.annotation.RestController;
 import com.psplatform.backend.user.UserResponse;
 import com.psplatform.backend.user.PasswordChangeRequest;
 import com.psplatform.backend.user.UsernameUpdateRequest;
+import com.psplatform.backend.experience.ExperienceService;
+import com.psplatform.backend.user.User;
 
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
 
 	private final AuthService authService;
+	private final ExperienceService experienceService;
 
-	public AuthController(AuthService authService) {
+	public AuthController(AuthService authService, ExperienceService experienceService) {
 		this.authService = authService;
+		this.experienceService = experienceService;
 	}
 
 	@PostMapping("/login")
 	public ResponseEntity<AuthTokenResponse> login(@RequestBody AuthLoginRequest request) {
-		return ResponseEntity.ok(AuthTokenResponse.from(authService.login(request)));
+		AuthTokenPayload payload = authService.login(request);
+		return ResponseEntity.ok(AuthTokenResponse.from(
+			payload,
+			experienceService.findProgress(payload.user().getId())
+		));
 	}
 
 	@PostMapping("/refresh")
 	public ResponseEntity<AuthTokenResponse> refresh(@RequestBody AuthRefreshRequest request) {
-		return ResponseEntity.ok(AuthTokenResponse.from(authService.refresh(request.refreshToken())));
+		AuthTokenPayload payload = authService.refresh(request.refreshToken());
+		return ResponseEntity.ok(AuthTokenResponse.from(
+			payload,
+			experienceService.findProgress(payload.user().getId())
+		));
 	}
 
 	@PostMapping("/logout")
@@ -42,7 +54,8 @@ public class AuthController {
 
 	@GetMapping("/me")
 	public UserResponse me(@RequestHeader(value = "Authorization", required = false) String authorization) {
-		return UserResponse.from(authService.verifyAccessToken(authorization));
+		User user = authService.verifyAccessToken(authorization);
+		return UserResponse.from(user, experienceService.findProgress(user.getId()));
 	}
 
 	@PatchMapping("/me/username")
@@ -50,7 +63,8 @@ public class AuthController {
 		@RequestHeader(value = "Authorization", required = false) String authorization,
 		@RequestBody UsernameUpdateRequest request
 	) {
-		return UserResponse.from(authService.updateCurrentUsername(authorization, request));
+		User user = authService.updateCurrentUsername(authorization, request);
+		return UserResponse.from(user, experienceService.findProgress(user.getId()));
 	}
 
 	@PatchMapping("/me/password")

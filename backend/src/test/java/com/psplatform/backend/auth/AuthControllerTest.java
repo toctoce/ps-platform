@@ -66,6 +66,9 @@ class AuthControllerTest {
 			.andExpect(jsonPath("$.refreshToken").isString())
 			.andExpect(jsonPath("$.expiresIn").value(900))
 			.andExpect(jsonPath("$.user.email").value(EMAIL))
+			.andExpect(jsonPath("$.user.level").value(1))
+			.andExpect(jsonPath("$.user.totalExperience").value(0))
+			.andExpect(jsonPath("$.user.requiredExperience").value(50))
 			.andReturn()
 			.getResponse()
 			.getContentAsString();
@@ -74,7 +77,9 @@ class AuthControllerTest {
 		mockMvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + accessToken))
 			.andExpect(status().isOk())
 			.andExpect(jsonPath("$.email").value(EMAIL))
-			.andExpect(jsonPath("$.username").value(USERNAME));
+			.andExpect(jsonPath("$.username").value(USERNAME))
+			.andExpect(jsonPath("$.level").value(1))
+			.andExpect(jsonPath("$.progressPercent").value(0));
 	}
 
 	@Test

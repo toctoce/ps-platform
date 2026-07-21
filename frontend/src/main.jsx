@@ -322,7 +322,7 @@ function App() {
           ) : null}
           <div className="user-menu">
             <button
-              className={isAuthenticated ? 'icon-action' : 'user-menu-trigger'}
+              className={isAuthenticated ? 'header-user-trigger' : 'user-menu-trigger'}
               type="button"
               onClick={() => {
                 if (!isAuthenticated) {
@@ -334,7 +334,12 @@ function App() {
               title="사용자 메뉴"
               aria-expanded={userMenuOpen}
             >
-              {isAuthenticated ? <UserRound size={20} /> : 'Log in'}
+              {isAuthenticated ? (
+                <>
+                  <span className="header-user-level">Lv. {auth?.user?.level ?? 1}</span>
+                  <strong className="header-username">{auth?.user?.username ?? '사용자'}</strong>
+                </>
+              ) : 'Log in'}
             </button>
           {userMenuOpen ? (
             <div className="user-menu-panel">
@@ -464,6 +469,7 @@ function App() {
             setMessage={setMessage}
             isAuthenticated={isAuthenticated}
             auth={auth}
+            onUserProgressChange={checkCurrentUser}
           />
         ) : route.name === 'problem-list' ? (
           <ProblemListPage

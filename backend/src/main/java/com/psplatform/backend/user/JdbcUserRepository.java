@@ -158,6 +158,7 @@ public class JdbcUserRepository implements UserRepository {
 	@Override
 	public void deleteAll() {
 		jdbcTemplate.update("DELETE FROM admin_audit_logs");
+		jdbcTemplate.update("DELETE FROM user_experience_awards");
 		jdbcTemplate.update("DELETE FROM refresh_tokens");
 		jdbcTemplate.update("DELETE FROM users");
 	}

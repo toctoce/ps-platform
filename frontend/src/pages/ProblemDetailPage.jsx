@@ -42,7 +42,14 @@ function defineEditorThemes(monaco) {
   monaco.editor.defineTheme('ps-light', solarizedLightTheme);
 }
 
-export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthenticated, auth }) {
+export function ProblemDetailPage({
+  problemId,
+  navigate,
+  setMessage,
+  isAuthenticated,
+  auth,
+  onUserProgressChange,
+}) {
   const [problem, setProblem] = useState(null);
   const [submissions, setSubmissions] = useState([]);
   const [busy, setBusy] = useState(false);
@@ -588,6 +595,9 @@ export function ProblemDetailPage({ problemId, navigate, setMessage, isAuthentic
 
       if (!isPendingStatus(submission.status)) {
         stopPolling(submissionId);
+        if (submission.verdict === 'ACCEPTED') {
+          onUserProgressChange?.();
+        }
       }
     } catch (error) {
       stopPolling(submissionId);
