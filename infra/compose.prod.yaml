@@ -8,6 +8,8 @@ x-logging: &default-logging
           
 services:
     ps-backend:
+        build:
+            context: ../backend
         image: ps-backend:latest
         restart: unless-stopped
         depends_on:
@@ -21,6 +23,8 @@ services:
         logging: *default-logging
         
     ps-web:
+        build:
+            context: ../frontend
         image: ps-web:latest
         restart: unless-stopped
         depends_on:
@@ -35,6 +39,8 @@ services:
         logging: *default-logging
         
     ps-judge-worker:
+        build:
+            context: ../judge-worker
         image: ps-judge-worker:latest
         restart: unless-stopped
         depends_on:
