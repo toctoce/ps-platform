@@ -38,8 +38,8 @@ public class JdbcUserRepository implements UserRepository {
 	@Override
 	public User save(String email, String username, String passwordHash, String role) {
 		String sql = """
-			INSERT INTO users (email, username, password_hash, role, created_at, updated_at)
-			VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+			INSERT INTO users (email, username, username_normalized, password_hash, role, created_at, updated_at)
+			VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
 			""";
 
 		KeyHolder keyHolder = new GeneratedKeyHolder();
@@ -47,8 +47,9 @@ public class JdbcUserRepository implements UserRepository {
 			PreparedStatement ps = connection.prepareStatement(sql, new String[] {"id"});
 			ps.setString(1, email);
 			ps.setString(2, username);
-			ps.setString(3, passwordHash);
-			ps.setString(4, role);
+			ps.setString(3, UserUsername.normalizeForComparison(username));
+			ps.setString(4, passwordHash);
+			ps.setString(5, role);
 			return ps;
 		}, keyHolder);
 
@@ -98,10 +99,10 @@ public class JdbcUserRepository implements UserRepository {
 			SELECT id, email, username, password_hash, role, auth_version,
 			       created_at, updated_at, deleted_at, suspended_at
 			FROM users
-			WHERE username = ?
+			WHERE username_normalized = ?
 			""",
 			rowMapper,
-			username
+			UserUsername.normalizeForComparison(username)
 		);
 		return users.stream().findFirst();
 	}
@@ -111,10 +112,11 @@ public class JdbcUserRepository implements UserRepository {
 		return jdbcTemplate.update(
 			"""
 			UPDATE users
-			SET username = ?, updated_at = CURRENT_TIMESTAMP
+			SET username = ?, username_normalized = ?, updated_at = CURRENT_TIMESTAMP
 			WHERE id = ? AND deleted_at IS NULL
 			""",
 			username,
+			UserUsername.normalizeForComparison(username),
 			id
 		) == 1;
 	}
@@ -140,6 +142,7 @@ public class JdbcUserRepository implements UserRepository {
 			UPDATE users
 			SET email = ('deleted-user-' || id || '@deleted.local'),
 			    username = ('deleted-user-' || id),
+			    username_normalized = LOWER('deleted-user-' || id),
 			    password_hash = 'deleted-password',
 			    role = 'WITHDRAWN',
 			    deleted_at = CURRENT_TIMESTAMP,

@@ -19,6 +19,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.psplatform.backend.user.UserRepository;
+import com.psplatform.backend.user.UserUsername;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -282,14 +283,43 @@ class AuthControllerTest {
 				.header("Authorization", "Bearer " + accessToken)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
-					{"username": "next-alice"}
+					{"username": "nextalice"}
 					"""))
 			.andExpect(status().isOk())
-			.andExpect(jsonPath("$.username").value("next-alice"))
+			.andExpect(jsonPath("$.username").value("nextalice"))
 			.andExpect(jsonPath("$.email").value(EMAIL));
 
 		Assertions.assertThat(userRepository.findByEmail(EMAIL))
-			.hasValueSatisfying(user -> Assertions.assertThat(user.getUsername()).isEqualTo("next-alice"));
+			.hasValueSatisfying(user -> Assertions.assertThat(user.getUsername()).isEqualTo("nextalice"));
+	}
+
+	@Test
+	void updateUsernameRejectsCaseInsensitiveDuplicateUsername() throws Exception {
+		userRepository.save("bob@example.com", "Bob", passwordEncoder.encode(PASSWORD), "USER");
+		String accessToken = loginAndRead("$.accessToken");
+
+		mockMvc.perform(patch("/api/auth/me/username")
+				.header("Authorization", "Bearer " + accessToken)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{"username": "bob"}
+					"""))
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.message").value("Username already exists: bob"));
+	}
+
+	@Test
+	void updateUsernameRejectsInvalidCharacters() throws Exception {
+		String accessToken = loginAndRead("$.accessToken");
+
+		mockMvc.perform(patch("/api/auth/me/username")
+				.header("Authorization", "Bearer " + accessToken)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{"username": "alice-1"}
+					"""))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.message").value(UserUsername.VALIDATION_MESSAGE));
 	}
 
 	@Test

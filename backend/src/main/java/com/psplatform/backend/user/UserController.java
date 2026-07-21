@@ -2,6 +2,8 @@ package com.psplatform.backend.user;
 
 import java.net.URI;
 
+import jakarta.validation.Valid;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -25,7 +27,7 @@ public class UserController {
 	}
 
 	@PostMapping
-	public ResponseEntity<UserResponse> signup(@RequestBody UserSignupRequest request) {
+	public ResponseEntity<UserResponse> signup(@Valid @RequestBody UserSignupRequest request) {
 		User user = userService.signup(request);
 		return ResponseEntity
 			.created(URI.create("/api/users/" + user.getId()))

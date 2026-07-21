@@ -30,7 +30,7 @@ public class UserService {
 	@Transactional
 	public User signup(UserSignupRequest request) {
 		String email = UserEmail.normalize(request.email());
-		String username = trimOrThrow(request.username(), "username");
+		String username = UserUsername.validate(request.username());
 		String password = trimOrThrow(request.password(), "password");
 
 		if (password.length() < MIN_PASSWORD_LENGTH) {
@@ -67,7 +67,7 @@ public class UserService {
 
 	@Transactional
 	public User updateUsername(User user, UsernameUpdateRequest request) {
-		String username = trimOrThrow(request.username(), "username");
+		String username = UserUsername.validate(request.username());
 		userRepository.findByUsername(username)
 			.filter(existing -> !existing.getId().equals(user.getId()))
 			.ifPresent(existing -> {

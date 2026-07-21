@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.psplatform.backend.emailverification.EmailVerificationRepository;
@@ -68,6 +70,24 @@ class UserControllerTest {
 			.andExpect(jsonPath("$.username").value("alice"))
 			.andExpect(jsonPath("$.role").value("USER"))
 			.andExpect(jsonPath("$.passwordHash").doesNotExist());
+	}
+
+	@Test
+	void signupAcceptsKoreanUsername() throws Exception {
+		String verificationToken = issueVerificationToken("korean@example.com");
+
+		mockMvc.perform(post("/api/users")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "email": "korean@example.com",
+					  "username": "알뿌",
+					  "password": "password1234",
+					  "verificationToken": "%s"
+					}
+					""".formatted(verificationToken)))
+			.andExpect(status().isCreated())
+			.andExpect(jsonPath("$.username").value("알뿌"));
 	}
 
 	@Test
@@ -131,19 +151,59 @@ class UserControllerTest {
 
 	@Test
 	void signupRejectsDuplicateUsername() throws Exception {
-		userRepository.save("first@example.com", "same-name", "hashed-password", "USER");
+		userRepository.save("first@example.com", "samename", "hashed-password", "USER");
 
 		mockMvc.perform(post("/api/users")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("""
 					{
 					  "email": "second@example.com",
-					  "username": "same-name",
+					  "username": "samename",
 					  "password": "password1234"
 					}
 					"""))
 			.andExpect(status().isConflict())
-			.andExpect(jsonPath("$.message").value("Username already exists: same-name"));
+			.andExpect(jsonPath("$.message").value("Username already exists: samename"));
+	}
+
+	@Test
+	void signupRejectsCaseInsensitiveDuplicateUsername() throws Exception {
+		userRepository.save("first@example.com", "Alice", "hashed-password", "USER");
+
+		mockMvc.perform(post("/api/users")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "email": "second@example.com",
+					  "username": "alice",
+					  "password": "password1234"
+					}
+					"""))
+			.andExpect(status().isConflict())
+			.andExpect(jsonPath("$.message").value("Username already exists: alice"));
+	}
+
+	@Test
+	void databaseRejectsCaseInsensitiveDuplicateUsername() {
+		userRepository.save("first@example.com", "Alice", "hashed-password", "USER");
+
+		assertThatThrownBy(() -> userRepository.save("second@example.com", "ALICE", "hashed-password", "USER"))
+			.isInstanceOf(DuplicateKeyException.class);
+	}
+
+	@Test
+	void signupRejectsInvalidUsernameCharacters() throws Exception {
+		mockMvc.perform(post("/api/users")
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("""
+					{
+					  "email": "invalid-username@example.com",
+					  "username": "alice-1",
+					  "password": "password1234"
+					}
+					"""))
+			.andExpect(status().isBadRequest())
+			.andExpect(jsonPath("$.message").value(UserUsername.VALIDATION_MESSAGE));
 	}
 
 	@Test
@@ -153,7 +213,7 @@ class UserControllerTest {
 				.content("""
 					{
 					  "email": "bad-email",
-					  "username": "invalid-email",
+					  "username": "invalidemail",
 					  "password": "password1234"
 					}
 					"""))
@@ -183,7 +243,7 @@ class UserControllerTest {
 				.content("""
 					{
 					  "email": "not-verified@example.com",
-					  "username": "not-verified",
+					  "username": "notverified",
 					  "password": "password1234"
 					}
 					"""))

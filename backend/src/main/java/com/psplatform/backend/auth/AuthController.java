@@ -1,5 +1,7 @@
 package com.psplatform.backend.auth;
 
+import jakarta.validation.Valid;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -61,7 +63,7 @@ public class AuthController {
 	@PatchMapping("/me/username")
 	public UserResponse updateUsername(
 		@RequestHeader(value = "Authorization", required = false) String authorization,
-		@RequestBody UsernameUpdateRequest request
+		@Valid @RequestBody UsernameUpdateRequest request
 	) {
 		User user = authService.updateCurrentUsername(authorization, request);
 		return UserResponse.from(user, experienceService.findProgress(user.getId()));
