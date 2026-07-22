@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import Editor from '@monaco-editor/react';
-import solarizedLightTheme from '../editor/themes/Solarized-light.json';
-import krTheme from '../editor/themes/krTheme.json';
 import { BookOpen, Check, ChevronDown, ChevronUp, Code2, Copy, Info, Moon, Play, Plus, Send, Siren, Sun, X } from 'lucide-react';
 import { request } from '../api/client.js';
 import { ConstraintContent } from '../components/ConstraintContent.jsx';
@@ -38,8 +36,32 @@ import {
 } from '../submission/submissionUtils.js';
 
 function defineEditorThemes(monaco) {
-  monaco.editor.defineTheme('ps-dark', krTheme);
-  monaco.editor.defineTheme('ps-light', solarizedLightTheme);
+  monaco.editor.defineTheme('ps-dark', {
+    base: 'vs-dark',
+    inherit: true,
+    rules: [],
+    colors: {
+      'editor.background': '#0f172a',
+      'editor.foreground': '#e2e8f0',
+      'editor.lineHighlightBackground': '#172033',
+      'editorLineNumber.foreground': '#64748b',
+      'editorLineNumber.activeForeground': '#cbd5e1',
+      'editor.selectionBackground': '#3182f680',
+    },
+  });
+  monaco.editor.defineTheme('ps-light', {
+    base: 'vs',
+    inherit: true,
+    rules: [],
+    colors: {
+      'editor.background': '#ffffff',
+      'editor.foreground': '#191f28',
+      'editor.lineHighlightBackground': '#f2f4f6',
+      'editorLineNumber.foreground': '#8b95a1',
+      'editorLineNumber.activeForeground': '#4e5968',
+      'editor.selectionBackground': '#c9e2ff',
+    },
+  });
 }
 
 export function ProblemDetailPage({

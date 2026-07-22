@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { LogIn, LogOut, MessageCircle, Settings, ShieldCheck, Trophy, UserPlus, UserRound, X } from 'lucide-react';
 import 'katex/dist/katex.min.css';
 import './styles.css';
+import './design-system.css';
 import { configureAuthSession, request } from './api/client.js';
 import { clearStoredAuth, getStoredAuth, saveStoredAuth } from './auth/storage.js';
 import { BRAND_LOGO_SRC, BRAND_NAME } from './brand.js';
