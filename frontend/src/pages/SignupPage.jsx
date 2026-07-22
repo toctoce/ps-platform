@@ -61,10 +61,7 @@ export function SignupPage({ setMessage, navigate }) {
   return (
     <section className="auth-page">
       <div className="auth-brand">
-        <span className="site-logo-mark">
-          <img src={BRAND_LOGO_SRC} alt="" />
-        </span>
-        <strong>{BRAND_NAME}</strong>
+        <img className="auth-brand-logo" src={BRAND_LOGO_SRC} alt={BRAND_NAME} />
         <p>계정을 만들고 문제 풀이를 시작하세요</p>
       </div>
       <form className="panel form-panel auth-form" onSubmit={signup}>

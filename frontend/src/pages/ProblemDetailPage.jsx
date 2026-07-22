@@ -46,7 +46,7 @@ function defineEditorThemes(monaco) {
       'editor.lineHighlightBackground': '#172033',
       'editorLineNumber.foreground': '#64748b',
       'editorLineNumber.activeForeground': '#cbd5e1',
-      'editor.selectionBackground': '#3182f680',
+      'editor.selectionBackground': '#7353ea80',
     },
   });
   monaco.editor.defineTheme('ps-light', {
@@ -56,10 +56,10 @@ function defineEditorThemes(monaco) {
     colors: {
       'editor.background': '#ffffff',
       'editor.foreground': '#191f28',
-      'editor.lineHighlightBackground': '#f2f4f6',
-      'editorLineNumber.foreground': '#8b95a1',
-      'editorLineNumber.activeForeground': '#4e5968',
-      'editor.selectionBackground': '#c9e2ff',
+      'editor.lineHighlightBackground': '#f0f1f3',
+      'editorLineNumber.foreground': '#66717e',
+      'editorLineNumber.activeForeground': '#343e4b',
+      'editor.selectionBackground': '#dcd4fb',
     },
   });
 }

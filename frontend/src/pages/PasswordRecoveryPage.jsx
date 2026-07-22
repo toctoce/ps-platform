@@ -50,10 +50,7 @@ export function PasswordRecoveryPage({ setMessage, navigate }) {
   return (
     <section className="auth-page">
       <div className="auth-brand">
-        <span className="site-logo-mark">
-          <img src={BRAND_LOGO_SRC} alt="" />
-        </span>
-        <strong>{BRAND_NAME}</strong>
+        <img className="auth-brand-logo" src={BRAND_LOGO_SRC} alt={BRAND_NAME} />
         <p>가입한 이메일로 비밀번호를 다시 설정하세요</p>
       </div>
       <form className="panel form-panel auth-form" onSubmit={resetPassword}>

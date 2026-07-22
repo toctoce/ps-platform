@@ -61,10 +61,7 @@ export function LoginPage({ onLoginSuccess, setMessage, navigate }) {
   return (
     <section className="auth-page">
       <div className="auth-brand">
-        <span className="site-logo-mark">
-          <img src={BRAND_LOGO_SRC} alt="" />
-        </span>
-        <strong>{BRAND_NAME}</strong>
+        <img className="auth-brand-logo" src={BRAND_LOGO_SRC} alt={BRAND_NAME} />
         <p>다시 만나서 반가워요</p>
       </div>
       <form className="panel form-panel auth-form" onSubmit={login}>

@@ -1,12 +1,12 @@
 import { StrictMode, useCallback, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
-import { LogIn, LogOut, MessageCircle, Settings, ShieldCheck, Trophy, UserPlus, UserRound, X } from 'lucide-react';
+import { LayoutGrid, List, LogIn, LogOut, MessageCircle, Play, Settings, ShieldCheck, Trophy, UserPlus, UserRound, X } from 'lucide-react';
 import 'katex/dist/katex.min.css';
 import './styles.css';
 import './design-system.css';
 import { configureAuthSession, request } from './api/client.js';
 import { clearStoredAuth, getStoredAuth, saveStoredAuth } from './auth/storage.js';
-import { BRAND_LOGO_SRC, BRAND_NAME } from './brand.js';
+import { BRAND_LOGO_SRC, BRAND_NAME, BRAND_SYMBOL_SRC } from './brand.js';
 import { ADMIN_TABS, AdminPage } from './pages/AdminPage.jsx';
 import { AccountPage } from './pages/AccountPage.jsx';
 import { CategoryPage } from './pages/CategoryPage.jsx';
@@ -290,11 +290,9 @@ function App() {
   return (
     <main className="app-shell">
       <header className={`site-header ${route.name === 'admin' ? 'is-admin' : ''}`}>
-        <button className="site-logo" type="button" onClick={() => navigate('/')}>
-          <span className="site-logo-mark">
-            <img src={BRAND_LOGO_SRC} alt="" />
-          </span>
-          <strong>{BRAND_NAME}</strong>
+        <button className="site-logo" type="button" onClick={() => navigate('/')} aria-label={`${BRAND_NAME} 홈`}>
+          <img className="site-logo-image" src={BRAND_LOGO_SRC} alt="" />
+          <img className="site-logo-symbol" src={BRAND_SYMBOL_SRC} alt="" />
         </button>
 
         {route.name === 'admin' && isAdmin ? (
@@ -315,6 +313,47 @@ function App() {
           </div>
         ) : null}
 
+        {route.name !== 'admin' ? (
+          <nav className="site-navigation" aria-label="주요 메뉴">
+            <button
+              className={route.name === 'random' ? 'is-active' : ''}
+              type="button"
+              onClick={() => navigate('/random')}
+              title="모의 코딩테스트"
+            >
+              <Play size={17} aria-hidden="true" />
+              <span>모의테스트</span>
+            </button>
+            <button
+              className={['problem-list', 'problem-detail'].includes(route.name) ? 'is-active' : ''}
+              type="button"
+              onClick={() => navigate('/problems')}
+              title="문제 목록"
+            >
+              <List size={17} aria-hidden="true" />
+              <span>문제</span>
+            </button>
+            <button
+              className={['category-list', 'category-detail'].includes(route.name) ? 'is-active' : ''}
+              type="button"
+              onClick={() => navigate('/categories')}
+              title="카테고리 목록"
+            >
+              <LayoutGrid size={17} aria-hidden="true" />
+              <span>카테고리</span>
+            </button>
+            <button
+              className={route.name === 'ranking' ? 'is-active' : ''}
+              type="button"
+              onClick={() => navigate('/rankings')}
+              title="랭킹"
+            >
+              <Trophy size={17} aria-hidden="true" />
+              <span>랭킹</span>
+            </button>
+          </nav>
+        ) : null}
+
         <div className="site-actions">
           {route.name === 'home' && isAdmin ? (
             <button className="home-admin-button" type="button" onClick={() => navigate('/admin')}>
@@ -322,15 +361,6 @@ function App() {
               관리자 페이지
             </button>
           ) : null}
-          <button
-            className={`icon-action header-ranking-button ${route.name === 'ranking' ? 'is-active' : ''}`}
-            type="button"
-            onClick={() => navigate('/rankings')}
-            title="랭킹"
-            aria-label="랭킹"
-          >
-            <Trophy size={19} />
-          </button>
           <div className="user-menu">
             <button
               className={isAuthenticated ? 'header-user-trigger' : 'user-menu-trigger'}
@@ -492,10 +522,7 @@ function App() {
             isAuthenticated={isAuthenticated}
           />
         ) : (
-          <HomePage
-            navigate={navigate}
-            setMessage={setMessage}
-          />
+          <HomePage auth={auth} navigate={navigate} />
         )}
       </section>
       {supportInquiryOpen ? (
